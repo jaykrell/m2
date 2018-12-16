@@ -91,7 +91,7 @@ string_vformat (const char *format, va_list va)
 	// TOOD rewrite
 	// TODO %x
 	va_list va2;
-	va_copy (va2, va);
+	va_copy (va2, va); //C99
 	std::vector <char> buf (1 + vsnprintf (0, 0, format, va));
 	vsnprintf (&buf [0], buf.size (), format, va2);
 	va_end (va);
@@ -491,6 +491,17 @@ image_first_section (image_nt_headers_t* base)
 }
 
 using namespace m2;
+
+const uint metadata_typedef = 2;
+const uint metadata_fielddef = 4;
+const uint metadata_methoddef = 6;
+const uint metadata_eventdef = 0x14
+const uint metadata_propertydef = 0x17;
+const uint metadata_typeref = 1;
+const uint metadata_memberref = 0xA;
+const uint metadata_interfaceimpl = 9;
+const uint metadata_customattribute = 0xC;
+//const uint metadata_customattribute = 0xC;
 
 int
 main (int argc, char** argv)
