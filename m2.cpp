@@ -6,9 +6,11 @@
 #define _DARWIN_USE_64_BIT_INODE
 
 #include <stdint.h>
+#include <assert.h>
 #include <string>
 #include <stdio.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <limits.h>
 #ifdef _WIN32
 #include <io.h>
@@ -19,6 +21,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #endif
+#include <vector> // TODO rewrite/rename
 
 typedef unsigned char uchar;
 typedef unsigned short ushort;
@@ -83,19 +86,59 @@ namespace m2
 std::string
 string_vformat (const char *format, va_list va)
 {
-	char buf [1000]; // FIXME
-	buf [999] = 0;
-	vsnprintf (buf, 999, format, va);
-	return buf;
+	// TODO no double buffer
+	// TODO Win32?
+	// TOOD rewrite
+	// TODO %x
+	va_list va2;
+	va_copy (va2, va);
+	std::vector <char> buf (1 + vsnprintf (0, 0, format, va));
+	vsnprintf (&buf [0], buf.size (), format, va2);
+	va_end (va);
+	va_end (va2);
+	return std::string (&buf [0]);
 }
 
 std::string
 string_format (const char *format, ...)
 {
+	va_list va;
+	va_start (va, format);
+	std::string a = string_vformat (format, va);
+	va_end (va);
+	return a;
+}
+
+}
+
+void
+assertf_failed (const char * format, ...)
+{
 	va_list args;
 	va_start (args, format);
-	return string_vformat (format, args);
+	fputs (("assertf_failed:" + m2::string_vformat (format, args) + "\n").c_str (), stderr);
+	assert (0);
+	abort ();
 }
+
+void
+assert_failed (const char * expr)
+{
+	fprintf (stderr, "assert_failed:%s\n", expr);
+	assert (0);
+	abort ();
+}
+
+#define release_assert(x)     ((x) || (assert_failed (!#x), (int)0))
+#define release_assertf(x, y) ((x) || ((assertf_failed y), 0))
+#ifdef NDEBUG
+#define assertf(x, y)      	/* nothing */
+#else
+#define assertf(x, y)       	(release_assertf (x, y))
+#endif
+
+namespace m2
+{
 
 void
 throw_int (int i, const char* a = "")
@@ -480,8 +523,10 @@ X (sizeof (image_section_header_t));
 		printf ("machine:%x\n", nt->FileHeader.Machine);
 		image_optional_header32 *opt32 = (image_optional_header32*)(&nt->OptionalHeader);
 		image_optional_header64 *opt64 = (image_optional_header64*)(&nt->OptionalHeader);
-		printf ("opt.magic:%x\n", opt32->Magic);
-		printf ("opt.magic:%x\n", opt32->Magic);
+		int opt_magic = opt32->Magic;
+		release_assertf ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), ("file:%s opt_magic:%x", file_name, opt_magic));
+		printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, opt32, opt64);
+		printf ("opt.rvas:%X\n", opt32 ? opt32->NumberOfRvaAndSizes : opt64->NumberOfRvaAndSizes);
 	}
 	catch (int er)
 	{
