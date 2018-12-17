@@ -10,10 +10,10 @@ clean:
 	-rm mac win 2>/dev/null
 
 mac: m2.cpp
-	g++ -g m2.cpp -o $@
+	g++ -std=c++11 -g m2.cpp -o $@
 
 win32: m2.cpp
-	i686-w64-mingw32-g++ -g m2.cpp -o $@
+	i686-w64-mingw32-g++ -std=c++11 -g m2.cpp -o $@
 
 win64: m2.cpp
-	x86_64-w64-mingw32-g++ -g m2.cpp -o $@
+	x86_64-w64-mingw32-g++ -std=c++11 -g m2.cpp -o $@

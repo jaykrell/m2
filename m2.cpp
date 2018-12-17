@@ -1,9 +1,24 @@
 // 2-clause BSD license unless that does not suffice
-// else MIT like mono.
+// else MIT like mono. Need to research the difference.
+
+// Much is based on https://www.ntcore.com/files/dotnetformat.htm
+// until/unless more official documentation is consulted.
+// Hopefully it is correct.
+
+// Implementation language is C++.
+// Exact C++ version is to be determined.
+// C++ library dependencies are likely to be removed, but we'll see.
+
+// Goals: clarity, simplicity, portability, size, interpreter, compile to C++, and maybe
+// later some JIT
 
 //#include "config.h"
 
-#define _DARWIN_USE_64_BIT_INODE
+#define _DARWIN_USE_64_BIT_INODE 1
+//#define __DARWIN_ONLY_64_BIT_INO_T 1
+// TODO cmake
+//#define _LARGEFILE_SOURCE
+//#define _LARGEFILE64_SOURCE
 
 #include <stdint.h>
 #include <assert.h>
@@ -283,11 +298,19 @@ struct image_optional_header64
 	image_data_directory_t DataDirectory[16];
 };
 
+struct image_section_header_t;
+
 struct image_nt_headers_t
 {
 	uint32 Signature;
 	image_file_header_t FileHeader;
 	char OptionalHeader;
+
+	image_section_header_t*
+	first_section_header ()
+	{
+		return (image_section_header_t*)((char*)&OptionalHeader + FileHeader.SizeOfOptionalHeader);
+	}
 };
 
 struct image_section_header_t
@@ -319,7 +342,17 @@ typedef void (explicit_operator_bool::*bool_type) () const;
 #ifdef _WIN32
 struct handle_t
 {
-	void * h;
+	// TODO handle_t vs. win32file_t, etc.
+
+	uint64 get_file_size (const char * file_name = "")
+	{
+		ULARGE_INTEGER b = { };
+		if (!GetFileSizeEx (h, &b))
+			throw_LastError (string_format ("GetFileSizeEx(%s)", file_name).c_str());
+		return a.QuadPart;
+	}
+
+	void * h = 0;
 
 	handle_t (void *a = 0) : h (a) { }
 
@@ -382,6 +415,16 @@ struct fd_t
 {
 	int fd;
 
+#ifndef _WIN32
+	uint64 get_file_size (const char * file_name = "")
+	{
+		struct stat64 st = { 0 }; // TODO
+		if (fstat64 (fd, &st))
+			throw_errno (string_format ("fstat(%s)", file_name).c_str ());
+		return st.st_size;
+	}
+#endif
+
 #if 0 // C++11
 	explicit operator bool () { return valid (); } // C++11
 #else
@@ -442,7 +485,11 @@ struct memory_mapped_file_t
 // TODO allow for systems that must read, not mmap
 	void * base;
 	size_t size;
-
+#ifdef _WIN32
+	handle_t file;
+#else
+	fd_t file;
+#endif
 	memory_mapped_file_t () : base (0), size (0) { }
 
 	~memory_mapped_file_t ()
@@ -458,55 +505,1348 @@ struct memory_mapped_file_t
 	void read (const char* a)
 	{
 #ifdef _WIN32
-		handle_t h = CreateFileA (a, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-		if (!h) throw_LastError (string_format ("CreateFileA(%s)", a).c_str ());
-		LARGE_INTEGER b;
-		b.QuadPart = 0;
-		if (!GetFileSizeEx (h, &b)) throw_LastError (string_format ("GetFileSizeEx(%s)", a).c_str());
-		// FIXME check for size==0
-		size = (size_t)b.QuadPart;
+		file = CreateFileA (a, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+		if (!file) throw_LastError (string_format ("CreateFileA(%s)", a).c_str ());
+		// FIXME check for size==0 and >4GB.
+		size = (size_t)file.get_file_size(a);
 		handle_t h2 = CreateFileMappingW (h, 0, PAGE_READONLY, 0, 0, 0);
 		if (!h2) throw_LastError (string_format ("CreateFileMapping(%s)", a).c_str ());
 		base = MapViewOfFile (h2, FILE_MAP_READ, 0, 0, 0);
 		if (!base) throw_LastError (string_format ("MapViewOfFile(%s)", a).c_str ());
 #else
-		fd_t fd = open (a, O_RDONLY);
-		if (!fd) throw_errno (string_format ("open(%s)", a).c_str ());
-		struct stat st; // FIXME? stat64
-		memset (&st, 0, sizeof (st));
-		if (fstat (fd, &st)) throw_errno (string_format ("fstat(%s)", a).c_str ());
-		size = st.st_size;
-		base = mmap (0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+		file = open (a, O_RDONLY);
+		if (!file) throw_errno (string_format ("open(%s)", a).c_str ());
+		// FIXME check for size==0 and >4GB.
+		size = (size_t)file.get_file_size(a);
+		base = mmap (0, st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 		if (base == MAP_FAILED) throw_errno (string_format ("mmap(%s)", a).c_str ());
 #endif
 	}
 };
 
-image_section_header_t*
-image_first_section (image_nt_headers_t* base)
+// TODO emum
+const uint COMIMAGE_FLAGS_ILONLY = 1;
+const uint COMIMAGE_FLAGS_32BITREQUIRED = 2;
+const uint COMIMAGE_FLAGS_IL_LIBRARY = 4;
+const uint COMIMAGE_FLAGS_STRONGNAMESIGNED = 8;
+const uint COMIMAGE_FLAGS_NATIVE_ENTRYPOINT = 0x10;
+const uint COMIMAGE_FLAGS_TRACKDEBUGDATA = 0x10000;
+
+// TODO emum
+// Bit clear: 16 bit; bit set: 32 bit
+const uint8 HeapOffsetSize_String = 1;
+const uint8 HeapOffsetSize_Guid = 2;
+const uint8 HeapOffsetSize_Blob = 4;
+
+// TODO emum
+const uint metadata_Module = 0;
+const uint metadata_TypeRef = 1;
+const uint metadata_TypeDef = 2;
+const uint metadata_Field = 4;
+const uint metadata_MethodDef = 6;
+const uint metadata_Param = 8;
+const uint metadata_InterfaceImpl = 9;
+const uint metadata_MemberRef = 10;
+const uint metadata_Constant = 11;
+const uint metadata_CustomAttribute = 12;
+const uint metadata_FieldMarshal = 13;
+const uint metadata_DeclSecurity = 14;
+const uint metadata_ClassLayout = 15;
+const uint metadata_FieldLayout = 16;
+const uint metadata_StandAloneSig = 17;
+const uint metadata_EventMap = 18;
+const uint metadata_Event = 20;
+const uint metadata_PropertyMap = 21;
+const uint metadata_Property = 23;
+const uint metadata_MethodSemantics = 24;
+const uint metadata_MethodImpl = 25;
+const uint metadata_ModuleRef = 26;
+const uint metadata_TypeSpec = 27;
+const uint metadata_ImplMap = 28;
+const uint metadata_FieldRVA = 29;
+const uint metadata_Assembly = 32;
+const uint metadata_AssemblyProcessor = 33;
+const uint metadata_AssemblyOS = 34;
+const uint metadata_AssemblyRef = 35;
+const uint metadata_AssemblyRefProcessor = 36;
+const uint metadata_AssemblyRefOS = 37;
+const uint metadata_File = 38;
+const uint metadata_ExportedType = 39;
+const uint metadata_ManifestResource = 40;
+const uint metadata_NestedClass = 41;
+const uint metadata_GenericParam = 42;
+const uint metadata_GenericParamConstraint = 44;
+
+// TODO emum
+const uint typedef_or_ref_is_def = 0;
+const uint typedef_or_ref_is_ref = 1;
+const uint typedef_or_ref_is_spec = 2;
+
+// TODO emum
+const uint hasconstant_field = 0;
+const uint hasconstant_param = 1;
+const uint hasconstant_property = 2;
+
+// TODO emum
+// 5 bits
+const uint hascustomttribute_MethodDef = 0;
+const uint hascustomttribute_FieldDef = 1;
+const uint hascustomttribute_TypeRef = 2;
+const uint hascustomttribute_TypeDef = 3;
+const uint hascustomttribute_ParamDef = 4;
+const uint hascustomttribute_InterfaceImpl = 5;
+const uint hascustomttribute_MemberRef = 6;
+const uint hascustomttribute_Module = 7;
+const uint hascustomttribute_Permission = 8;
+const uint hascustomttribute_Property = 9;
+const uint hascustomttribute_Event = 10;
+const uint hascustomttribute_StandAloneSig = 11;
+const uint hascustomttribute_ModuleRef = 12;
+const uint hascustomttribute_TypeSpec = 13;
+const uint hascustomttribute_Assembly = 14;
+const uint hascustomttribute_AssemblyRef = 15;
+const uint hascustomttribute_File = 16;
+const uint hascustomttribute_ExportedType = 17;
+const uint hascustomttribute_ManifestResource = 18;
+
+// TODO emum
+const uint hasfieldmarshal_fielddef = 0;
+const uint hasfieldmarshal_paramdef = 1;
+
+// TODO emum
+const uint hasdeclsecurity_typedef = 0;
+const uint hasdeclsecurity_methoddef = 1;
+const uint hasdeclsecurity_assembly = 2;
+
+struct metadata_header
 {
-	return (image_section_header_t*)((char*)&base->OptionalHeader + base->FileHeader.SizeOfOptionalHeader);
-}
+	uint32 reserved;
+	uint8 MajorVersion;
+	uint8 MinorVersion;
+	uint8 HeapOffsetSizes;
+	uint8 reserved2;
+	uint64 Valid; // metadata_typedef etc.
+	uint64 Sorted; // metadata_typedef etc.
+	// uint32 NumberOfRaws [];
+};
+
+// COM+ 2.0 header structure.
+struct image_clr_header // data_directory [15]
+{
+	uint32 cb; // count of bytes
+	uint16 MajorRuntimeVersion;
+	uint16 MinorRuntimeVersion;
+	image_data_directory_t MetaData;
+	uint32 Flags;
+	// If COMIMAGE_FLAGS_NATIVE_ENTRYPOINT is not set, EntryPointToken represents a managed entrypoint.
+	// If COMIMAGE_FLAGS_NATIVE_ENTRYPOINT is set, EntryPointRVA represents an RVA to a native entrypoint.
+	union {
+		uint32 EntryPointToken;
+		uint32 EntryPointRVA;
+	};
+	image_data_directory_t Resources;
+	image_data_directory_t StrongNameSignature;
+	image_data_directory_t CodeManagerTable;
+	image_data_directory_t VTableFixups;
+	image_data_directory_t ExportAddressTableJumps;
+	image_data_directory_t ManagedNativeHeader;
+};
+
+struct loaded_image_t
+{
+	memory_mapped_file_t mmf;
+	void * base = 0;
+	image_dos_header_t* dos = 0;
+	uint32 pe_offset = 0;
+	uchar* pe = 0;
+	image_nt_headers_t *nt = 0;
+	image_optional_header32 *opt32 = 0;
+	image_optional_header64 *opt64 = 0;
+	uint32 opt_magic = 0;
+	uint number_of_sections = 0;
+	std::vector<image_section_header_t*> section_headers;
+
+	void init (const char *file_name)
+	{
+		mmf.read (file_name);
+		base = mmf.base;
+		file_size = mmf.file.get_file_size (
+		dos = (image_dos_header_t*)base;
+		printf ("mz: %02x%02x\n", ((uchar*)dos) [0], ((uchar*)dos) [1]);
+		if (memcmp (base, "MZ", 2))
+			throw string_format ("incorrect MZ signature %s", file_name);
+		printf ("mz: %c%c\n", ((char*)dos) [0], ((char*)dos) [1]);
+		pe_offset = dos->get_pe ();
+		printf ("pe_offset: %#x\n", pe_offset);
+		pe = (pe_offset + (uchar*)base);
+		printf ("pe: %02x%02x%02x%02x\n", pe [0], pe [1], pe [2], pe [3]);
+		if (memcmp (pe, "PE\0\0", 4))
+			throw string_format ("incorrect PE00 signature %s", file_name);
+		printf ("pe: %c%c\\%d\\%d\n", pe [0], pe [1], pe [2], pe [3]);
+		nt = (image_nt_headers_t*)pe;
+		printf ("Machine:%X\n", nt->FileHeader.Machine);
+		printf ("NumberOfSections:%X\n", nt->FileHeader.NumberOfSections);
+		printf ("TimeDateStamp:%X\n", nt->FileHeader.TimeDateStamp);
+		printf ("PointerToSymbolTable:%X\n", nt->FileHeader.PointerToSymbolTable);
+		printf ("NumberOfSymbols:%X\n", nt->FileHeader.NumberOfSymbols);
+		printf ("SizeOfOptionalHeader:%xXn", nt->FileHeader.SizeOfOptionalHeader);
+		printf ("Characteristics:%X\n", nt->FileHeader.Characteristics);
+		opt32 = (image_optional_header32*)(&nt->OptionalHeader);
+		opt64 = (image_optional_header64*)(&nt->OptionalHeader);
+		opt_magic = opt32->Magic;
+		release_assertf ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), ("file:%s opt_magic:%x", file_name, opt_magic));
+		printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, opt32, opt64);
+		printf ("opt.rvas:%X\n", opt32 ? opt32->NumberOfRvaAndSizes : opt64->NumberOfRvaAndSizes);
+		number_of_sections = nt->FileHeader.NumberOfSections;
+		printf ("number_of_sections:%X\n", number_of_sections);
+		image_section_header_t* section_header = nt->first_section_header ();
+		for (uint i = 0; i < number_of_sections; ++i, ++section_header)
+			printf ("section [%02X].Name: %.8s\n", i, section_header->Name);
+	}
+
+	int
+	rva_to_file_offset (void* base, int rva)
+	{
+	}
+};
+
+struct metadata_header_t
+{
+	uint32 Signature; // 0x424A5342
+	uint16 MajorVersion;
+	uint16 MinorVersion;
+	uint32 Reserved;
+	x      Length;
+	uint16 Reserved2;
+	uint16 Streams; // number of streams
+	// StreamHeaders{name, offset, size}[]
+};
+
+struct metadata_module_t
+{
+	uint16 Generation; // reserved, 0
+	uint32 Name; // index into string heap
+	uint32 Mvid; // index into guid heap
+	uint32 EncId; // reserved, 0
+	uint32 EncBaseId; // reserved, 0
+};
+
+struct metadata_typeref_t
+{
+	uint32 ResolutionScope; // Module or ModuleRef or AssemblyRef or TypeRef
+	uint32 TypeName; // string
+	uint32 TypeNamespace; // string
+};
+
+struct metadata_typedef_t // 2
+{
+	uint32 flags; // TypeAttributes CorTypeAttr
+	uint32 TypeName; // string
+	uint32 TypeNamespace; // string
+	uint32 Extends; // TypeDef or TypeRef or TypeSpec
+	uint32 FieldList; // index into Field table, either to last row or next start
+	uint32 MethodList; // similar to previous
+};
+
+typedef enum CorTypeAttr
+{
+    // Use this mask to retrieve the type visibility information.
+    tdVisibilityMask        =   0x00000007,
+    tdNotPublic             =   0x00000000,     // Class is not public scope.
+    tdPublic                =   0x00000001,     // Class is public scope.
+    tdNestedPublic          =   0x00000002,     // Class is nested with public visibility.
+    tdNestedPrivate         =   0x00000003,     // Class is nested with private visibility.
+    tdNestedFamily          =   0x00000004,     // Class is nested with family visibility.
+    tdNestedAssembly        =   0x00000005,     // Class is nested with assembly visibility.
+    tdNestedFamANDAssem     =   0x00000006,     // Class is nested with family and assembly visibility.
+    tdNestedFamORAssem      =   0x00000007,     // Class is nested with family or assembly visibility.
+
+    // Use this mask to retrieve class layout information
+    tdLayoutMask            =   0x00000018,
+    tdAutoLayout            =   0x00000000,     // Class fields are auto-laid out
+    tdSequentialLayout      =   0x00000008,     // Class fields are laid out sequentially
+    tdExplicitLayout        =   0x00000010,     // Layout is supplied explicitly
+    // end layout mask
+
+    // Use this mask to retrieve class semantics information.
+    tdClassSemanticsMask    =   0x00000060,
+    tdClass                 =   0x00000000,     // Type is a class.
+    tdInterface             =   0x00000020,     // Type is an interface.
+    // end semantics mask
+
+    // Special semantics in addition to class semantics.
+    tdAbstract              =   0x00000080,     // Class is abstract
+    tdSealed                =   0x00000100,     // Class is concrete and may not be extended
+    tdSpecialName           =   0x00000400,     // Class name is special. Name describes how.
+
+    // Implementation attributes.
+    tdImport                =   0x00001000,     // Class / interface is imported
+    tdSerializable          =   0x00002000,     // The class is Serializable.
+
+    // Use tdStringFormatMask to retrieve string information for native interop
+    tdStringFormatMask      =   0x00030000,
+    tdAnsiClass             =   0x00000000,     // LPTSTR is interpreted as ANSI in this class
+    tdUnicodeClass          =   0x00010000,     // LPTSTR is interpreted as UNICODE
+    tdAutoClass             =   0x00020000,     // LPTSTR is interpreted automatically
+    tdCustomFormatClass     =   0x00030000,     // A non-standard encoding specified by CustomFormatMask
+    tdCustomFormatMask      =   0x00C00000,     // Use this mask to retrieve non-standard encoding information for native interop. The meaning of the values of these 2 bits is unspecified.
+
+    // end string format mask
+
+    tdBeforeFieldInit       =   0x00100000,     // Initialize the class any time before first static field access.
+    tdForwarder             =   0x00200000,     // This ExportedType is a type forwarder.
+
+    // Flags reserved for runtime use.
+    tdReservedMask          =   0x00040800,
+    tdRTSpecialName         =   0x00000800,     // Runtime should check name encoding.
+    tdHasSecurity           =   0x00040000,     // Class has security associate with it.
+} CorTypeAttr;
+
+#if 0 // todo
+
+
+04 - Field Table
+Each row represents a field in a TypeDef class. The fields of one class are not stored casually: after the fields of one class end, the fields of the next class begin.
+
+Columns:
+
+• Flags (a 2-byte bitmask of type FieldAttributes)
+• Name (index into String heap)
+• Signature (index into Blob heap)
+
+Available flags are:
+
+typedef enum CorFieldAttr
+{
+    // member access mask - Use this mask to retrieve accessibility information.
+    fdFieldAccessMask           =   0x0007,
+    fdPrivateScope              =   0x0000,     // Member not referenceable.
+    fdPrivate                   =   0x0001,     // Accessible only by the parent type.
+    fdFamANDAssem               =   0x0002,     // Accessible by sub-types only in this Assembly.
+    fdAssembly                  =   0x0003,     // Accessibly by anyone in the Assembly.
+    fdFamily                    =   0x0004,     // Accessible only by type and sub-types.
+    fdFamORAssem                =   0x0005,     // Accessibly by sub-types anywhere, plus anyone in assembly.
+    fdPublic                    =   0x0006,     // Accessibly by anyone who has visibility to this scope.
+    // end member access mask
+
+    // field contract attributes.
+    fdStatic                    =   0x0010,     // Defined on type, else per instance.
+    fdInitOnly                  =   0x0020,     // Field may only be initialized, not written to after init.
+    fdLiteral                   =   0x0040,     // Value is compile time constant.
+    fdNotSerialized             =   0x0080,     // Field does not have to be serialized when type is remoted.
+
+    fdSpecialName               =   0x0200,     // field is special. Name describes how.
+
+    // interop attributes
+    fdPinvokeImpl               =   0x2000,     // Implementation is forwarded through pinvoke.
+
+    // Reserved flags for runtime use only.
+    fdReservedMask              =   0x9500,
+    fdRTSpecialName             =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
+    fdHasFieldMarshal           =   0x1000,     // Field has marshalling information.
+    fdHasDefault                =   0x8000,     // Field has default.
+    fdHasFieldRVA               =   0x0100,     // Field has RVA.
+} CorFieldAttr;
+
+06 - MethodDef Table
+Each row represents a method in a specific class. The methods sequence follows the same logic of the fields one.
+
+Columns:
+
+• RVA (a 4-byte constant)
+• ImplFlags (a 2-byte bitmask of type MethodImplAttributes)
+• Flags (a 2-byte bitmask of type MethodAttribute)
+• Name (index into String heap)
+• Signature (index into Blob heap)
+• ParamList (index into Param table). It marks the first of a contiguous run of Parameters owned by this method. The run continues to the smaller of:
+        o the last row of the Param table
+        o the next run of Parameters, found by inspecting the ParamList of the next row in the MethodDef table
+
+Available flags are:
+
+typedef enum CorMethodAttr
+{
+    // member access mask - Use this mask to retrieve accessibility information.
+    mdMemberAccessMask          =   0x0007,
+    mdPrivateScope              =   0x0000,     // Member not referenceable.
+    mdPrivate                   =   0x0001,     // Accessible only by the parent type.
+    mdFamANDAssem               =   0x0002,     // Accessible by sub-types only in this Assembly.
+    mdAssem                     =   0x0003,     // Accessibly by anyone in the Assembly.
+    mdFamily                    =   0x0004,     // Accessible only by type and sub-types.
+    mdFamORAssem                =   0x0005,     // Accessibly by sub-types anywhere, plus anyone in assembly.
+    mdPublic                    =   0x0006,     // Accessibly by anyone who has visibility to this scope.
+    // end member access mask
+
+    // method contract attributes.
+    mdStatic                    =   0x0010,     // Defined on type, else per instance.
+    mdFinal                     =   0x0020,     // Method may not be overridden.
+    mdVirtual                   =   0x0040,     // Method virtual.
+    mdHideBySig                 =   0x0080,     // Method hides by name+sig, else just by name.
+
+    // vtable layout mask - Use this mask to retrieve vtable attributes.
+    mdVtableLayoutMask          =   0x0100,
+    mdReuseSlot                 =   0x0000,     // The default.
+    mdNewSlot                   =   0x0100,     // Method always gets a new slot in the vtable.
+    // end vtable layout mask
+
+    // method implementation attributes.
+    mdCheckAccessOnOverride     =   0x0200,     // Overridability is the same as the visibility.
+    mdAbstract                  =   0x0400,     // Method does not provide an implementation.
+    mdSpecialName               =   0x0800,     // Method is special. Name describes how.
+
+    // interop attributes
+    mdPinvokeImpl               =   0x2000,     // Implementation is forwarded through pinvoke.
+    mdUnmanagedExport           =   0x0008,     // Managed method exported via thunk to unmanaged code.
+
+    // Reserved flags for runtime use only.
+    mdReservedMask              =   0xd000,
+    mdRTSpecialName             =   0x1000,     // Runtime should check name encoding.
+    mdHasSecurity               =   0x4000,     // Method has security associate with it.
+    mdRequireSecObject          =   0x8000,     // Method calls another method containing security code.
+
+} CorMethodAttr;
+
+typedef enum CorMethodImpl
+{
+    // code impl mask
+    miCodeTypeMask      =   0x0003,   // Flags about code type.
+    miIL                =   0x0000,   // Method impl is IL.
+    miNative            =   0x0001,   // Method impl is native.
+    miOPTIL             =   0x0002,   // Method impl is OPTIL
+    miRuntime           =   0x0003,   // Method impl is provided by the runtime.
+    // end code impl mask
+
+    // managed mask
+    miManagedMask       =   0x0004,   // Flags specifying whether the code is managed or unmanaged.
+    miUnmanaged         =   0x0004,   // Method impl is unmanaged, otherwise managed.
+    miManaged           =   0x0000,   // Method impl is managed.
+    // end managed mask
+
+    // implementation info and interop
+    miForwardRef        =   0x0010,   // Indicates method is defined; used primarily in merge scenarios.
+    miPreserveSig       =   0x0080,   // Indicates method sig is not to be mangled to do HRESULT conversion.
+
+    miInternalCall      =   0x1000,   // Reserved for internal use.
+
+    miSynchronized      =   0x0020,   // Method is single threaded through the body.
+    miNoInlining        =   0x0008,   // Method may not be inlined.
+    miMaxMethodImplVal  =   0xffff,   // Range check value
+} CorMethodImpl;
+
+The RVA points to the method body, I'll explain the format of that later. The Signature gives information about the method declaration, remember that data stored in the #Blob stream follows 7bit encoding/decoding rules.
+
+08 - Param Table
+
+Each row represents a method's param.
+
+Columns:
+
+• Flags (a 2-byte bitmask of type ParamAttributes)
+• Sequence (a 2-byte constant)
+• Name (index into String heap)
+
+Available flags are:
+
+typedef enum CorParamAttr
+{
+    pdIn                        =   0x0001,     // Param is [In]
+    pdOut                       =   0x0002,     // Param is [out]
+    pdOptional                  =   0x0010,     // Param is optional
+
+    // Reserved flags for Runtime use only.
+    pdReservedMask              =   0xf000,
+    pdHasDefault                =   0x1000,     // Param has default value.
+    pdHasFieldMarshal           =   0x2000,     // Param has FieldMarshal.
+
+    pdUnused                    =   0xcfe0,
+} CorParamAttr;
+
+09 - InterfaceImpl Table
+
+Each row tells the framework a class that implements a specific interface.
+
+Columns:
+
+• Class (index into the TypeDef table)
+• Interface (index into the TypeDef, TypeRef or TypeSpec table; more precisely, a TypeDefOrRef coded index)
+
+10 - MemberRef Table
+
+Also known as MethodRef table. Each row represents an imported method.
+
+Columns:
+
+• Class (index into the TypeRef, ModuleRef, MethodDef, TypeSpec or TypeDef tables; more precisely, a MemberRefParent coded index)
+• Name (index into String heap)
+• Signature (index into Blob heap)
+
+11 - Constant Table
+
+Each row represents a constant value for a Param, Field or Property.
+
+Columns:
+
+• Type (a 1-byte constant, followed by a 1-byte padding zero).
+• Parent (index into the Param or Field or Property table; more precisely, a HasConstant coded index)
+• Value (index into Blob heap)
+
+12 - CustomAttribute Table
+
+I think the best description is given by the SDK: "The CustomAttribute table stores data that can be used to instantiate a Custom Attribute (more precisely, an object of the specified Custom Attribute class) at runtime. The column called Type is slightly misleading – it actually indexes a constructor method – the owner of that constructor method is the Type of the Custom Attribute."
+
+Columns:
+
+• Parent (index into any metadata table, except the CustomAttribute table itself; more precisely, a HasCustomAttribute coded index)
+• Type (index into the MethodDef or MethodRef table; more precisely, a CustomAttributeType coded index)
+• Value (index into Blob heap)
+
+13 - FieldMarshal Table
+
+Each row tells the way a Param or Field should be threated when called from/to unmanaged code.
+
+Columns:
+
+• Parent (index into Field or Param table; more precisely, a HasFieldMarshal coded index)
+• NativeType (index into the Blob heap)
+
+14 - DeclSecurity Table
+
+Security attributes attached to a class, method or assembly.
+
+Columns:
+
+• Action (2-byte value)
+• Parent (index into the TypeDef, MethodDef or Assembly table; more precisely, a HasDeclSecurity coded index)
+• PermissionSet (index into Blob heap)
+
+15 - ClassLayout Table
+
+Remember "#pragma pack(n)" for VC++? Well, this is kind of the same thing for .NET. It's useful when handing something from managed to unmanaged code.
+
+Columns:
+
+• PackingSize (a 2-byte constant)
+• ClassSize (a 4-byte constant)
+• Parent (index into TypeDef table)
+
+16 - FieldLayout Table
+
+Related with the ClassLayout.
+
+Columns:
+
+• Offset (a 4-byte constant)
+• Field (index into the Field table)
+
+17 - StandAloneSig Table
+
+Each row represents a signature that isn't referenced by any other table.
+
+Columns:
+
+• Signature (index into the Blob heap)
+
+18 - EventMap Table
+
+List of events for a specific class.
+
+Columns:
+
+• Parent (index into the TypeDef table)
+• EventList (index into Event table). It marks the first of a contiguous run of Events owned by this Type. The run continues to the smaller of:
+        o the last row of the Event table
+        o the next run of Events, found by inspecting the EventList of the next row in the EventMap table
+
+20 - Event Table
+
+Each row represents an event.
+
+Columns:
+
+• EventFlags (a 2-byte bitmask of type EventAttribute)
+• Name (index into String heap)
+• EventType (index into TypeDef, TypeRef or TypeSpec tables; more precisely, a TypeDefOrRef coded index) [this corresponds to the Type of the Event; it is not the Type that owns this event]
+
+Available flags are:
+
+typedef enum CorEventAttr
+{
+    evSpecialName           =   0x0200,     // event is special. Name describes how.
+
+    // Reserved flags for Runtime use only.
+    evReservedMask          =   0x0400,
+    evRTSpecialName         =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
+} CorEventAttr;
+
+21 - PropertyMap Table
+
+List of Properties owned by a specific class.
+
+Columns:
+
+• Parent (index into the TypeDef table)
+• PropertyList (index into Property table). It marks the first of a contiguous run of Properties owned by Parent. The run continues to the smaller of:
+        o the last row of the Property table
+        o the next run of Properties, found by inspecting the PropertyList of the next row in this PropertyMap table
+
+23 - Property Table
+
+Each row represents a property.
+
+Columns:
+
+• Flags (a 2-byte bitmask of type PropertyAttributes)
+• Name (index into String heap)
+• Type (index into Blob heap) [the name of this column is misleading. It does not index a TypeDef or TypeRef table – instead it indexes the signature in the Blob heap of the Property)
+
+Available flags are:
+
+typedef enum CorPropertyAttr
+{
+    prSpecialName           =   0x0200,     // property is special. Name describes how.
+
+    // Reserved flags for Runtime use only.
+    prReservedMask          =   0xf400,
+    prRTSpecialName         =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
+    prHasDefault            =   0x1000,     // Property has default
+
+    prUnused                =   0xe9ff,
+} CorPropertyAttr;
+
+24 - MethodSemantics Table
+
+Links Events and Properties to specific methods. For example one Event can be associated to more methods. A property uses this table to associate get/set methods.
+
+Columns:
+
+• Semantics (a 2-byte bitmask of type MethodSemanticsAttributes)
+• Method (index into the MethodDef table)
+• Association (index into the Event or Property table; more precisely, a HasSemantics coded index)
+
+Available flags are:
+
+typedef enum CorMethodSemanticsAttr
+{
+    msSetter    =   0x0001,     // Setter for property
+    msGetter    =   0x0002,     // Getter for property
+    msOther     =   0x0004,     // other method for property or event
+    msAddOn     =   0x0008,     // AddOn method for event
+    msRemoveOn  =   0x0010,     // RemoveOn method for event
+    msFire      =   0x0020,     // Fire method for event
+} CorMethodSemanticsAttr;
+
+25 - MethodImpl Table
+
+I quote: "MethodImpls let a compiler override the default inheritance rules provided by the CLI. Their original use was to allow a class “C”, that inherited method “Foo” from interfaces I and J, to provide implementations for both methods (rather than have only one slot for “Foo” in its vtable). But MethodImpls can be used for other reasons too, limited only by the compiler writer’s ingenuity within the constraints defined in the Validation rules below.".
+
+Columns:
+
+• Class (index into TypeDef table)
+• MethodBody (index into MethodDef or MemberRef table; more precisely, a MethodDefOrRef coded index)
+• MethodDeclaration (index into MethodDef or MemberRef table; more precisely, a MethodDefOrRef coded index)
+
+26 - ModuleRef Table
+
+Each row represents a reference to an external module.
+
+Columns:
+
+• Name (index into String heap)
+
+27 - TypeSpec Table
+
+Each row represents a specification for a TypeDef or TypeRef. The only column indexes a token in the #Blob stream.
+
+Columns:
+
+• Signature (index into the Blob heap)
+
+28 - ImplMap Table
+
+I quote: "The ImplMap table holds information about unmanaged methods that can be reached from managed code, using PInvoke dispatch.
+Each row of the ImplMap table associates a row in the MethodDef table (MemberForwarded) with the name of a routine (ImportName) in some unmanaged DLL (ImportScope).". This means all the unmanaged functions used by the assembly are listed here.
+
+Columns:
+
+• MappingFlags (a 2-byte bitmask of type PInvokeAttributes)
+• MemberForwarded (index into the Field or MethodDef table; more precisely, a MemberForwarded coded index. However, it only ever indexes the MethodDef table, since Field export is not supported)
+• ImportName (index into the String heap)
+• ImportScope (index into the ModuleRef table)
+
+Available flags are:
+
+typedef enum  CorPinvokeMap
+{
+    pmNoMangle          = 0x0001,   // Pinvoke is to use the member name as specified.
+
+    // Use this mask to retrieve the CharSet information.
+    pmCharSetMask       = 0x0006,
+    pmCharSetNotSpec    = 0x0000,
+    pmCharSetAnsi       = 0x0002,
+    pmCharSetUnicode    = 0x0004,
+    pmCharSetAuto       = 0x0006,
+
+
+    pmBestFitUseAssem   = 0x0000,
+    pmBestFitEnabled    = 0x0010,
+    pmBestFitDisabled   = 0x0020,
+    pmBestFitMask       = 0x0030,
+
+    pmThrowOnUnmappableCharUseAssem   = 0x0000,
+    pmThrowOnUnmappableCharEnabled    = 0x1000,
+    pmThrowOnUnmappableCharDisabled   = 0x2000,
+    pmThrowOnUnmappableCharMask       = 0x3000,
+
+    pmSupportsLastError = 0x0040,   // Information about target function. Not relevant for fields.
+
+    // None of the calling convention flags is relevant for fields.
+    pmCallConvMask      = 0x0700,
+    pmCallConvWinapi    = 0x0100,   // Pinvoke will use native callconv appropriate to target windows platform.
+    pmCallConvCdecl     = 0x0200,
+    pmCallConvStdcall   = 0x0300,
+    pmCallConvThiscall  = 0x0400,   // In M9, pinvoke will raise exception.
+    pmCallConvFastcall  = 0x0500,
+
+    pmMaxValue          = 0xFFFF,
+} CorPinvokeMap;
+
+29 - FieldRVA Table
+
+Each row is an extension for a Field table. The RVA in this table gives the location of the inital value for a Field.
+
+Columns:
+
+• RVA (a 4-byte constant)
+• Field (index into Field table)
+
+32 - Assembly Table
+
+It's a one-row table. It stores information about the current assembly.
+
+Columns:
+
+• HashAlgId (a 4-byte constant of type AssemblyHashAlgorithm)
+• MajorVersion, MinorVersion, BuildNumber, RevisionNumber (2-byte constants)
+• Flags (a 4-byte bitmask of type AssemblyFlags)
+• PublicKey (index into Blob heap)
+• Name (index into String heap)
+• Culture (index into String heap)
+
+Available flags are:
+
+typedef enum CorAssemblyFlags
+{
+    afPublicKey             =   0x0001,     // The assembly ref holds the full (unhashed) public key.
+
+    afPA_None               =   0x0000,     // Processor Architecture unspecified
+    afPA_MSIL               =   0x0010,     // Processor Architecture: neutral (PE32)
+    afPA_x86                =   0x0020,     // Processor Architecture: x86 (PE32)
+    afPA_IA64               =   0x0030,     // Processor Architecture: Itanium (PE32+)
+    afPA_AMD64              =   0x0040,     // Processor Architecture: AMD X64 (PE32+)
+    afPA_Specified          =   0x0080,     // Propagate PA flags to AssemblyRef record
+    afPA_Mask               =   0x0070,     // Bits describing the processor architecture
+    afPA_FullMask           =   0x00F0,     // Bits describing the PA incl. Specified
+    afPA_Shift              =   0x0004,     // NOT A FLAG, shift count in PA flags <--> index conversion
+
+    afEnableJITcompileTracking  =   0x8000, // From "DebuggableAttribute".
+    afDisableJITcompileOptimizer=   0x4000, // From "DebuggableAttribute".
+
+    afRetargetable          =   0x0100,     // The assembly can be retargeted (at runtime) to an
+                                            // assembly from a different publisher.
+} CorAssemblyFlags;
+
+The PublicKey is != 0, only if the StrongName Signature is present and the afPublicKey flag is set.
+
+33 - AssemblyProcessor Table
+
+This table is ignored by the CLI and shouldn't be present in an assembly.
+
+Columns:
+
+• Processor (a 4-byte constant)
+
+34 - AssemblyOS Table
+
+This table is ignored by the CLI and shouldn't be present in an assembly.
+
+Columns:
+
+• OSPlatformID (a 4-byte constant)
+• OSMajorVersion (a 4-byte constant)
+• OSMinorVersion (a 4-byte constant)
+
+35 - AssemblyRef Table
+
+Each row references an external assembly.
+
+Columns:
+
+• MajorVersion, MinorVersion, BuildNumber, RevisionNumber (2-byte constants)
+• Flags (a 4-byte bitmask of type AssemblyFlags)
+• PublicKeyOrToken (index into Blob heap – the public key or token that identifies the author of this Assembly)
+• Name (index into String heap)
+• Culture (index into String heap)
+• HashValue (index into Blob heap)
+
+The flags are the same ones of the Assembly table.
+
+36 - AssemblyRefProcessor Table
+
+This table is ignored by the CLI and shouldn't be present in an assembly.
+
+Columns:
+
+• Processor (4-byte constant)
+• AssemblyRef (index into the AssemblyRef table)
+
+37 - AssemblyRefOS Table
+
+This table is ignored by the CLI and shouldn't be present in an assembly.
+
+Columns:
+
+• OSPlatformId (4-byte constant)
+• OSMajorVersion (4-byte constant)
+• OSMinorVersion (4-byte constant)
+• AssemblyRef (index into the AssemblyRef table)
+
+38 - File Table
+
+Each row references an external file.
+
+Columns:
+
+• Flags (a 4-byte bitmask of type FileAttributes)
+• Name (index into String heap)
+• HashValue (index into Blob heap)
+
+Available flags are:
+
+typedef enum CorFileFlags
+{
+    ffContainsMetaData      =   0x0000,     // This is not a resource file
+    ffContainsNoMetaData    =   0x0001,     // This is a resource file or other non-metadata-containing file
+} CorFileFlags;
+
+39 - ExportedType Table
+
+I quote: "The ExportedType table holds a row for each type, defined within other modules of this Assembly, that is exported out of this Assembly. In essence, it stores TypeDef row numbers of all types that are marked public in other modules that this Assembly comprises.". Be careful, this doesn't mean that when an assembly uses a class contained in my assembly I export that type. In fact, I haven't seen yet this table in an assembly.
+
+Columns:
+
+• Flags (a 4-byte bitmask of type TypeAttributes)
+• TypeDefId (4-byte index into a TypeDef table of another module in this Assembly). This field is used as a hint only. If the entry in the target TypeDef table matches the TypeName and TypeNamespace entries in this table, resolution has succeeded. But if there is a mismatch, the CLI shall fall back to a search of the target TypeDef table
+• TypeName (index into the String heap)
+• TypeNamespace (index into the String heap)
+• Implementation. This can be an index (more precisely, an Implementation coded index) into one of 2 tables, as follows:
+        o File table, where that entry says which module in the current assembly holds the TypeDef
+        o ExportedType table, where that entry is the enclosing Type of the current nested Type
+
+The flags are the same ones of the TypeDef.
+
+40 - ManifestResource Table
+
+Each row references an internal or external resource.
+
+Columns:
+
+• Offset (a 4-byte constant)
+• Flags (a 4-byte bitmask of type ManifestResourceAttributes)
+• Name (index into the String heap)
+• Implementation (index into File table, or AssemblyRef table, or null; more precisely, an Implementation coded index)
+
+Available flags are:
+
+typedef enum CorManifestResourceFlags
+{
+    mrVisibilityMask        =   0x0007,
+    mrPublic                =   0x0001,     // The Resource is exported from the Assembly.
+    mrPrivate               =   0x0002,     // The Resource is private to the Assembly.
+} CorManifestResourceFlags;
+
+If the Implementation index is 0, then the referenced resource is internal. We obtain the File Offset of the resource by adding the converted Resources RVA (the one in the CLI Header) to the offset present in this table. I wrote an article you can either find on NTCore or codeproject about Manifest Resources, anyway I quote some parts from the other article to give at least a brief explanation, since this section is absolutely undocumented. There are different kinds of resources referenced by this table, and not all of them can be threated in the same way. Reading a bitmap, for example, is very simple: every Manifest Resource begins with a dword that tells us the size of the actual embedded resource... And that's it... After that, we have our bitmap. Ok, but what about those ".resources" files? For every dialog in a .NET Assembly there is one, this means every resource of a dialog is contained in the dialog's own ".resources" file.
+
+A very brief description of ".resources" files format: "The first dword is a signature which has to be 0xBEEFCACE, otherwise the resources file has to be considered as invalid. Second dword contains the number of readers for this resources file, don't worry, it's something we don't have to talk about... Framework stuff. Third dword is the size of reader types This number is only good for us to skip the string (or strings) that follows, which is something like: "System.Resources.ResourceReader, mscorlibsSystem.Resources.RuntimeResourceSet, mscorlib, Version=1.0.5000.0, Culture=neutral, PublicKeyToken=b77a5c561934e089". It tells the framework the reader to use for this resources file.
+
+Ok, now we got to the interesting part. The next dword tells us the version of the resources file (existing versions are 1 and 2). After the version, another dword gives the number of actual resources in the file. Another dword follows and gives the number of resource types.
+
+To gather the additional information we need, we have to skip the resource types. For each type there's a 7bit encoded integer who gives the size of the string that follows. To decode these kind of integers you have to read every byte until you find one which hasn't the highest bit set and make some additional operations to obtain the final value... For the moment let's just stick to the format. After having skipped the types we have to align our position to an 8 byte base. Then we have a dword * NumberOfResources and each dword contains the hash of a resource. Then we have the same amount of dwords, this time with the offsets of the resource names. Another important dword follows: the Data Section Offset. We need this offset to retrieve resources offsets. After this dword we have the resources names. Well, actually it's not just the names (I just call it this way), every name  (7bit encoded integer + unicode string) is followed by a dword, an offset which you can add to the DataSection offset to retrieve the resource offset. The first thing we find, given a resource offset, is a 7bit encoded integer, which is the type index for the current resource.".
+
+If you're interested in this subject, check out that other article I wrote, since there you can find code that maybe helps you understand better.
+
+41 - NestedClass Table
+
+Each row represents a nested class. You know what a nested class is, right?
+
+The columns are of course only two.
+
+Columns:
+
+• NestedClass (index into the TypeDef table)
+• EnclosingClass (index into the TypeDef table)
+
+42 - GenericParam Table
+
+I quote: "The GenericParam table stores the generic parameters used in generic type definitions and generic methoddefinitions. These generic parameters can be constrained (i.e., generic arguments shall extend some class and/or implement certain interfaces) or unconstrained.".
+
+Columns:
+
+• Number (the 2-byte index of the generic parameter, numbered left-to-right, from zero)
+• Flags (a 2-byte bitmask of type GenericParamAttributes)
+• Owner (an index into the TypeDef or MethodDef table, specifying the Type or Method to which this generic parameter applies; more precisely, a TypeOrMethodDef coded index)
+• Name (a non-null index into the String heap, giving the name for the generic parameter. This is purely descriptive and is used only by source language compilers and by Reflection)
+
+Available flags are:
+
+typedef enum CorGenericParamAttr
+{
+    // Variance of type parameters, only applicable to generic parameters
+    // for generic interfaces and delegates
+    gpVarianceMask          =   0x0003,
+    gpNonVariant            =   0x0000,
+    gpCovariant             =   0x0001,
+    gpContravariant         =   0x0002,
+
+    // Special constraints, applicable to any type parameters
+    gpSpecialConstraintMask =  0x001C,
+    gpNoSpecialConstraint   =   0x0000,
+    gpReferenceTypeConstraint = 0x0004,      // type argument must be a reference type
+    gpNotNullableValueTypeConstraint   =   0x0008, // type argument must be a value type but not Nullable
+    gpDefaultConstructorConstraint = 0x0010, // type argument must have a public default constructor
+} CorGenericParamAttr;
+
+44 - GenericParamConstraint Table
+
+I quote: "The GenericParamConstraint table records the constraints for each generic parameter. Each generic parameter can be constrained to derive from zero or one class. Each generic parameter can be constrained to implement zero or more interfaces. Conceptually, each row in the GenericParamConstraint table is ‘owned’ by a row in the GenericParam table. All rows in the GenericParamConstraint table for a given Owner shall refer to distinct constraints.".
+
+The columns needed are, of course, only two
+
+Columns:
+
+• Owner (an index into the GenericParam table, specifying to which generic parameter this row refers)
+• Constraint (an index into the TypeDef, TypeRef, or TypeSpec tables, specifying from which class this generic parameter is constrained to derive; or which interface this generic parameter is constrained to implement; more precisely, a TypeDefOrRef coded index)
+
+Ok that's all about MetaData tables. The last thing I have to explain, as I promised, is the Method format.
+
+Methods
+Every method contained in an assembly is referenced in the MethodDef table, the RVA tells us where the method is. The method body is made of three or at least two parts:
+
+- A header, which can be a Fat or a Tiny one.
+
+- The code. The code size is specified in the header.
+
+- Extra Sections. These sections are not always present, the header tells us if they are. Those sections can store different kinds of data, but for now they are only used to store Exception Sections. Those sections sepcify try/catch handlers in the code.
+
+The first byte of the method tells us the type of header used. If the method uses a tiny header the CorILMethod_TinyFormat (0x02) flag will be set otherwise the CorILMethod_FatFormat (0x03) flag. If the tiny header is used, the 2 low bits are reserved for flags (header type) and the rest specify the code size. Of course a tiny header can only be used if the code size is less than 64 bytes. In addition it can't be used if maxstack > 8 or local variables or exceptions (extra sections) are present. In all these other cases the fat header is used:
+
+Offset
+
+Size
+
+Field
+
+Description
+
+0
+
+12 (bits)
+
+Flags
+
+Flags (CorILMethod_FatFormat shall be set in bits 0:1).
+
+12 (bits)
+
+4 (bits)
+
+Size
+
+Size of this header expressed as the count of 4-byte integers occupied (currently 3).
+
+2
+
+2
+
+MaxStack
+
+Maximum number of items on the operand stack.
+
+4
+
+4
+
+CodeSize
+
+Size in bytes of the actual method body
+
+8
+
+4
+
+LocalVarSigTok
+
+Meta Data token for a signature describing the layout of the local variables for the method.  0 means there are no local variables present. This field references a stand-alone signature in the MetaData tables, which references an entry in the #Blob stream.
+
+The available flags are:
+
+Flag
+
+Value
+
+Description
+
+CorILMethod_FatFormat
+
+0x3
+
+Method header is fat.
+
+CorILMethod_TinyFormat
+
+0x2
+
+Method header is tiny.
+
+CorILMethod_MoreSects
+
+0x8
+
+More sections follow after this header.
+
+CorILMethod_InitLocals
+
+0x10
+
+Call default constructor on all local variables.
+
+This means that when the CorILMethod_MoreSects is set, extra sections follow the method. To reach the first extra section we have to add the size of the header to the code size and to the file offset of the method, then aligne to the next 4-byte boundary.
+
+Extra sections can have a Fat (1 byte flags, 3 bytes size) or a Small header (1 byte flags, 1 byte size); the size includes the header size. The type of header and the type of section is specified in the first byte, of course:
+
+Flag
+
+Value
+
+Description
+
+CorILMethod_Sect_EHTable
+
+0x1
+
+Exception handling data.
+
+CorILMethod_Sect_OptILTable
+
+0x2
+
+Reserved, shall be 0.
+
+CorILMethod_Sect_FatFormat
+
+0x40
+
+Data format is of the fat variety, meaning there is a 3-byte length.  If not set, the header is small with a  1-byte length
+
+CorILMethod_Sect_MoreSects
+
+0x80
+
+Another data section occurs after this current section
+
+No other types than the exception handling sections are declared (this doesn't mean you shouldn't check the CorILMethod_Sect_EHTable flag). So if the section is small it will be:
+
+Offset
+
+Size
+
+Field
+
+Description
+
+0
+
+1
+
+Kind
+
+Flags as described above.
+
+1
+
+1
+
+DataSize
+
+Size of the data for the block, including the header, say n*12+4.
+
+2
+
+2
+
+Reserved
+
+Padding, always 0.
+
+4
+
+n
+
+Clauses
+
+n small exception clauses.
+
+Otherwise:
+
+Offset
+
+Size
+
+Field
+
+Description
+
+0
+
+1
+
+Kind
+
+Which type of exception block is being used
+
+1
+
+3
+
+DataSize
+
+Size of the data for the block, including the header, say n*24+4.
+
+4
+
+n
+
+Clauses
+
+n fat exception clauses.
+
+The number of the clauses is given byte the DataSize. I mean you have to subtract the size of the header and then divide by the size of a Fat/Small exception clause (this, of course, depends on the kind of header). The small one:
+
+Offset
+
+Size
+
+Field
+
+Description
+
+0
+
+2
+
+Flags
+
+Flags, see below.
+
+2
+
+2
+
+TryOffset
+
+Offset in bytes of try block from start of the header.
+
+4
+
+1
+
+TryLength
+
+Length in bytes of the try block
+
+5
+
+2
+
+HandlerOffset
+
+Location of the handler for this try block
+
+7
+
+1
+
+HandlerLength
+
+Size of the handler code in bytes
+
+8
+
+4
+
+ClassToken
+
+Meta data token for a type-based exception handler
+
+8
+
+4
+
+FilterOffset
+
+Offset in method body for filter-based exception handler
+
+And the fat one:
+
+Offset
+
+Size
+
+Field
+
+Description
+
+0
+
+4
+
+Flags
+
+Flags, see below.
+
+4
+
+4
+
+TryOffset
+
+Offset in bytes of  try block from start of the header.
+
+8
+
+4
+
+TryLength
+
+Length in bytes of the try block
+
+12
+
+4
+
+HandlerOffset
+
+Location of the handler for this try block
+
+16
+
+4
+
+HandlerLength
+
+Size of the handler code in bytes
+
+20
+
+4
+
+ClassToken
+
+Meta data token for a type-based exception handler
+
+20
+
+4
+
+FilterOffset
+
+Offset in method body for filter-based exception handler
+
+Available flags are:
+
+Flag
+
+Value
+
+Description
+
+const uint COR_ILEXCEPTION_CLAUSE_EXCEPTION = 0; // A typed exception clause
+const uint COR_ILEXCEPTION_CLAUSE_FILTER = 1; // An exception filter and handler clause
+const uint COR_ILEXCEPTION_CLAUSE_FINALLY = 2; // A finally clause
+const uint COR_ILEXCEPTION_CLAUSE_FAULT = 4; // Fault clause (finally that is called on exception only)
+
+//The #Blob Stream
+//This stream contains different things as you might have already noticed going through the MetaData tables, but the only thing in this stream which is a bit difficult to understand are signatures. Every signature referenced by the MetaData tables is contained in this stream. What does a signature stand for? For instance, it could tell us the declaration of a method (be it a defined method or a referenced one), this meaning the parameters and the return type of that method. The various kind of signatures are: MethodDefSig, MethodRefSig, FieldSig, PropertySig, LocalVarSig, TypeSpec, MethodSpec.
+
+typedef enum CorElementType
+{
+    ELEMENT_TYPE_END            = 0x0,
+    ELEMENT_TYPE_VOID           = 0x1,
+    ELEMENT_TYPE_BOOLEAN        = 0x2,
+    ELEMENT_TYPE_CHAR           = 0x3,
+    ELEMENT_TYPE_I1             = 0x4,
+    ELEMENT_TYPE_U1             = 0x5,
+    ELEMENT_TYPE_I2             = 0x6,
+    ELEMENT_TYPE_U2             = 0x7,
+    ELEMENT_TYPE_I4             = 0x8,
+    ELEMENT_TYPE_U4             = 0x9,
+    ELEMENT_TYPE_I8             = 0xa,
+    ELEMENT_TYPE_U8             = 0xb,
+    ELEMENT_TYPE_R4             = 0xc,
+    ELEMENT_TYPE_R8             = 0xd,
+    ELEMENT_TYPE_STRING         = 0xe,
+
+    // every type above PTR will be simple type
+
+    ELEMENT_TYPE_PTR            = 0xf,      // PTR
+    ELEMENT_TYPE_BYREF          = 0x10,     // BYREF
+
+    // Please use ELEMENT_TYPE_VALUETYPE. ELEMENT_TYPE_VALUECLASS is deprecated.
+    ELEMENT_TYPE_VALUETYPE      = 0x11,     // VALUETYPE
+
+    ELEMENT_TYPE_CLASS          = 0x12,     // CLASS
+    ELEMENT_TYPE_VAR            = 0x13,     // a class type variable VAR
+    ELEMENT_TYPE_ARRAY          = 0x14,     // MDARRAY     ...   ...
+
+    ELEMENT_TYPE_GENERICINST    = 0x15,     // GENERICINST    ...
+    ELEMENT_TYPE_TYPEDBYREF     = 0x16,     // TYPEDREF  (it takes no args) a typed referece to some other type
+
+    ELEMENT_TYPE_I              = 0x18,     // native integer size
+    ELEMENT_TYPE_U              = 0x19,     // native unsigned integer size
+    ELEMENT_TYPE_FNPTR          = 0x1B,     // FNPTR
+
+    ELEMENT_TYPE_OBJECT         = 0x1C,     // Shortcut for System.Object
+    ELEMENT_TYPE_SZARRAY        = 0x1D,     // Shortcut for single dimension zero lower bound array
+                                            // SZARRAY
+    ELEMENT_TYPE_MVAR           = 0x1e,     // a method type variable MVAR
+
+    // This is only for binding
+    ELEMENT_TYPE_CMOD_REQD      = 0x1F,     // required C modifier : E_T_CMOD_REQD
+    ELEMENT_TYPE_CMOD_OPT       = 0x20,     // optional C modifier : E_T_CMOD_OPT
+
+    // This is for signatures generated internally (which will not be persisted in any way).
+    ELEMENT_TYPE_INTERNAL       = 0x21,     // INTERNAL
+
+    // Note that this is the max of base type excluding modifiers
+    ELEMENT_TYPE_MAX            = 0x22,     // first invalid element type
+    ELEMENT_TYPE_MODIFIER       = 0x40,
+    ELEMENT_TYPE_SENTINEL       = 0x01 | ELEMENT_TYPE_MODIFIER, // sentinel for varargs
+    ELEMENT_TYPE_PINNED         = 0x05 | ELEMENT_TYPE_MODIFIER,
+    ELEMENT_TYPE_R4_HFA         = 0x06 | ELEMENT_TYPE_MODIFIER, // used only internally for R4 HFA types
+    ELEMENT_TYPE_R8_HFA         = 0x07 | ELEMENT_TYPE_MODIFIER, // used only internally for R8 HFA types
+
+} CorElementType;
+
+#endif
+
 
 }
 
 using namespace m2;
 
-const uint metadata_typedef = 2;
-const uint metadata_fielddef = 4;
-const uint metadata_methoddef = 6;
-const uint metadata_eventdef = 0x14
-const uint metadata_propertydef = 0x17;
-const uint metadata_typeref = 1;
-const uint metadata_memberref = 0xA;
-const uint metadata_interfaceimpl = 9;
-const uint metadata_customattribute = 0xC;
-//const uint metadata_customattribute = 0xC;
-
 int
 main (int argc, char** argv)
 {
-	memory_mapped_file_t mmf;
+	loaded_image_t im;
 #define X(x) printf ("%s %#x\n", #x, (int)x)
 X (sizeof (image_dos_header_t));
 X (sizeof (image_file_header_t));
@@ -515,29 +1855,7 @@ X (sizeof (image_section_header_t));
 #undef X
 	try
 	{
-		const char *file_name = argv [1];
-		mmf.read (file_name);
-		void * base = mmf.base;
-		image_dos_header_t* dos = (image_dos_header_t*)base;
-		printf ("mz: %02x%02x\n", ((uchar*)dos) [0], ((uchar*)dos) [1]);
-		if (memcmp (base, "MZ", 2))
-			throw string_format ("incorrect MZ signature %s", file_name);
-		printf ("mz: %c%c\n", ((char*)dos) [0], ((char*)dos) [1]);
-		uint pe_offset = dos->get_pe ();
-		printf ("pe_offset: %#x\n", pe_offset);
-		uchar* pe = (pe_offset + (uchar*)base);
-		printf ("pe: %02x%02x%02x%02x\n", pe [0], pe [1], pe [2], pe [3]);
-		if (memcmp (pe, "PE\0\0", 4))
-			throw string_format ("incorrect PE00 signature %s", file_name);
-		printf ("pe: %c%c\\%d\\%d\n", pe [0], pe [1], pe [2], pe [3]);
-		image_nt_headers_t *nt = (image_nt_headers_t*)pe;
-		printf ("machine:%x\n", nt->FileHeader.Machine);
-		image_optional_header32 *opt32 = (image_optional_header32*)(&nt->OptionalHeader);
-		image_optional_header64 *opt64 = (image_optional_header64*)(&nt->OptionalHeader);
-		int opt_magic = opt32->Magic;
-		release_assertf ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), ("file:%s opt_magic:%x", file_name, opt_magic));
-		printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, opt32, opt64);
-		printf ("opt.rvas:%X\n", opt32 ? opt32->NumberOfRvaAndSizes : opt64->NumberOfRvaAndSizes);
+		im.init (argv [1]);
 	}
 	catch (int er)
 	{
@@ -547,4 +1865,5 @@ X (sizeof (image_section_header_t));
 	{
 		fprintf (stderr, "error %s\n", er.c_str());
 	}
+	return 0;
 }
