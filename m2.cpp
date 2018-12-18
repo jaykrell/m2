@@ -641,9 +641,7 @@ const CodedIndex_t CodedIndex_HasCustomAttribute = { "HasCustomAttribute", 5, 22
     { MethodDef, Field, TypeRef, TypeDef, Param, InterfaceImpl, MemberRef,
       Module, DeclSecurity, Property, Event, StandAloneSig, ModuleRef, TypeSpec,
       Assembly, AssemblyRef, File, ExportedType, ManifestResource,
-      GenericParam,
-      // TODO Mono lacks the next two. How to construct?
-      GenericParamConstraint, MethodSpec }};
+      GenericParam, GenericParamConstraint, MethodSpec }};
 
 const CodedIndex_t CodedIndex_HasFieldMarshal = { "HasFieldMarshal", 1, 2, { Field, Param }};
 
