@@ -981,24 +981,24 @@ struct metadata_customattribute_t // 12
 
 12 - CustomAttribute Table
 
-I think the best description is given by the SDK: "The CustomAttribute table stores data that can be used to instantiate a
+//I think the best description is given by the SDK: "The CustomAttribute table stores data that can be used to instantiate a
 // Custom Attribute (more precisely, an object of the specified Custom Attribute class) at runtime. The column called Type 
 //is slightly misleading – it actually indexes a constructor method – the owner of that constructor method is the Type of the Custom Attribute."
 
-Columns:
+// Columns:
 
-• Parent (index into any metadata table, except the CustomAttribute table itself; more precisely, a HasCustomAttribute coded index)
-• Type (index into the MethodDef or MethodRef table; more precisely, a CustomAttributeType coded index)
-• Value (index into Blob heap)
+// • Parent (index into any metadata table, except the CustomAttribute table itself; more precisely, a HasCustomAttribute coded index)
+// • Type (index into the MethodDef or MethodRef table; more precisely, a CustomAttributeType coded index)
+// • Value (index into Blob heap)
 
 13 - FieldMarshal Table
 
-Each row tells the way a Param or Field should be threated when called from/to unmanaged code.
+// Each row tells the way a Param or Field should be threated when called from/to unmanaged code.
 
-Columns:
+// Columns:
 
-• Parent (index into Field or Param table; more precisely, a HasFieldMarshal coded index)
-• NativeType (index into the Blob heap)
+// • Parent (index into Field or Param table; more precisely, a HasFieldMarshal coded index)
+// • NativeType (index into the Blob heap)
 
 14 - DeclSecurity Table
 
@@ -1012,7 +1012,8 @@ Columns:
 
 15 - ClassLayout Table
 
-Remember "#pragma pack(n)" for VC++? Well, this is kind of the same thing for .NET. It's useful when handing something from managed to unmanaged code.
+//Remember "#pragma pack(n)" for VC++? Well, this is kind of the same thing for .NET. It's
+// useful when handing something from managed to unmanaged code.
 
 Columns:
 
@@ -1031,7 +1032,7 @@ Columns:
 
 17 - StandAloneSig Table
 
-Each row represents a signature that isn't referenced by any other table.
+//Each row represents a signature that isn't referenced by any other table.
 
 Columns:
 
@@ -1154,15 +1155,17 @@ Columns:
 
 28 - ImplMap Table
 
-I quote: "The ImplMap table holds information about unmanaged methods that can be reached from managed code, using PInvoke dispatch.
-Each row of the ImplMap table associates a row in the MethodDef table (MemberForwarded) with the name of a routine (ImportName) in some unmanaged DLL (ImportScope).". This means all the unmanaged functions used by the assembly are listed here.
+// I quote: "The ImplMap table holds information about unmanaged methods that can be reached from managed code,
+// using PInvoke dispatch. Each row of the ImplMap table associates a row in the MethodDef table (MemberForwarded)
+//  with the name of a routine (ImportName) in some unmanaged DLL (ImportScope).". This means all the unmanaged functions used by the assembly are listed here.
 
-Columns:
+// Columns:
 
-• MappingFlags (a 2-byte bitmask of type PInvokeAttributes)
-• MemberForwarded (index into the Field or MethodDef table; more precisely, a MemberForwarded coded index. However, it only ever indexes the MethodDef table, since Field export is not supported)
-• ImportName (index into the String heap)
-• ImportScope (index into the ModuleRef table)
+// • MappingFlags (a 2-byte bitmask of type PInvokeAttributes)
+// • MemberForwarded (index into the Field or MethodDef table; more precisely, a MemberForwarded coded index.
+//  However, it only ever indexes the MethodDef table, since Field export is not supported)
+// • ImportName (index into the String heap)
+// • ImportScope (index into the ModuleRef table)
 
 Available flags are:
 
@@ -1212,7 +1215,7 @@ Columns:
 
 32 - Assembly Table
 
-It's a one-row table. It stores information about the current assembly.
+//It's a one-row table. It stores information about the current assembly.
 
 Columns:
 
@@ -1250,7 +1253,7 @@ The PublicKey is != 0, only if the StrongName Signature is present and the afPub
 
 33 - AssemblyProcessor Table
 
-This table is ignored by the CLI and shouldn't be present in an assembly.
+//This table is ignored by the CLI and shouldn't be present in an assembly.
 
 Columns:
 
@@ -1258,7 +1261,7 @@ Columns:
 
 34 - AssemblyOS Table
 
-This table is ignored by the CLI and shouldn't be present in an assembly.
+//This table is ignored by the CLI and shouldn't be present in an assembly.
 
 Columns:
 
@@ -1283,7 +1286,7 @@ The flags are the same ones of the Assembly table.
 
 36 - AssemblyRefProcessor Table
 
-This table is ignored by the CLI and shouldn't be present in an assembly.
+//This table is ignored by the CLI and shouldn't be present in an assembly.
 
 Columns:
 
@@ -1292,7 +1295,7 @@ Columns:
 
 37 - AssemblyRefOS Table
 
-This table is ignored by the CLI and shouldn't be present in an assembly.
+//This table is ignored by the CLI and shouldn't be present in an assembly.
 
 Columns:
 
@@ -1321,12 +1324,17 @@ typedef enum CorFileFlags
 
 39 - ExportedType Table
 
-I quote: "The ExportedType table holds a row for each type, defined within other modules of this Assembly, that is exported out of this Assembly. In essence, it stores TypeDef row numbers of all types that are marked public in other modules that this Assembly comprises.". Be careful, this doesn't mean that when an assembly uses a class contained in my assembly I export that type. In fact, I haven't seen yet this table in an assembly.
+//I quote: "The ExportedType table holds a row for each type, defined within other modules of this Assembly,
+//that is exported out of this Assembly. In essence, it stores TypeDef row numbers of all types that are marked
+//public in other modules that this Assembly comprises.". Be careful, this doesn't mean that when an assembly
+// uses a class contained in my assembly I export that type. In fact, I haven't seen yet this table in an assembly.
 
 Columns:
 
 • Flags (a 4-byte bitmask of type TypeAttributes)
-• TypeDefId (4-byte index into a TypeDef table of another module in this Assembly). This field is used as a hint only. If the entry in the target TypeDef table matches the TypeName and TypeNamespace entries in this table, resolution has succeeded. But if there is a mismatch, the CLI shall fall back to a search of the target TypeDef table
+• TypeDefId (4-byte index into a TypeDef table of another module in this Assembly). This field is used as a
+// hint only. If the entry in the target TypeDef table matches the TypeName and TypeNamespace entries in
+//this table, resolution has succeeded. But if there is a mismatch, the CLI shall fall back to a search of the target TypeDef table
 • TypeName (index into the String heap)
 • TypeNamespace (index into the String heap)
 • Implementation. This can be an index (more precisely, an Implementation coded index) into one of 2 tables, as follows:
@@ -1355,15 +1363,42 @@ typedef enum CorManifestResourceFlags
     mrPrivate               =   0x0002,     // The Resource is private to the Assembly.
 } CorManifestResourceFlags;
 
-If the Implementation index is 0, then the referenced resource is internal. We obtain the File Offset of the resource by adding the converted Resources RVA (the one in the CLI Header) to the offset present in this table. I wrote an article you can either find on NTCore or codeproject about Manifest Resources, anyway I quote some parts from the other article to give at least a brief explanation, since this section is absolutely undocumented. There are different kinds of resources referenced by this table, and not all of them can be threated in the same way. Reading a bitmap, for example, is very simple: every Manifest Resource begins with a dword that tells us the size of the actual embedded resource... And that's it... After that, we have our bitmap. Ok, but what about those ".resources" files? For every dialog in a .NET Assembly there is one, this means every resource of a dialog is contained in the dialog's own ".resources" file.
+//If the Implementation index is 0, then the referenced resource is internal. We obtain the File Offset of
+// the resource by adding the converted Resources RVA (the one in the CLI Header) to the offset present in
+//this table. I wrote an article you can either find on NTCore or codeproject about Manifest Resources,
+// anyway I quote some parts from the other article to give at least a brief explanation, since this section
+//is absolutely undocumented. There are different kinds of resources referenced by this table, and not all
+//of them can be threated in the same way. Reading a bitmap, for example, is very simple: every Manifest
+//Resource begins with a dword that tells us the size of the actual embedded resource... And that's it...
+//After that, we have our bitmap. Ok, but what about those ".resources" files? For every dialog in a .NET
+// Assembly there is one, this means every resource of a dialog is contained in the dialog's own ".resources" file.
 
-A very brief description of ".resources" files format: "The first dword is a signature which has to be 0xBEEFCACE, otherwise the resources file has to be considered as invalid. Second dword contains the number of readers for this resources file, don't worry, it's something we don't have to talk about... Framework stuff. Third dword is the size of reader types This number is only good for us to skip the string (or strings) that follows, which is something like: "System.Resources.ResourceReader, mscorlibsSystem.Resources.RuntimeResourceSet, mscorlib, Version=1.0.5000.0, Culture=neutral, PublicKeyToken=b77a5c561934e089". It tells the framework the reader to use for this resources file.
+//A very brief description of ".resources" files format: "The first dword is a signature which has to be
+//0xBEEFCACE, otherwise the resources file has to be considered as invalid. Second dword contains the
+//number of readers for this resources file, don't worry, it's something we don't have to talk about...
+//Framework stuff. Third dword is the size of reader types This number is only good for us to skip
+// the string (or strings) that follows, which is something like: "System.Resources.ResourceReader,
+//mscorlibsSystem.Resources.RuntimeResourceSet, mscorlib, Version=1.0.5000.0, Culture=neutral, PublicKeyToken=b77a5c561934e089".
+//It tells the framework the reader to use for this resources file.
 
-Ok, now we got to the interesting part. The next dword tells us the version of the resources file (existing versions are 1 and 2). After the version, another dword gives the number of actual resources in the file. Another dword follows and gives the number of resource types.
+// Ok, now we got to the interesting part. The next dword tells us the version of the resources file
+// (existing versions are 1 and 2). After the version, another dword gives the number of actual resources in the
+// file. Another dword follows and gives the number of resource types.
 
-To gather the additional information we need, we have to skip the resource types. For each type there's a 7bit encoded integer who gives the size of the string that follows. To decode these kind of integers you have to read every byte until you find one which hasn't the highest bit set and make some additional operations to obtain the final value... For the moment let's just stick to the format. After having skipped the types we have to align our position to an 8 byte base. Then we have a dword * NumberOfResources and each dword contains the hash of a resource. Then we have the same amount of dwords, this time with the offsets of the resource names. Another important dword follows: the Data Section Offset. We need this offset to retrieve resources offsets. After this dword we have the resources names. Well, actually it's not just the names (I just call it this way), every name  (7bit encoded integer + unicode string) is followed by a dword, an offset which you can add to the DataSection offset to retrieve the resource offset. The first thing we find, given a resource offset, is a 7bit encoded integer, which is the type index for the current resource.".
+//To gather the additional information we need, we have to skip the resource types. For each type
+//there's a 7bit encoded integer who gives the size of the string that follows. To decode these kind of
+// integers you have to read every byte until you find one which hasn't the highest bit set and make some
+// additional operations to obtain the final value... For the moment let's just stick to the format. After
+// having skipped the types we have to align our position to an 8 byte base. Then we have a
+// dword * NumberOfResources and each dword contains the hash of a resource. Then we have the same amount of
+// dwords, this time with the offsets of the resource names. Another important dword follows: the Data Section
+// Offset. We need this offset to retrieve resources offsets. After this dword we have the resources names.
+// Well, actually it's not just the names (I just call it this way), every name  (7bit encoded integer + unicode
+// string) is followed by a dword, an offset which you can add to the DataSection offset to retrieve the resource offset.
+// The first thing we find, given a resource offset, is a 7bit encoded integer, which is the type index for the current resource.".
 
-If you're interested in this subject, check out that other article I wrote, since there you can find code that maybe helps you understand better.
+// If you are interested in this subject, check out that other article I wrote, since there you
+// can find code that maybe helps you understand better.
 
 41 - NestedClass Table
 
@@ -1378,9 +1413,9 @@ Columns:
 
 42 - GenericParam Table
 
-I quote: "The GenericParam table stores the generic parameters used in generic type definitions
+I quote: The GenericParam table stores the generic parameters used in generic type definitions
 and generic methoddefinitions. These generic parameters can be constrained (i.e., generic arguments
-shall extend some class and/or implement certain interfaces) or unconstrained.".
+shall extend some class and/or implement certain interfaces) or unconstrained..
 
 Columns:
 
@@ -1410,27 +1445,40 @@ typedef enum CorGenericParamAttr
 
 44 - GenericParamConstraint Table
 
-I quote: "The GenericParamConstraint table records the constraints for each generic parameter. Each generic parameter can be constrained to derive from zero or one class. Each generic parameter can be constrained to implement zero or more interfaces. Conceptually, each row in the GenericParamConstraint table is ‘owned’ by a row in the GenericParam table. All rows in the GenericParamConstraint table for a given Owner shall refer to distinct constraints.".
+// I quote: "The GenericParamConstraint table records the constraints for each generic parameter.
+// Each generic parameter can be constrained to derive from zero or one class. Each generic parameter
+// can be constrained to implement zero or more interfaces. Conceptually, each row in the GenericParamConstraint
+//  table is ‘owned’ by a row in the GenericParam table. All rows in the GenericParamConstraint table for a
+// given Owner shall refer to distinct constraints.".
 
 The columns needed are, of course, only two
 
 Columns:
 
-• Owner (an index into the GenericParam table, specifying to which generic parameter this row refers)
-• Constraint (an index into the TypeDef, TypeRef, or TypeSpec tables, specifying from which class this generic parameter is constrained to derive; or which interface this generic parameter is constrained to implement; more precisely, a TypeDefOrRef coded index)
+// • Owner (an index into the GenericParam table, specifying to which generic parameter this row refers)
+// • Constraint (an index into the TypeDef, TypeRef, or TypeSpec tables, specifying from which class this
+// generic parameter is constrained to derive; or which interface this generic parameter is constrained
+// to implement; more precisely, a TypeDefOrRef coded index)
 
-Ok that's all about MetaData tables. The last thing I have to explain, as I promised, is the Method format.
+// Ok that's all about MetaData tables. The last thing I have to explain, as I promised, is the Method format.
 
-Methods
-Every method contained in an assembly is referenced in the MethodDef table, the RVA tells us where the method is. The method body is made of three or at least two parts:
+// Methods
+// Every method contained in an assembly is referenced in the MethodDef table, the RVA tells us where
+// the method is. The method body is made of three or at least two parts:
 
-- A header, which can be a Fat or a Tiny one.
+// - A header, which can be a Fat or a Tiny one.
 
-- The code. The code size is specified in the header.
+// - The code. The code size is specified in the header.
 
-- Extra Sections. These sections are not always present, the header tells us if they are. Those sections can store different kinds of data, but for now they are only used to store Exception Sections. Those sections sepcify try/catch handlers in the code.
+// - Extra Sections. These sections are not always present, the header tells us if they are. Those sections
+//  can store different kinds of data, but for now they are only used to store Exception Sections.
+// Those sections sepcify try/catch handlers in the code.
 
-The first byte of the method tells us the type of header used. If the method uses a tiny header the CorILMethod_TinyFormat (0x02) flag will be set otherwise the CorILMethod_FatFormat (0x03) flag. If the tiny header is used, the 2 low bits are reserved for flags (header type) and the rest specify the code size. Of course a tiny header can only be used if the code size is less than 64 bytes. In addition it can't be used if maxstack > 8 or local variables or exceptions (extra sections) are present. In all these other cases the fat header is used:
+// The first byte of the method tells us the type of header used. If the method uses a tiny header the CorILMethod_TinyFormat (0x02)
+//  flag will be set otherwise the CorILMethod_FatFormat (0x03) flag. If the tiny header is used, the 2 low bits are
+// reserved for flags (header type) and the rest specify the code size. Of course a tiny header can only be used if
+// the code size is less than 64 bytes. In addition it cannot be used if maxstack > 8 or local variables or exceptions
+//  (extra sections) are present. In all these other cases the fat header is used:
 
 Offset
 
@@ -1546,7 +1594,8 @@ CorILMethod_Sect_MoreSects
 
 Another data section occurs after this current section
 
-No other types than the exception handling sections are declared (this doesn't mean you shouldn't check the CorILMethod_Sect_EHTable flag). So if the section is small it will be:
+// No other types than the exception handling sections are declared (this doesn't mean
+// you shouldn't check the CorILMethod_Sect_EHTable flag). So if the section is small it will be:
 
 Offset
 
