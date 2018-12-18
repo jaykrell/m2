@@ -616,9 +616,15 @@ typedef method_header_fat_t
 struct codedindex_t
 {
 	const char *name;
-	int8 tag_size : 3; // max5?
-	int8 count : 5; // max20?
-	int8 * map [20];
+	uint8 tag_size : 3; // max5?
+	uint8 count : 5; // max20?
+	uint8 * map [20];
+};
+
+struct heapindex_t
+{
+	const char *heap_name; // string, guid, etc.
+	uint8 heap_index; // dynamic
 };
 
 codedindex_t codedindex_typedef_or_ref =
@@ -1862,6 +1868,7 @@ struct metadata_field_type_t
 	const char *name;
 	int fixed_size;
 	codedindex_t * codedindex;
+	void (*decode)(...);
 };
 
 metadata_field_type_t metadata_field_type_int8 = {"int8", 1};
@@ -1872,21 +1879,22 @@ metadata_field_type_t metadata_field_type_uint8 = {"uint8", 1};
 metadata_field_type_t metadata_field_type_uint16 = {"uint16", 2};
 metadata_field_type_t metadata_field_type_uint32 = {"uint32", 4};
 metadata_field_type_t metadata_field_type_uint64 = {"uint64", 8};
-metadata_field_type_t metadata_field_type_resolutionscope = {"resolutionscope", 
+metadata_field_type_t metadata_field_type_resolutionscope = {"resolutionscope"};
+metadata_field_type_t metadata_field_type_string = {"string"};
+metadata_field_type_t metadata_field_type_guid = {"guid"};
+
 struct metadata_field_t
 {
 	const char *name;
-	int8 size;
-	int8 tag_size;
-//	int8 *stream_map; // dynamic
+	metadata_field_type_t *type;
 };
 
 struct metadata_table_schema_t
 {
 	const char *name;
-	int count;
+	int field_count;
 	metadata_field_t* fields;
-	int size; // dynamic, might live elsewhere
+	int size; // dynamic, might live elsewhere (per assembly)
 };
 
 const int guid = -1;
