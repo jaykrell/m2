@@ -594,7 +594,7 @@ struct method_header_tiny_t
 	uint8 GetSize () { return Value >> 2; }
 };
 
-typedef method_header_fat_t
+struct method_header_fat_t
 {
 	uint16 FlagsAndHeaderSize;
 	uint16 MaxStack;
@@ -618,7 +618,7 @@ struct codedindex_t
 	const char *name;
 	uint8 tag_size : 3; // max5?
 	uint8 count : 5; // max20?
-	uint8 * map [20];
+	uint8 map [20];
 };
 
 struct heapindex_t
@@ -632,7 +632,7 @@ codedindex_t codedindex_typedef_or_ref =
 	"TypeDefOrRef",
 	2,
 	3,
-	{ metadata_TypeDef, metadata_TypeRef, metadata_TypeSpec };
+	{ TypeDef, TypeRef, TypeSpec },
 };
 
 enum class TypeDefOrRef : uint8 // 2 bit tag
@@ -811,9 +811,9 @@ struct metadata_typedef_t // 2
 	uint32 MethodList; // similar to previous
 };
 
-struct metadata_field_t // 4
+struct metadata_fieldtable_t // 4
 {
-	class enum flags_t : uint16
+	enum class flags_t : uint16
 	{
 	    // member access mask - Use this mask to retrieve accessibility information.
 	    FieldAccessMask           =   0x0007,
@@ -929,7 +929,7 @@ struct metadata_methoddef_t // 6
 
 struct metadata_param_t // 8
 {
-	enum class flags_t : uin16
+	enum class flags_t : uint16
 	{
 	    In                        =   0x0001,     // Param is [In]
 	    Out                       =   0x0002,     // Param is [out]
@@ -976,7 +976,7 @@ struct metadata_customattribute_t // 12
 	uint32 Parent; // HasCustomAttribute (5 bits)
 	uint32 Type; // MethodDef or MethodRef, CustomAttributeType
 	uint32 Value; // blob
-}
+};
 
 #if 0 // todo
 
@@ -1871,22 +1871,22 @@ struct metadata_field_type_t
 	void (*decode)(...);
 };
 
-metadata_field_type_t metadata_field_type_int8 = {"int8", 1};
-metadata_field_type_t metadata_field_type_int16 = {"int16", 2};
-metadata_field_type_t metadata_field_type_int32 = {"int32", 4};
-metadata_field_type_t metadata_field_type_int64 = {"int64", 8};
-metadata_field_type_t metadata_field_type_uint8 = {"uint8", 1};
-metadata_field_type_t metadata_field_type_uint16 = {"uint16", 2};
-metadata_field_type_t metadata_field_type_uint32 = {"uint32", 4};
-metadata_field_type_t metadata_field_type_uint64 = {"uint64", 8};
-metadata_field_type_t metadata_field_type_resolutionscope = {"resolutionscope"};
-metadata_field_type_t metadata_field_type_string = {"string"};
-metadata_field_type_t metadata_field_type_guid = {"guid"};
+const metadata_field_type_t metadata_field_type_int8 = {"int8", 1};
+const metadata_field_type_t metadata_field_type_int16 = {"int16", 2};
+const metadata_field_type_t metadata_field_type_int32 = {"int32", 4};
+const metadata_field_type_t metadata_field_type_int64 = {"int64", 8};
+const metadata_field_type_t metadata_field_type_uint8 = {"uint8", 1};
+const metadata_field_type_t metadata_field_type_uint16 = {"uint16", 2};
+const metadata_field_type_t metadata_field_type_uint32 = {"uint32", 4};
+const metadata_field_type_t metadata_field_type_uint64 = {"uint64", 8};
+const metadata_field_type_t metadata_field_type_resolutionscope = {"resolutionscope"};
+const metadata_field_type_t metadata_field_type_string = {"string"};
+const metadata_field_type_t metadata_field_type_guid = {"guid"};
 
 struct metadata_field_t
 {
-	const char *name;
-	metadata_field_type_t *type;
+	const char* name;
+	const metadata_field_type_t& type;
 };
 
 struct metadata_table_schema_t
@@ -1901,22 +1901,24 @@ const int guid = -1;
 const int string = -2;
 const int resolutionscope = -3;
 
-metadata_field_t metata_row_schema_module =
+metadata_field_t metata_row_schema_module_fields [ ] =
 {
-	{ "Generation", 2 },
-	{ "Name", string},
-	{ "Mvid", guid},
-	{ "EncId", guid},
-	{ "EncBaseId", guid};
+	{ "Generation", metadata_field_type_uint16 },
+	{ "Name", metadata_field_type_string },
+	{ "Mvid", metadata_field_type_guid },
+	{ "EncId", metadata_field_type_guid },
+	{ "EncBaseId", metadata_field_type_guid },
 };
 
-metadata_table_schema_t metata_row_schema_module = { "module", CountOf (metata_row_schema_module), metata_row_schema_module };
+#define CountOf(x) (sizeof (x) / sizeof ((x)[0])) // TODO
 
-metadata_row_schema_t metata_row_schema_typeref =
+metadata_table_schema_t metata_row_schema_module = { "module", CountOf (metata_row_schema_module_fields), metata_row_schema_module_fields };
+
+metadata_field_t metata_row_schema_typeref_fields [ ] =
 {
-	{ "ResolutionScope", resolutionscope },
-	{ "TypeName", string},
-	{ "TypeNamespace", string},
+	{ "ResolutionScope", metadata_field_type_resolutionscope },
+	{ "TypeName", metadata_field_type_string },
+	{ "TypeNamespace", metadata_field_type_string },
 };
 
 struct metadata_table_t
