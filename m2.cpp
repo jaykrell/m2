@@ -573,8 +573,9 @@ const uint8 File = 38;
 const uint8 ExportedType = 39;
 const uint8 ManifestResource = 40; // 0x28
 const uint8 NestedClass = 41;
-const uint8 GenericParam = 42;
-const uint8 GenericParamConstraint = 44;
+const uint8 GenericParam = 42; // 0x2A
+const uint8 MethodSpec = 0x2B;
+const uint8 GenericParamConstraint = 44; // 0x2C
 
 // TODO enum
 const uint8 CorILMethod_TinyFormat = 2;
@@ -614,7 +615,7 @@ struct method_header_fat_t
 
 struct CodedIndex_t
 {
-    const char name [16];
+    const char name [24];
     uint8 tag_size; // max5?
     uint8 count; // max21?
     uint8 map [22]; // TODO wastes bytes but ok? pointer will 8 anyway,
@@ -636,7 +637,7 @@ const CodedIndex_t CodedIndex_ResolutionScope = { "ResolutionScope", 2, 4, { Mod
 const CodedIndex_t CodedIndex_HasConstant = { "HasConstant", 2, 3,
     { Field, Param, Property } };
 
-const CodedIndex_t CodedIndex_HasCustomAttribute = { "HasCustomAttribute", 5, 21,
+const CodedIndex_t CodedIndex_HasCustomAttribute = { "HasCustomAttribute", 5, 22,
     { MethodDef, Field, TypeRef, TypeDef, Param, InterfaceImpl, MemberRef,
       Module, DeclSecurity, Property, Event, StandAloneSig, ModuleRef, TypeSpec,
       Assembly, AssemblyRef, File, ExportedType, ManifestResource,
@@ -644,7 +645,7 @@ const CodedIndex_t CodedIndex_HasCustomAttribute = { "HasCustomAttribute", 5, 21
       // TODO Mono lacks the next two. How to construct?
       GenericParamConstraint, MethodSpec }};
 
-const CodedIndex_t CodedIndex_HasFieldMarshal = { "HasFieldMarshal", 1, 2, { FieldDef, ParamDef }};
+const CodedIndex_t CodedIndex_HasFieldMarshal = { "HasFieldMarshal", 1, 2, { Field, Param }};
 
 const CodedIndex_t CodedIndex_HasDeclSecurity = { "HasDeclSecurity", 2, 3, {TypeDef, MethodDef, Assembly }};
 
@@ -687,13 +688,6 @@ struct metadata_module_t // 0
     uint32 Mvid; // index into guid heap
     uint32 EncId; // reserved, Guid, 0
     uint32 EncBaseId; // reserved, Guid, 0
-};
-
-struct metadata_typeref_t // 1
-{
-    uint32 ResolutionScope; // Module or ModuleRef or AssemblyRef or TypeRef
-    uint32 TypeName; // string
-    uint32 TypeNamespace; // string
 };
 
 struct metadata_typedef_t // 2
@@ -1887,11 +1881,14 @@ struct metadata_table_schema_t
 {
     const char *name;
     uint field_count;
-    metadata_field_t* fields;
+    const metadata_field_t* fields;
     uint size; // dynamic, might live elsewhere (per assembly)
 };
 
-metadata_field_t metata_row_schema_module_fields [ ] =
+#define CountOf(x) (sizeof (x) / sizeof ((x)[0])) // TODO
+
+// 0
+const metadata_field_t metata_row_schema_module_fields [ ] =
 {
     { "Generation", metadata_field_type_uint16 },
     { "Name", metadata_field_type_string },
@@ -1899,17 +1896,16 @@ metadata_field_t metata_row_schema_module_fields [ ] =
     { "EncId", metadata_field_type_guid },
     { "EncBaseId", metadata_field_type_guid },
 };
-
-#define CountOf(x) (sizeof (x) / sizeof ((x)[0])) // TODO
-
 metadata_table_schema_t metata_row_schema_module = { "module", CountOf (metata_row_schema_module_fields), metata_row_schema_module_fields };
 
-metadata_field_t metata_row_schema_typeref_fields [ ] =
+// 1
+const metadata_field_t metata_row_schema_typeref_fields [ ] =
 {
     { "ResolutionScope", metadata_field_type_resolutionscope },
     { "TypeName", metadata_field_type_string },
     { "TypeNamespace", metadata_field_type_string },
 };
+metadata_table_schema_t metata_row_schema_typeref = { "typeref", CountOf (metata_row_schema_typeref_fields), metata_row_schema_typeref_fields };
 
 struct metadata_table_t
 {
