@@ -489,7 +489,6 @@ struct memory_mapped_file_t
 #else
 	fd_t file;
 #endif
-	memory_mapped_file_t () : base (0), size (0) { }
 	//memory_mapped_file_t () { }
 
 	~memory_mapped_file_t ()
