@@ -101,27 +101,27 @@ namespace m2
 std::string
 string_vformat (const char *format, va_list va)
 {
-	// TODO no double buffer
-	// TODO Win32?
-	// TOOD rewrite
-	// TODO %x
-	va_list va2;
-	va_copy (va2, va); //C99
-	std::vector <char> buf (1 + vsnprintf (0, 0, format, va));
-	vsnprintf (&buf [0], buf.size (), format, va2);
-	va_end (va);
-	va_end (va2);
-	return std::string (&buf [0]);
+    // TODO no double buffer
+    // TODO Win32?
+    // TOOD rewrite
+    // TODO %x
+    va_list va2;
+    va_copy (va2, va); //C99
+    std::vector <char> buf (1 + vsnprintf (0, 0, format, va));
+    vsnprintf (&buf [0], buf.size (), format, va2);
+    va_end (va);
+    va_end (va2);
+    return std::string (&buf [0]);
 }
 
 std::string
 string_format (const char *format, ...)
 {
-	va_list va;
-	va_start (va, format);
-	std::string a = string_vformat (format, va);
-	va_end (va);
-	return a;
+    va_list va;
+    va_start (va, format);
+    std::string a = string_vformat (format, va);
+    va_end (va);
+    return a;
 }
 
 }
@@ -129,27 +129,27 @@ string_format (const char *format, ...)
 void
 assertf_failed (const char * format, ...)
 {
-	va_list args;
-	va_start (args, format);
-	fputs (("assertf_failed:" + m2::string_vformat (format, args) + "\n").c_str (), stderr);
-	assert (0);
-	abort ();
+    va_list args;
+    va_start (args, format);
+    fputs (("assertf_failed:" + m2::string_vformat (format, args) + "\n").c_str (), stderr);
+    assert (0);
+    abort ();
 }
 
 void
 assert_failed (const char * expr)
 {
-	fprintf (stderr, "assert_failed:%s\n", expr);
-	assert (0);
-	abort ();
+    fprintf (stderr, "assert_failed:%s\n", expr);
+    assert (0);
+    abort ();
 }
 
 #define release_assert(x)     ((x) || (assert_failed (!#x), (int)0))
 #define release_assertf(x, y) ((x) || ((assertf_failed y), 0))
 #ifdef NDEBUG
-#define assertf(x, y)      	/* nothing */
+#define assertf(x, y)          /* nothing */
 #else
-#define assertf(x, y)       	(release_assertf (x, y))
+#define assertf(x, y)           (release_assertf (x, y))
 #endif
 
 namespace m2
@@ -158,14 +158,14 @@ namespace m2
 void
 throw_int (int i, const char* a = "")
 {
-	throw string_format ("error %d %s\n", i, a);
+    throw string_format ("error %d %s\n", i, a);
 
 }
 
 void
 throw_errno (const char* a = "")
 {
-	throw_int (errno, a);
+    throw_int (errno, a);
 
 }
 
@@ -173,7 +173,7 @@ throw_errno (const char* a = "")
 void
 throw_LastError (const char* a = "")
 {
-	throw_int (GetLastError (), a);
+    throw_int (GetLastError (), a);
 
 }
 #endif
@@ -181,14 +181,14 @@ throw_LastError (const char* a = "")
 uint16
 unpack2le (const void *a)
 {
-	uchar* b = (uchar*)a;
-	return b [1] * 256 + b [0];
+    uchar* b = (uchar*)a;
+    return b [1] * 256 + b [0];
 }
 
 uint32
 unpack4le (const void *a)
 {
-	return unpack2le (a) + unpack2le ((char*)a + 2);
+    return unpack2le (a) + unpack2le ((char*)a + 2);
 }
 
 unsigned
@@ -199,142 +199,142 @@ unpack (char (&a)[4]) { return a[1] * 256 | a[0]; }
 
 struct image_dos_header_t
 {
-	union {
-		struct {
-			uint16 mz;
-			uint8 pad [64-6];
-			uint32 pe;
-		};
-		char a [64];
-	};
-	
-	bool check_sig () { return a [0] == 'M' && a [1] == 'Z'; }
-	unsigned get_pe () { return unpack4le (&a [60]); }
+    union {
+        struct {
+            uint16 mz;
+            uint8 pad [64-6];
+            uint32 pe;
+        };
+        char a [64];
+    };
+    
+    bool check_sig () { return a [0] == 'M' && a [1] == 'Z'; }
+    unsigned get_pe () { return unpack4le (&a [60]); }
 };
 
 struct image_file_header_t
 {
-	uint16 Machine;
-	uint16 NumberOfSections;
-	uint32 TimeDateStamp;
-	uint32 PointerToSymbolTable;
-	uint32 NumberOfSymbols;
-	uint16 SizeOfOptionalHeader;
-	uint16 Characteristics;
+    uint16 Machine;
+    uint16 NumberOfSections;
+    uint32 TimeDateStamp;
+    uint32 PointerToSymbolTable;
+    uint32 NumberOfSymbols;
+    uint16 SizeOfOptionalHeader;
+    uint16 Characteristics;
 };
 
 struct image_data_directory_t
 {
-	uint32 VirtualAddress;
-	uint32 Size;
+    uint32 VirtualAddress;
+    uint32 Size;
 };
 
 struct image_optional_header32
 {
-	uint16 Magic;
-	uint8  MajorLinkerVersion;
-	uint8  MinorLinkerVersion;
-	uint32 SizeOfCode;
-	uint32 SizeOfInitializedData;
-	uint32 SizeOfUninitializedData;
-	uint32 AddressOfEntryPoint;
-	uint32 BaseOfCode;
-	uint32 BaseOfData;
-	uint32 ImageBase;
-	uint32 SectionAlignment;
-	uint32 FileAlignment;
-	uint16 MajorOperatingSystemVersion;
-	uint16 MinorOperatingSystemVersion;
-	uint16 MajorImageVersion;
-	uint16 MinorImageVersion;
-	uint16 MajorSubsystemVersion;
-	uint16 MinorSubsystemVersion;
-	uint32 Win32VersionValue;
-	uint32 SizeOfImage;
-	uint32 SizeOfHeaders;
-	uint32 CheckSum;
-	uint16 Subsystem;
-	uint16 DllCharacteristics;
-	uint32 SizeOfStackReserve;
-	uint32 SizeOfStackCommit;
-	uint32 SizeOfHeapReserve;
-	uint32 SizeOfHeapCommit;
-	uint32 LoaderFlags;
-	uint32 NumberOfRvaAndSizes;
-	image_data_directory_t DataDirectory[16];
+    uint16 Magic;
+    uint8  MajorLinkerVersion;
+    uint8  MinorLinkerVersion;
+    uint32 SizeOfCode;
+    uint32 SizeOfInitializedData;
+    uint32 SizeOfUninitializedData;
+    uint32 AddressOfEntryPoint;
+    uint32 BaseOfCode;
+    uint32 BaseOfData;
+    uint32 ImageBase;
+    uint32 SectionAlignment;
+    uint32 FileAlignment;
+    uint16 MajorOperatingSystemVersion;
+    uint16 MinorOperatingSystemVersion;
+    uint16 MajorImageVersion;
+    uint16 MinorImageVersion;
+    uint16 MajorSubsystemVersion;
+    uint16 MinorSubsystemVersion;
+    uint32 Win32VersionValue;
+    uint32 SizeOfImage;
+    uint32 SizeOfHeaders;
+    uint32 CheckSum;
+    uint16 Subsystem;
+    uint16 DllCharacteristics;
+    uint32 SizeOfStackReserve;
+    uint32 SizeOfStackCommit;
+    uint32 SizeOfHeapReserve;
+    uint32 SizeOfHeapCommit;
+    uint32 LoaderFlags;
+    uint32 NumberOfRvaAndSizes;
+    image_data_directory_t DataDirectory[16];
 };
 
 struct image_optional_header64
 {
-	uint16 Magic;
-	uint8  MajorLinkerVersion;
-	uint8  MinorLinkerVersion;
-	uint32 SizeOfCode;
-	uint32 SizeOfInitializedData;
-	uint32 SizeOfUninitializedData;
-	uint32 AddressOfEntryPoint;
-	uint32 BaseOfCode;
-	uint64 ImageBase;
-	uint32 SectionAlignment;
-	uint32 FileAlignment;
-	uint16 MajorOperatingSystemVersion;
-	uint16 MinorOperatingSystemVersion;
-	uint16 MajorImageVersion;
-	uint16 MinorImageVersion;
-	uint16 MajorSubsystemVersion;
-	uint16 MinorSubsystemVersion;
-	uint32 Win32VersionValue;
-	uint32 SizeOfImage;
-	uint32 SizeOfHeaders;
-	uint32 CheckSum;
-	uint16 Subsystem;
-	uint16 DllCharacteristics;
-	uint64 SizeOfStackReserve;
-	uint64 SizeOfStackCommit;
-	uint64 SizeOfHeapReserve;
-	uint64 SizeOfHeapCommit;
-	uint32 LoaderFlags;
-	uint32 NumberOfRvaAndSizes;
-	image_data_directory_t DataDirectory[16];
+    uint16 Magic;
+    uint8  MajorLinkerVersion;
+    uint8  MinorLinkerVersion;
+    uint32 SizeOfCode;
+    uint32 SizeOfInitializedData;
+    uint32 SizeOfUninitializedData;
+    uint32 AddressOfEntryPoint;
+    uint32 BaseOfCode;
+    uint64 ImageBase;
+    uint32 SectionAlignment;
+    uint32 FileAlignment;
+    uint16 MajorOperatingSystemVersion;
+    uint16 MinorOperatingSystemVersion;
+    uint16 MajorImageVersion;
+    uint16 MinorImageVersion;
+    uint16 MajorSubsystemVersion;
+    uint16 MinorSubsystemVersion;
+    uint32 Win32VersionValue;
+    uint32 SizeOfImage;
+    uint32 SizeOfHeaders;
+    uint32 CheckSum;
+    uint16 Subsystem;
+    uint16 DllCharacteristics;
+    uint64 SizeOfStackReserve;
+    uint64 SizeOfStackCommit;
+    uint64 SizeOfHeapReserve;
+    uint64 SizeOfHeapCommit;
+    uint32 LoaderFlags;
+    uint32 NumberOfRvaAndSizes;
+    image_data_directory_t DataDirectory[16];
 };
 
 struct image_section_header_t;
 
 struct image_nt_headers_t
 {
-	uint32 Signature;
-	image_file_header_t FileHeader;
-	char OptionalHeader;
+    uint32 Signature;
+    image_file_header_t FileHeader;
+    char OptionalHeader;
 
-	image_section_header_t*
-	first_section_header ()
-	{
-		return (image_section_header_t*)((char*)&OptionalHeader + FileHeader.SizeOfOptionalHeader);
-	}
+    image_section_header_t*
+    first_section_header ()
+    {
+        return (image_section_header_t*)((char*)&OptionalHeader + FileHeader.SizeOfOptionalHeader);
+    }
 };
 
 struct image_section_header_t
 {
-	uint8 Name [8];
-	union {
-		uint32 PhysicalAddress;
-		uint32 VirtualSize;
-	} Misc;
-	uint32 VirtualAddress;
-	uint32 SizeOfRawData;
-	uint32 PointerToRawData;
-	uint32 PointerToRelocations;
-	uint32 PointerToLinenumbers;
-	uint16 NumberOfRelocations;
-	uint16 NumberOfLinenumbers;
-	uint32 Characteristics;
+    uint8 Name [8];
+    union {
+        uint32 PhysicalAddress;
+        uint32 VirtualSize;
+    } Misc;
+    uint32 VirtualAddress;
+    uint32 SizeOfRawData;
+    uint32 PointerToRawData;
+    uint32 PointerToRelocations;
+    uint32 PointerToLinenumbers;
+    uint16 NumberOfRelocations;
+    uint16 NumberOfLinenumbers;
+    uint32 Characteristics;
 };
 
 // C++98 workaround for what C++11 offers.
 struct explicit_operator_bool
 {
-	typedef void (explicit_operator_bool::*T) () const;
-	void True () const;
+    typedef void (explicit_operator_bool::*T) () const;
+    void True () const;
 };
 
 typedef void (explicit_operator_bool::*bool_type) () const;
@@ -342,185 +342,185 @@ typedef void (explicit_operator_bool::*bool_type) () const;
 #ifdef _WIN32
 struct handle_t
 {
-	// TODO handle_t vs. win32file_t, etc.
+    // TODO handle_t vs. win32file_t, etc.
 
-	uint64 get_file_size (const char * file_name = "")
-	{
-		LARGE_INTEGER a = { };
-		if (!GetFileSizeEx (h, &a)) // TODO NT4
-			throw_LastError (string_format ("GetFileSizeEx(%s)", file_name).c_str());
-		return a.QuadPart;
-	}
+    uint64 get_file_size (const char * file_name = "")
+    {
+        LARGE_INTEGER a = { };
+        if (!GetFileSizeEx (h, &a)) // TODO NT4
+            throw_LastError (string_format ("GetFileSizeEx(%s)", file_name).c_str());
+        return a.QuadPart;
+    }
 
-	void * h = 0;
+    void * h = 0;
 
-	handle_t (void *a) : h (a) { }
-	handle_t () : h (0) { }
+    handle_t (void *a) : h (a) { }
+    handle_t () : h (0) { }
 
-	void* get () { return h; }
+    void* get () { return h; }
 
-	bool valid () const { return static_valid (h); }
+    bool valid () const { return static_valid (h); }
 
-	static bool static_valid (void* h) { return h && h != INVALID_HANDLE_VALUE; }
+    static bool static_valid (void* h) { return h && h != INVALID_HANDLE_VALUE; }
 
-	operator void* () { return get (); }
+    operator void* () { return get (); }
 
-	static void static_cleanup (void* h)
-	{
-		if (!static_valid (h)) return;
-		CloseHandle (h);
-	}
+    static void static_cleanup (void* h)
+    {
+        if (!static_valid (h)) return;
+        CloseHandle (h);
+    }
 
-	void* detach ()
-	{
-		void* const a = h;
-		h = 0;
-		return a;
-	}
+    void* detach ()
+    {
+        void* const a = h;
+        h = 0;
+        return a;
+    }
 
-	void cleanup ()
-	{
-		static_cleanup (detach ());
-	}
+    void cleanup ()
+    {
+        static_cleanup (detach ());
+    }
 
-	handle_t& operator= (void* a)
-	{
-		if (h == a) return *this;
-		cleanup ();
-		h = a;
-		return *this;
-	}
+    handle_t& operator= (void* a)
+    {
+        if (h == a) return *this;
+        cleanup ();
+        h = a;
+        return *this;
+    }
 
 #if 0 // C++11
-	explicit operator bool () { return valid (); } // C++11
+    explicit operator bool () { return valid (); } // C++11
 #else
-	operator explicit_operator_bool::T () const
-	{
-		return valid () ? &explicit_operator_bool::True : NULL;
-	}
+    operator explicit_operator_bool::T () const
+    {
+        return valid () ? &explicit_operator_bool::True : NULL;
+    }
 #endif
 
-	bool operator ! () { return !valid (); }
+    bool operator ! () { return !valid (); }
 
-	~handle_t ()
-	{
-		if (valid ()) CloseHandle (h);
-		h = 0;
-	}
+    ~handle_t ()
+    {
+        if (valid ()) CloseHandle (h);
+        h = 0;
+    }
 };
 #endif
 
 struct fd_t
 {
-	int fd;
+    int fd;
 
 #ifndef _WIN32
-	uint64 get_file_size (const char * file_name = "")
-	{
-		struct stat64 st = { 0 }; // TODO
-		if (fstat64 (fd, &st))
-			throw_errno (string_format ("fstat(%s)", file_name).c_str ());
-		return st.st_size;
-	}
+    uint64 get_file_size (const char * file_name = "")
+    {
+        struct stat64 st = { 0 }; // TODO
+        if (fstat64 (fd, &st))
+            throw_errno (string_format ("fstat(%s)", file_name).c_str ());
+        return st.st_size;
+    }
 #endif
 
 #if 0 // C++11
-	explicit operator bool () { return valid (); } // C++11
+    explicit operator bool () { return valid (); } // C++11
 #else
-	operator explicit_operator_bool::T () const
-	{
-		return valid () ? &explicit_operator_bool::True : NULL;
-	}
+    operator explicit_operator_bool::T () const
+    {
+        return valid () ? &explicit_operator_bool::True : NULL;
+    }
 #endif
 
-	bool operator ! () { return !valid (); }
+    bool operator ! () { return !valid (); }
 
-	operator int () { return get (); }
-	static bool static_valid (int fd) { return fd != -1; }
-	int get () const { return fd; }
-	bool valid () const { return static_valid (fd); }
+    operator int () { return get (); }
+    static bool static_valid (int fd) { return fd != -1; }
+    int get () const { return fd; }
+    bool valid () const { return static_valid (fd); }
 
-	static void static_cleanup (int fd)
-	{
-		if (!static_valid (fd)) return;
+    static void static_cleanup (int fd)
+    {
+        if (!static_valid (fd)) return;
 #ifdef _WIN32
-		_close (fd);
+        _close (fd);
 #else
-		close (fd);
+        close (fd);
 #endif
-	}
+    }
 
-	int detach ()
-	{
-		int const a = fd;
-		fd = -1;
-		return a;
-	}
+    int detach ()
+    {
+        int const a = fd;
+        fd = -1;
+        return a;
+    }
 
-	void cleanup ()
-	{
-		static_cleanup (detach ());
-	}
+    void cleanup ()
+    {
+        static_cleanup (detach ());
+    }
 
-	fd_t (int a = -1) : fd (a) { }
+    fd_t (int a = -1) : fd (a) { }
 
-	fd_t& operator= (int a)
-	{
-		if (fd == a) return *this;
-		cleanup ();
-		fd = a;
-		return *this;
-	}
+    fd_t& operator= (int a)
+    {
+        if (fd == a) return *this;
+        cleanup ();
+        fd = a;
+        return *this;
+    }
 
-	~fd_t ()
-	{
-		cleanup ();
-	}
+    ~fd_t ()
+    {
+        cleanup ();
+    }
 };
 
 struct memory_mapped_file_t
 {
 // TODO allow for redirection to built-in data
 // TODO allow for systems that must read, not mmap
-	void * base = 0;
-	size_t size = 0;
+    void * base = 0;
+    size_t size = 0;
 #ifdef _WIN32
-	handle_t file;
+    handle_t file;
 #else
-	fd_t file;
+    fd_t file;
 #endif
-	//memory_mapped_file_t () { }
+    //memory_mapped_file_t () { }
 
-	~memory_mapped_file_t ()
-	{
-		if (!base) return;
+    ~memory_mapped_file_t ()
+    {
+        if (!base) return;
 #ifdef _WIN32
-		UnmapViewOfFile (base);
+        UnmapViewOfFile (base);
 #else
-		munmap (base, size);
+        munmap (base, size);
 #endif
-		base = 0;
-	}
-	void read (const char* a)
-	{
+        base = 0;
+    }
+    void read (const char* a)
+    {
 #ifdef _WIN32
-		file = CreateFileA (a, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-		if (!file) throw_LastError (string_format ("CreateFileA(%s)", a).c_str ());
-		// FIXME check for size==0 and >4GB.
-		size = (size_t)file.get_file_size(a);
-		handle_t h2 = CreateFileMappingW (file, 0, PAGE_READONLY, 0, 0, 0);
-		if (!h2) throw_LastError (string_format ("CreateFileMapping(%s)", a).c_str ());
-		base = MapViewOfFile (h2, FILE_MAP_READ, 0, 0, 0);
-		if (!base) throw_LastError (string_format ("MapViewOfFile(%s)", a).c_str ());
+        file = CreateFileA (a, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+        if (!file) throw_LastError (string_format ("CreateFileA(%s)", a).c_str ());
+        // FIXME check for size==0 and >4GB.
+        size = (size_t)file.get_file_size(a);
+        handle_t h2 = CreateFileMappingW (file, 0, PAGE_READONLY, 0, 0, 0);
+        if (!h2) throw_LastError (string_format ("CreateFileMapping(%s)", a).c_str ());
+        base = MapViewOfFile (h2, FILE_MAP_READ, 0, 0, 0);
+        if (!base) throw_LastError (string_format ("MapViewOfFile(%s)", a).c_str ());
 #else
-		file = open (a, O_RDONLY);
-		if (!file) throw_errno (string_format ("open(%s)", a).c_str ());
-		// FIXME check for size==0 and >4GB.
-		size = (size_t)file.get_file_size(a);
-		base = mmap (0, size, PROT_READ, MAP_PRIVATE, file, 0);
-		if (base == MAP_FAILED) throw_errno (string_format ("mmap(%s)", a).c_str ());
+        file = open (a, O_RDONLY);
+        if (!file) throw_errno (string_format ("open(%s)", a).c_str ());
+        // FIXME check for size==0 and >4GB.
+        size = (size_t)file.get_file_size(a);
+        base = mmap (0, size, PROT_READ, MAP_PRIVATE, file, 0);
+        if (base == MAP_FAILED) throw_errno (string_format ("mmap(%s)", a).c_str ());
 #endif
-	}
+    }
 };
 
 // TODO emum
@@ -557,8 +557,8 @@ const uint8 EventMap = 18;
 const uint8 Event = 20;
 const uint8 PropertyMap = 21;
 const uint8 Property = 23;
-const uint8 MethodSemantics = 24;
-const uint8 MethodImpl = 25;
+const uint8 MethodSemantics = 24; // 0x18
+const uint8 MethodImpl = 25; // 0x19
 const uint8 ModuleRef = 26;
 const uint8 TypeSpec = 27;
 const uint8 ImplMap = 28;
@@ -571,7 +571,7 @@ const uint8 AssemblyRefProcessor = 36;
 const uint8 AssemblyRefOS = 37;
 const uint8 File = 38;
 const uint8 ExportedType = 39;
-const uint8 ManifestResource = 40;
+const uint8 ManifestResource = 40; // 0x28
 const uint8 NestedClass = 41;
 const uint8 GenericParam = 42;
 const uint8 GenericParamConstraint = 44;
@@ -588,22 +588,22 @@ struct method_header_tiny_t
 // no extra data sections (what does this mean?)
 // maxstack=8
 {
-	uint8 Value;
-	uint8 GetFlags () { return Value & 3; }
-	uint8 GetSize () { return Value >> 2; }
+    uint8 Value;
+    uint8 GetFlags () { return Value & 3; }
+    uint8 GetSize () { return Value >> 2; }
 };
 
 struct method_header_fat_t
 {
-	uint16 FlagsAndHeaderSize;
-	uint16 MaxStack;
-	uint32 CodeSize;
-	uint32 LocalVarSigTok;
+    uint16 FlagsAndHeaderSize;
+    uint16 MaxStack;
+    uint32 CodeSize;
+    uint32 LocalVarSigTok;
 
-	bool MoreSects () { return !!(GetFlags () & CorILMethod_MoreSects); }
-	bool InitLocals () { return !!(GetFlags () & CorILMethod_InitLocals); }
-	uint16 GetFlags () { return FlagsAndHeaderSize & 0xFFF; }
-	uint16 GetHeaderSize () { return FlagsAndHeaderSize >> 12; } // should be 3
+    bool MoreSects () { return !!(GetFlags () & CorILMethod_MoreSects); }
+    bool InitLocals () { return !!(GetFlags () & CorILMethod_InitLocals); }
+    uint16 GetFlags () { return FlagsAndHeaderSize & 0xFFF; }
+    uint16 GetHeaderSize () { return FlagsAndHeaderSize >> 12; } // should be 3
 };
 
 
@@ -612,369 +612,319 @@ struct method_header_fat_t
 // of that index.
 // As well, such indices have variable size depending on the maximum index.
 
-struct codedindex_t
+struct CodedIndex_t
 {
-	const char *name;
-	uint8 tag_size : 3; // max5?
-	uint8 count : 5; // max20?
-	uint8 map [20];
+    const char name [16];
+    uint8 tag_size; // max5?
+    uint8 count; // max21?
+    uint8 map [22]; // TODO wastes bytes but ok? pointer will 8 anyway,
+                    // mono does it differently and without padding
 };
 
-struct heapindex_t
+struct HeapIndex_t
 {
-	const char *heap_name; // string, guid, etc.
-	uint8 heap_index; // dynamic
+    const char *heap_name; // string, guid, etc.
+    uint8 heap_index; // dynamic?
 };
 
-codedindex_t codedindex_typedef_or_ref =
-{
-	"TypeDefOrRef",
-	2,
-	3,
-	{ TypeDef, TypeRef, TypeSpec },
-};
+const CodedIndex_t CodedIndex_TypeDefOrRef = { "TypeDefOrRef", 2, 3, { TypeDef,
+    TypeRef, TypeSpec }, };
 
-enum class TypeDefOrRef : uint8 // 2 bit tag
-{
-	TagSize = 2,
-	TypeDef = 0,
-	TypeRef = 1,
-	TypeSpec = 2,
-};
+const CodedIndex_t CodedIndex_ResolutionScope = { "ResolutionScope", 2, 4, { Module,
+    ModuleRef, AssemblyRef, TypeRef } };
 
-enum class ResolutionScope : uint8 // 2 bit tag
-{
-	TagSize = 2,
-	Module = 0,
-	ModuleRef = 1,
-	AssemblyRef = 2,
-	TypeRef = 3,
-};
+const CodedIndex_t CodedIndex_HasConstant = { "HasConstant", 2, 3,
+    { Field, Param, Property } };
 
-enum class HasConstant : uint8
-{
-	TagSize = 2,
-	Field = 0,
-	Param = 1,
-	Property = 2,
-};
+const CodedIndex_t CodedIndex_HasCustomAttribute = { "HasCustomAttribute", 5, 21,
+    { MethodDef, Field, TypeRef, TypeDef, Param, InterfaceImpl, MemberRef,
+      Module, DeclSecurity, Property, Event, StandAloneSig, ModuleRef, TypeSpec,
+      Assembly, AssemblyRef, File, ExportedType, ManifestResource,
+      GenericParam,
+      // TODO Mono lacks the next two. How to construct?
+      GenericParamConstraint, MethodSpec }};
 
-enum class HasCustomAttribute : uint8
-{
-	TagSize = 5,
-	MethodDef = 0,
-	FieldDef = 1,
-	TypeRef = 2,
-	TypeDef = 3,
-	ParamDef = 4,
-	InterfaceImpl = 5,
-	MemberRef = 6,
-	Module = 7,
-	Permission = 8,
-	Property = 9,
-	Event = 10,
-	StandAloneSig = 11,
-	ModuleRef = 12,
-	TypeSpec = 13,
-	Assembly = 14,
-	AssemblyRef = 15,
-	File = 16,
-	ExportedType = 17,
-	ManifestResource = 18,
-};
+const CodedIndex_t CodedIndex_HasFieldMarshal = { "HasFieldMarshal", 1, 2, { FieldDef, ParamDef }};
 
-enum class HasFieldMarshal : uint8
-{
-	TagSize = 1,
-	FieldDef = 0,
-	ParamDef = 1,
-};
-
-enum class HasDeclSecurity : uint8
-{
-	TagSize = 2,
-	TypeDef = 0,
-	MethodDef = 1,
-	Assembly = 2,
-};
+const CodedIndex_t CodedIndex_HasDeclSecurity = { "HasDeclSecurity", 2, 3, {TypeDef, MethodDef, Assembly }};
 
 struct metadata_header
 {
-	uint32 reserved;
-	uint8 MajorVersion;
-	uint8 MinorVersion;
-	uint8 HeapOffsetSizes;
-	uint8 reserved2;
-	uint64 Valid; // metadata_typedef etc.
-	uint64 Sorted; // metadata_typedef etc.
-	// uint32 NumberOfRaws [];
+    uint32 reserved;
+    uint8 MajorVersion;
+    uint8 MinorVersion;
+    uint8 HeapOffsetSizes;
+    uint8 reserved2;
+    uint64 Valid; // metadata_typedef etc.
+    uint64 Sorted; // metadata_typedef etc.
+    // uint32 NumberOfRaws [];
 };
 
 struct metadata_header_t
 {
-	/* 0 */ uint32 Signature = 0x424A5342;
-	/* 4 */ uint16 MajorVersion; // 1, ignore
-	/* 6 */ uint16 MinorVersion; // 1, ignore
-	/* 8 */ uint32 Reserved;     // 0
-	/* 12 */ uint32 Length; // VersionLength includes null, round up to 4, includes null
-	/* 16 */ //char Version [ ]; // length is multiple of 4
-	// uint16 Flags; // 0
-	// uint16 NumberOfStreams;
-	// metadata_stream_header_t stream_headers [NumberOfStreams];
+    /* 0 */ uint32 Signature = 0x424A5342;
+    /* 4 */ uint16 MajorVersion; // 1, ignore
+    /* 6 */ uint16 MinorVersion; // 1, ignore
+    /* 8 */ uint32 Reserved;     // 0
+    /* 12 */ uint32 Length; // VersionLength includes null, round up to 4, includes null
+    /* 16 */ //char Version [ ]; // length is multiple of 4
+    // uint16 Flags; // 0
+    // uint16 NumberOfStreams;
+    // metadata_stream_header_t stream_headers [NumberOfStreams];
 };
 
 struct metadata_stream_header_t // see mono verify_metadata_header
 {
-	uint32 Offset;
-	uint32 Size; // multiple of 4
-	char   Name [32]; // multiple of 4, null terminated, max 32
+    uint32 Offset;
+    uint32 Size; // multiple of 4
+    char   Name [32]; // multiple of 4, null terminated, max 32
 };
 
 struct metadata_module_t // 0
 {
-	uint16 Generation; // reserved, 0
-	uint32 Name; // index into string heap
-	uint32 Mvid; // index into guid heap
-	uint32 EncId; // reserved, Guid, 0
-	uint32 EncBaseId; // reserved, Guid, 0
+    uint16 Generation; // reserved, 0
+    uint32 Name; // index into string heap
+    uint32 Mvid; // index into guid heap
+    uint32 EncId; // reserved, Guid, 0
+    uint32 EncBaseId; // reserved, Guid, 0
 };
 
 struct metadata_typeref_t // 1
 {
-	uint32 ResolutionScope; // Module or ModuleRef or AssemblyRef or TypeRef
-	uint32 TypeName; // string
-	uint32 TypeNamespace; // string
+    uint32 ResolutionScope; // Module or ModuleRef or AssemblyRef or TypeRef
+    uint32 TypeName; // string
+    uint32 TypeNamespace; // string
 };
 
 struct metadata_typedef_t // 2
 {
-	enum class flags_t : uint32
-	{
-	    // Use this mask to retrieve the type visibility information.
-	    VisibilityMask        =   0x00000007,
-	    NotPublic             =   0x00000000,     // Class is not public scope.
-	    Public                =   0x00000001,     // Class is public scope.
-	    NestedPublic          =   0x00000002,     // Class is nested with public visibility.
-	    NestedPrivate         =   0x00000003,     // Class is nested with private visibility.
-	    NestedFamily          =   0x00000004,     // Class is nested with family visibility.
-	    NestedAssembly        =   0x00000005,     // Class is nested with assembly visibility.
-	    NestedFamANDAssem     =   0x00000006,     // Class is nested with family and assembly visibility.
-	    NestedFamORAssem      =   0x00000007,     // Class is nested with family or assembly visibility.
+    enum class flags_t : uint32
+    {
+        // Use this mask to retrieve the type visibility information.
+        VisibilityMask        =   0x00000007,
+        NotPublic             =   0x00000000,     // Class is not public scope.
+        Public                =   0x00000001,     // Class is public scope.
+        NestedPublic          =   0x00000002,     // Class is nested with public visibility.
+        NestedPrivate         =   0x00000003,     // Class is nested with private visibility.
+        NestedFamily          =   0x00000004,     // Class is nested with family visibility.
+        NestedAssembly        =   0x00000005,     // Class is nested with assembly visibility.
+        NestedFamANDAssem     =   0x00000006,     // Class is nested with family and assembly visibility.
+        NestedFamORAssem      =   0x00000007,     // Class is nested with family or assembly visibility.
 
-	    // Use this mask to retrieve class layout information
-	    LayoutMask            =   0x00000018,
-	    AutoLayout            =   0x00000000,     // Class fields are auto-laid out
-	    SequentialLayout      =   0x00000008,     // Class fields are laid out sequentially
-	    ExplicitLayout        =   0x00000010,     // Layout is supplied explicitly
-	    // end layout mask
+        // Use this mask to retrieve class layout information
+        LayoutMask            =   0x00000018,
+        AutoLayout            =   0x00000000,     // Class fields are auto-laid out
+        SequentialLayout      =   0x00000008,     // Class fields are laid out sequentially
+        ExplicitLayout        =   0x00000010,     // Layout is supplied explicitly
+        // end layout mask
 
-	    // Use this mask to retrieve class semantics information.
-	    ClassSemanticsMask    =   0x00000060,
-	    Class                 =   0x00000000,     // Type is a class.
-	    Interface             =   0x00000020,     // Type is an interface.
-	    // end semantics mask
+        // Use this mask to retrieve class semantics information.
+        ClassSemanticsMask    =   0x00000060,
+        Class                 =   0x00000000,     // Type is a class.
+        Interface             =   0x00000020,     // Type is an interface.
+        // end semantics mask
 
-	    // Special semantics in addition to class semantics.
-	    Abstract              =   0x00000080,     // Class is abstract
-	    Sealed                =   0x00000100,     // Class is concrete and may not be extended
-	    SpecialName           =   0x00000400,     // Class name is special. Name describes how.
+        // Special semantics in addition to class semantics.
+        Abstract              =   0x00000080,     // Class is abstract
+        Sealed                =   0x00000100,     // Class is concrete and may not be extended
+        SpecialName           =   0x00000400,     // Class name is special. Name describes how.
 
-	    // Implementation attributes.
-	    Import                =   0x00001000,     // Class / interface is imported
-	    Serializable          =   0x00002000,     // The class is Serializable.
+        // Implementation attributes.
+        Import                =   0x00001000,     // Class / interface is imported
+        Serializable          =   0x00002000,     // The class is Serializable.
 
-	    // Use StringFormatMask to retrieve string information for native interop
-	    StringFormatMask      =   0x00030000,
-	    AnsiClass             =   0x00000000,     // LPTSTR is interpreted as ANSI in this class
-	    UnicodeClass          =   0x00010000,     // LPTSTR is interpreted as UNICODE
-	    AutoClass             =   0x00020000,     // LPTSTR is interpreted automatically
-	    CustomFormatClass     =   0x00030000,     // A non-standard encoding specified by CustomFormatMask
-	    CustomFormatMask      =   0x00C00000,     // Use this mask to retrieve non-standard encoding information for native interop. The meaning of the values of these 2 bits is unspecified.
+        // Use StringFormatMask to retrieve string information for native interop
+        StringFormatMask      =   0x00030000,
+        AnsiClass             =   0x00000000,     // LPTSTR is interpreted as ANSI in this class
+        UnicodeClass          =   0x00010000,     // LPTSTR is interpreted as UNICODE
+        AutoClass             =   0x00020000,     // LPTSTR is interpreted automatically
+        CustomFormatClass     =   0x00030000,     // A non-standard encoding specified by CustomFormatMask
+        CustomFormatMask      =   0x00C00000,     // Use this mask to retrieve non-standard encoding information for native interop. The meaning of the values of these 2 bits is unspecified.
 
-	    // end string format mask
+        // end string format mask
 
-	    BeforeFieldInit       =   0x00100000,     // Initialize the class any time before first static field access.
-	    Forwarder             =   0x00200000,     // This ExportedType is a type forwarder.
+        BeforeFieldInit       =   0x00100000,     // Initialize the class any time before first static field access.
+        Forwarder             =   0x00200000,     // This ExportedType is a type forwarder.
 
-	    // Flags reserved for runtime use.
-	    ReservedMask          =   0x00040800,
-	    RTSpecialName         =   0x00000800,     // Runtime should check name encoding.
-	    HasSecurity           =   0x00040000,     // Class has security associate with it.
-	};
+        // Flags reserved for runtime use.
+        ReservedMask          =   0x00040800,
+        RTSpecialName         =   0x00000800,     // Runtime should check name encoding.
+        HasSecurity           =   0x00040000,     // Class has security associate with it.
+    };
 
-	flags_t flags;
-	uint32 TypeName; // string
-	uint32 TypeNamespace; // string
-	uint32 Extends; // TypeDef or TypeRef or TypeSpec
-	uint32 FieldList; // index into Field table, either to last row or next start
-	uint32 MethodList; // similar to previous
+    flags_t flags;
+    uint32 TypeName; // string
+    uint32 TypeNamespace; // string
+    uint32 Extends; // TypeDef or TypeRef or TypeSpec
+    uint32 FieldList; // index into Field table, either to last row or next start
+    uint32 MethodList; // similar to previous
 };
 
 struct metadata_fieldtable_t // 4
 {
-	enum class flags_t : uint16
-	{
-	    // member access mask - Use this mask to retrieve accessibility information.
-	    FieldAccessMask           =   0x0007,
-	    PrivateScope              =   0x0000,     // Member not referenceable.
-	    Private                   =   0x0001,     // Accessible only by the parent type.
-	    FamANDAssem               =   0x0002,     // Accessible by sub-types only in this Assembly.
-	    Assembly                  =   0x0003,     // Accessibly by anyone in the Assembly.
-	    Family                    =   0x0004,     // Accessible only by type and sub-types.
-	    FamORAssem                =   0x0005,     // Accessibly by sub-types anywhere, plus anyone in assembly.
-	    Public                    =   0x0006,     // Accessibly by anyone who has visibility to this scope.
-	    // end member access mask
+    enum class flags_t : uint16
+    {
+        // member access mask - Use this mask to retrieve accessibility information.
+        FieldAccessMask           =   0x0007,
+        PrivateScope              =   0x0000,     // Member not referenceable.
+        Private                   =   0x0001,     // Accessible only by the parent type.
+        FamANDAssem               =   0x0002,     // Accessible by sub-types only in this Assembly.
+        Assembly                  =   0x0003,     // Accessibly by anyone in the Assembly.
+        Family                    =   0x0004,     // Accessible only by type and sub-types.
+        FamORAssem                =   0x0005,     // Accessibly by sub-types anywhere, plus anyone in assembly.
+        Public                    =   0x0006,     // Accessibly by anyone who has visibility to this scope.
+        // end member access mask
 
-	    // field contract attributes.
-	    Static                    =   0x0010,     // Defined on type, else per instance.
-	    InitOnly                  =   0x0020,     // Field may only be initialized, not written to after init.
-	    Literal                   =   0x0040,     // Value is compile time constant.
-	    NotSerialized             =   0x0080,     // Field does not have to be serialized when type is remoted.
+        // field contract attributes.
+        Static                    =   0x0010,     // Defined on type, else per instance.
+        InitOnly                  =   0x0020,     // Field may only be initialized, not written to after init.
+        Literal                   =   0x0040,     // Value is compile time constant.
+        NotSerialized             =   0x0080,     // Field does not have to be serialized when type is remoted.
 
-	    SpecialName               =   0x0200,     // field is special. Name describes how.
+        SpecialName               =   0x0200,     // field is special. Name describes how.
 
-	    // interop attributes
-	    PinvokeImpl               =   0x2000,     // Implementation is forwarded through pinvoke.
+        // interop attributes
+        PinvokeImpl               =   0x2000,     // Implementation is forwarded through pinvoke.
 
-	    // Reserved flags for runtime use only.
-	    ReservedMask              =   0x9500,
-	    RTSpecialName             =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
-	    HasFieldMarshal           =   0x1000,     // Field has marshalling information.
-	    HasDefault                =   0x8000,     // Field has default.
-	    HasFieldRVA               =   0x0100,     // Field has RVA.
-	};
-	flags_t Flags;
-	uint32 Name; // string
-	uint32 Signature; // blob
+        // Reserved flags for runtime use only.
+        ReservedMask              =   0x9500,
+        RTSpecialName             =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
+        HasFieldMarshal           =   0x1000,     // Field has marshalling information.
+        HasDefault                =   0x8000,     // Field has default.
+        HasFieldRVA               =   0x0100,     // Field has RVA.
+    };
+    flags_t Flags;
+    uint32 Name; // string
+    uint32 Signature; // blob
 };
 
 struct metadata_methoddef_t // 6
 {
-	enum class flags_t : uint16
-	{
-	    // member access mask - Use this mask to retrieve accessibility information.
-	    MemberAccessMask          =   0x0007,
-	    PrivateScope              =   0x0000,     // Member not referenceable.
-	    Private                   =   0x0001,     // Accessible only by the parent type.
-	    FamANDAssem               =   0x0002,     // Accessible by sub-types only in this Assembly.
-	    Assem                     =   0x0003,     // Accessibly by anyone in the Assembly.
-	    Family                    =   0x0004,     // Accessible only by type and sub-types.
-	    FamORAssem                =   0x0005,     // Accessibly by sub-types anywhere, plus anyone in assembly.
-	    Public                    =   0x0006,     // Accessibly by anyone who has visibility to this scope.
-	    // end member access mask
+    enum class flags_t : uint16
+    {
+        // member access mask - Use this mask to retrieve accessibility information.
+        MemberAccessMask          =   0x0007,
+        PrivateScope              =   0x0000,     // Member not referenceable.
+        Private                   =   0x0001,     // Accessible only by the parent type.
+        FamANDAssem               =   0x0002,     // Accessible by sub-types only in this Assembly.
+        Assem                     =   0x0003,     // Accessibly by anyone in the Assembly.
+        Family                    =   0x0004,     // Accessible only by type and sub-types.
+        FamORAssem                =   0x0005,     // Accessibly by sub-types anywhere, plus anyone in assembly.
+        Public                    =   0x0006,     // Accessibly by anyone who has visibility to this scope.
+        // end member access mask
 
-	    // method contract attributes.
-	    Static                    =   0x0010,     // Defined on type, else per instance.
-	    Final                     =   0x0020,     // Method may not be overridden.
-	    Virtual                   =   0x0040,     // Method virtual.
-	    HideBySig                 =   0x0080,     // Method hides by name+sig, else just by name.
+        // method contract attributes.
+        Static                    =   0x0010,     // Defined on type, else per instance.
+        Final                     =   0x0020,     // Method may not be overridden.
+        Virtual                   =   0x0040,     // Method virtual.
+        HideBySig                 =   0x0080,     // Method hides by name+sig, else just by name.
 
-	    // vtable layout mask - Use this mask to retrieve vtable attributes.
-	    VtableLayoutMask          =   0x0100,
-	    ReuseSlot                 =   0x0000,     // The default.
-	    NewSlot                   =   0x0100,     // Method always gets a new slot in the vtable.
-	    // end vtable layout mask
+        // vtable layout mask - Use this mask to retrieve vtable attributes.
+        VtableLayoutMask          =   0x0100,
+        ReuseSlot                 =   0x0000,     // The default.
+        NewSlot                   =   0x0100,     // Method always gets a new slot in the vtable.
+        // end vtable layout mask
 
-	    // method implementation attributes.
-	    CheckAccessOnOverride     =   0x0200,     // Overridability is the same as the visibility.
-	    Abstract                  =   0x0400,     // Method does not provide an implementation.
-	    SpecialName               =   0x0800,     // Method is special. Name describes how.
+        // method implementation attributes.
+        CheckAccessOnOverride     =   0x0200,     // Overridability is the same as the visibility.
+        Abstract                  =   0x0400,     // Method does not provide an implementation.
+        SpecialName               =   0x0800,     // Method is special. Name describes how.
 
-	    // interop attributes
-	    PinvokeImpl               =   0x2000,     // Implementation is forwarded through pinvoke.
-	    UnmanagedExport           =   0x0008,     // Managed method exported via thunk to unmanaged code.
+        // interop attributes
+        PinvokeImpl               =   0x2000,     // Implementation is forwarded through pinvoke.
+        UnmanagedExport           =   0x0008,     // Managed method exported via thunk to unmanaged code.
 
-	    // Reserved flags for runtime use only.
-	    ReservedMask              =   0xd000,
-	    RTSpecialName             =   0x1000,     // Runtime should check name encoding.
-	    HasSecurity               =   0x4000,     // Method has security associate with it.
-	    RequireSecObject          =   0x8000,     // Method calls another method containing security code.
-	};
+        // Reserved flags for runtime use only.
+        ReservedMask              =   0xd000,
+        RTSpecialName             =   0x1000,     // Runtime should check name encoding.
+        HasSecurity               =   0x4000,     // Method has security associate with it.
+        RequireSecObject          =   0x8000,     // Method calls another method containing security code.
+    };
 
-	enum class implflags_t : uint16
-	{
-	    // code impl mask
-	    CodeTypeMask      =   0x0003,   // Flags about code type.
-	    IL                =   0x0000,   // Method impl is IL.
-	    Native            =   0x0001,   // Method impl is native.
-	    OPTIL             =   0x0002,   // Method impl is OPTIL
-	    Runtime           =   0x0003,   // Method impl is provided by the runtime.
-	    // end code impl mask
+    enum class implflags_t : uint16
+    {
+        // code impl mask
+        CodeTypeMask      =   0x0003,   // Flags about code type.
+        IL                =   0x0000,   // Method impl is IL.
+        Native            =   0x0001,   // Method impl is native.
+        OPTIL             =   0x0002,   // Method impl is OPTIL
+        Runtime           =   0x0003,   // Method impl is provided by the runtime.
+        // end code impl mask
 
-	    // managed mask
-	    ManagedMask       =   0x0004,   // Flags specifying whether the code is managed or unmanaged.
-	    Unmanaged         =   0x0004,   // Method impl is unmanaged, otherwise managed.
-	    Managed           =   0x0000,   // Method impl is managed.
-	    // end managed mask
+        // managed mask
+        ManagedMask       =   0x0004,   // Flags specifying whether the code is managed or unmanaged.
+        Unmanaged         =   0x0004,   // Method impl is unmanaged, otherwise managed.
+        Managed           =   0x0000,   // Method impl is managed.
+        // end managed mask
 
-	    // implementation info and interop
-	    ForwardRef        =   0x0010,   // Indicates method is defined; used primarily in merge scenarios.
-	    PreserveSig       =   0x0080,   // Indicates method sig is not to be mangled to do HRESULT conversion.
+        // implementation info and interop
+        ForwardRef        =   0x0010,   // Indicates method is defined; used primarily in merge scenarios.
+        PreserveSig       =   0x0080,   // Indicates method sig is not to be mangled to do HRESULT conversion.
 
-	    InternalCall      =   0x1000,   // Reserved for internal use.
+        InternalCall      =   0x1000,   // Reserved for internal use.
 
-	    Synchronized      =   0x0020,   // Method is single threaded through the body.
-	    NoInlining        =   0x0008,   // Method may not be inlined.
-	    MaxMethodImplVal  =   0xffff,   // Range check value
-	};
+        Synchronized      =   0x0020,   // Method is single threaded through the body.
+        NoInlining        =   0x0008,   // Method may not be inlined.
+        MaxMethodImplVal  =   0xffff,   // Range check value
+    };
 
-	uint32 Rva;
-	implflags_t ImplFlags;
-	flags_t Flags;
-	uint32 Name; // String heap
-	uint32 Signature; // Blob heap, 7 bit encode/decode
-	uint32 ParamList; // Param table, start, until table end, or start of next MethodDef
+    uint32 Rva;
+    implflags_t ImplFlags;
+    flags_t Flags;
+    uint32 Name; // String heap
+    uint32 Signature; // Blob heap, 7 bit encode/decode
+    uint32 ParamList; // Param table, start, until table end, or start of next MethodDef
 };
 
 struct metadata_param_t // 8
 {
-	enum class flags_t : uint16
-	{
-	    In                        =   0x0001,     // Param is [In]
-	    Out                       =   0x0002,     // Param is [out]
-	    Optional                  =   0x0010,     // Param is optional
+    enum class flags_t : uint16
+    {
+        In                        =   0x0001,     // Param is [In]
+        Out                       =   0x0002,     // Param is [out]
+        Optional                  =   0x0010,     // Param is optional
 
-	    // Reserved flags for Runtime use only.
-	    ReservedMask              =   0xf000,
-	    HasDefault                =   0x1000,     // Param has default value.
-	    HasFieldMarshal           =   0x2000,     // Param has FieldMarshal.
+        // Reserved flags for Runtime use only.
+        ReservedMask              =   0xf000,
+        HasDefault                =   0x1000,     // Param has default value.
+        HasFieldMarshal           =   0x2000,     // Param has FieldMarshal.
 
-	    Unused                    =   0xcfe0,
-	};
+        Unused                    =   0xcfe0,
+    };
 
-	flags_t Flags;
-	uint16 Sequence;
-	uint32 Name; // String heap
+    flags_t Flags;
+    uint16 Sequence;
+    uint32 Name; // String heap
 };
 
 struct metadata_interfaceimpl_t // 9
 {
-	uint32 Class; // TypeDef
-	uint32 Interface; // TypeDef or TypeRef or TypeSpec, "TypeDefOrRef"
+    uint32 Class; // TypeDef
+    uint32 Interface; // TypeDef or TypeRef or TypeSpec, "TypeDefOrRef"
 };
 
 struct metadata_memberef_t // 10
 {
-	uint32 Class; // TypeRef, ModuleRef, MethodDef, TypeSpec or TypeDef tables; more precisely, a MemberRefParent coded index
-	uint32 Name; // String heap
-	uint32 Signature; // blob heap
+    uint32 Class; // TypeRef, ModuleRef, MethodDef, TypeSpec or TypeDef tables; more precisely, a MemberRefParent coded index
+    uint32 Name; // String heap
+    uint32 Signature; // blob heap
 };
 
 // TODO This probably is not correct.
 struct metadata_constant_t // 11
 {
-	uint8 Type;
-	uint8 Pad;
-	uint32 Parent; // Param or Field or Property, "HasConstant", Type?
-	uint32 Value; // Blob
+    uint8 Type;
+    uint8 Pad;
+    uint32 Parent; // Param or Field or Property, "HasConstant", Type?
+    uint32 Value; // Blob
 };
 
 // TODO This probably is not correct.
 struct metadata_customattribute_t // 12
 {
-	uint32 Parent; // HasCustomAttribute (5 bits)
-	uint32 Type; // MethodDef or MethodRef, CustomAttributeType
-	uint32 Value; // blob
+    uint32 Parent; // HasCustomAttribute (5 bits)
+    uint32 Type; // MethodDef or MethodRef, CustomAttributeType
+    uint32 Value; // blob
 };
 
 #if 0 // todo
@@ -982,7 +932,7 @@ struct metadata_customattribute_t // 12
 12 - CustomAttribute Table
 
 //I think the best description is given by the SDK: "The CustomAttribute table stores data that can be used to instantiate a
-// Custom Attribute (more precisely, an object of the specified Custom Attribute class) at runtime. The column called Type 
+// Custom Attribute (more precisely, an object of the specified Custom Attribute class) at runtime. The column called Type
 //is slightly misleading – it actually indexes a constructor method – the owner of that constructor method is the Type of the Custom Attribute."
 
 // Columns:
@@ -1888,31 +1838,31 @@ typedef enum CorElementType
 // COM+ 2.0 header structure.
 struct image_clr_header // data_directory [15]
 {
-	uint32 cb; // count of bytes
-	uint16 MajorRuntimeVersion;
-	uint16 MinorRuntimeVersion;
-	image_data_directory_t MetaData;
-	uint32 Flags;
-	// If COMIMAGE_FLAGS_NATIVE_ENTRYPOINT is not set, EntryPointToken represents a managed entrypoint.
-	// If COMIMAGE_FLAGS_NATIVE_ENTRYPOINT is set, EntryPointRVA represents an RVA to a native entrypoint.
-	union {
-		uint32 EntryPointToken;
-		uint32 EntryPointRVA;
-	};
-	image_data_directory_t Resources;
-	image_data_directory_t StrongNameSignature;
-	image_data_directory_t CodeManagerTable;
-	image_data_directory_t VTableFixups;
-	image_data_directory_t ExportAddressTableJumps;
-	image_data_directory_t ManagedNativeHeader;
+    uint32 cb; // count of bytes
+    uint16 MajorRuntimeVersion;
+    uint16 MinorRuntimeVersion;
+    image_data_directory_t MetaData;
+    uint32 Flags;
+    // If COMIMAGE_FLAGS_NATIVE_ENTRYPOINT is not set, EntryPointToken represents a managed entrypoint.
+    // If COMIMAGE_FLAGS_NATIVE_ENTRYPOINT is set, EntryPointRVA represents an RVA to a native entrypoint.
+    union {
+        uint32 EntryPointToken;
+        uint32 EntryPointRVA;
+    };
+    image_data_directory_t Resources;
+    image_data_directory_t StrongNameSignature;
+    image_data_directory_t CodeManagerTable;
+    image_data_directory_t VTableFixups;
+    image_data_directory_t ExportAddressTableJumps;
+    image_data_directory_t ManagedNativeHeader;
 };
 
 struct metadata_field_type_t
 {
-	const char *name;
-	uint8 fixed_size;
-	codedindex_t * codedindex;
-	void (*decode)(...);
+    const char *name;
+    uint8 fixed_size;
+    CodedIndex_t * CodedIndex;
+    void (*decode)(...);
 };
 
 const metadata_field_type_t metadata_field_type_int8 = {"int8", 1};
@@ -1929,25 +1879,25 @@ const metadata_field_type_t metadata_field_type_guid = {"guid"};
 
 struct metadata_field_t
 {
-	const char* name;
-	const metadata_field_type_t& type;
+    const char* name;
+    const metadata_field_type_t& type;
 };
 
 struct metadata_table_schema_t
 {
-	const char *name;
-	uint field_count;
-	metadata_field_t* fields;
-	uint size; // dynamic, might live elsewhere (per assembly)
+    const char *name;
+    uint field_count;
+    metadata_field_t* fields;
+    uint size; // dynamic, might live elsewhere (per assembly)
 };
 
 metadata_field_t metata_row_schema_module_fields [ ] =
 {
-	{ "Generation", metadata_field_type_uint16 },
-	{ "Name", metadata_field_type_string },
-	{ "Mvid", metadata_field_type_guid },
-	{ "EncId", metadata_field_type_guid },
-	{ "EncBaseId", metadata_field_type_guid },
+    { "Generation", metadata_field_type_uint16 },
+    { "Name", metadata_field_type_string },
+    { "Mvid", metadata_field_type_guid },
+    { "EncId", metadata_field_type_guid },
+    { "EncBaseId", metadata_field_type_guid },
 };
 
 #define CountOf(x) (sizeof (x) / sizeof ((x)[0])) // TODO
@@ -1956,76 +1906,76 @@ metadata_table_schema_t metata_row_schema_module = { "module", CountOf (metata_r
 
 metadata_field_t metata_row_schema_typeref_fields [ ] =
 {
-	{ "ResolutionScope", metadata_field_type_resolutionscope },
-	{ "TypeName", metadata_field_type_string },
-	{ "TypeNamespace", metadata_field_type_string },
+    { "ResolutionScope", metadata_field_type_resolutionscope },
+    { "TypeName", metadata_field_type_string },
+    { "TypeNamespace", metadata_field_type_string },
 };
 
 struct metadata_table_t
 {
-	void * base;
-	uint index;
-	uint row_size;
+    void * base;
+    uint index;
+    uint row_size;
 };
 
 struct loaded_image_t
 {
-	std::vector<uint8> row_size; // index by metadata table
-	uint64 file_size = 0;
-	memory_mapped_file_t mmf;
-	void * base = 0;
-	image_dos_header_t* dos = 0;
-	uint32 pe_offset = 0;
-	uchar* pe = 0;
-	image_nt_headers_t *nt = 0;
-	image_optional_header32 *opt32 = 0;
-	image_optional_header64 *opt64 = 0;
-	uint32 opt_magic = 0;
-	uint number_of_sections = 0;
-	std::vector<image_section_header_t*> section_headers;
+    std::vector<uint8> row_size; // index by metadata table
+    uint64 file_size = 0;
+    memory_mapped_file_t mmf;
+    void * base = 0;
+    image_dos_header_t* dos = 0;
+    uint32 pe_offset = 0;
+    uchar* pe = 0;
+    image_nt_headers_t *nt = 0;
+    image_optional_header32 *opt32 = 0;
+    image_optional_header64 *opt64 = 0;
+    uint32 opt_magic = 0;
+    uint number_of_sections = 0;
+    std::vector<image_section_header_t*> section_headers;
 
-	void init (const char *file_name)
-	{
-		mmf.read (file_name);
-		base = mmf.base;
-		file_size = mmf.file.get_file_size ();
-		dos = (image_dos_header_t*)base;
-		printf ("mz: %02x%02x\n", ((uchar*)dos) [0], ((uchar*)dos) [1]);
-		if (memcmp (base, "MZ", 2))
-			throw string_format ("incorrect MZ signature %s", file_name);
-		printf ("mz: %c%c\n", ((char*)dos) [0], ((char*)dos) [1]);
-		pe_offset = dos->get_pe ();
-		printf ("pe_offset: %#x\n", pe_offset);
-		pe = (pe_offset + (uchar*)base);
-		printf ("pe: %02x%02x%02x%02x\n", pe [0], pe [1], pe [2], pe [3]);
-		if (memcmp (pe, "PE\0\0", 4))
-			throw string_format ("incorrect PE00 signature %s", file_name);
-		printf ("pe: %c%c\\%d\\%d\n", pe [0], pe [1], pe [2], pe [3]);
-		nt = (image_nt_headers_t*)pe;
-		printf ("Machine:%X\n", nt->FileHeader.Machine);
-		printf ("NumberOfSections:%X\n", nt->FileHeader.NumberOfSections);
-		printf ("TimeDateStamp:%X\n", nt->FileHeader.TimeDateStamp);
-		printf ("PointerToSymbolTable:%X\n", nt->FileHeader.PointerToSymbolTable);
-		printf ("NumberOfSymbols:%X\n", nt->FileHeader.NumberOfSymbols);
-		printf ("SizeOfOptionalHeader:%xXn", nt->FileHeader.SizeOfOptionalHeader);
-		printf ("Characteristics:%X\n", nt->FileHeader.Characteristics);
-		opt32 = (image_optional_header32*)(&nt->OptionalHeader);
-		opt64 = (image_optional_header64*)(&nt->OptionalHeader);
-		opt_magic = opt32->Magic;
-		release_assertf ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), ("file:%s opt_magic:%x", file_name, opt_magic));
-		printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, opt32, opt64);
-		printf ("opt.rvas:%X\n", opt32 ? opt32->NumberOfRvaAndSizes : opt64->NumberOfRvaAndSizes);
-		number_of_sections = nt->FileHeader.NumberOfSections;
-		printf ("number_of_sections:%X\n", number_of_sections);
-		image_section_header_t* section_header = nt->first_section_header ();
-		for (uint i = 0; i < number_of_sections; ++i, ++section_header)
-			printf ("section [%02X].Name: %.8s\n", i, section_header->Name);
-	}
+    void init (const char *file_name)
+    {
+        mmf.read (file_name);
+        base = mmf.base;
+        file_size = mmf.file.get_file_size ();
+        dos = (image_dos_header_t*)base;
+        printf ("mz: %02x%02x\n", ((uchar*)dos) [0], ((uchar*)dos) [1]);
+        if (memcmp (base, "MZ", 2))
+            throw string_format ("incorrect MZ signature %s", file_name);
+        printf ("mz: %c%c\n", ((char*)dos) [0], ((char*)dos) [1]);
+        pe_offset = dos->get_pe ();
+        printf ("pe_offset: %#x\n", pe_offset);
+        pe = (pe_offset + (uchar*)base);
+        printf ("pe: %02x%02x%02x%02x\n", pe [0], pe [1], pe [2], pe [3]);
+        if (memcmp (pe, "PE\0\0", 4))
+            throw string_format ("incorrect PE00 signature %s", file_name);
+        printf ("pe: %c%c\\%d\\%d\n", pe [0], pe [1], pe [2], pe [3]);
+        nt = (image_nt_headers_t*)pe;
+        printf ("Machine:%X\n", nt->FileHeader.Machine);
+        printf ("NumberOfSections:%X\n", nt->FileHeader.NumberOfSections);
+        printf ("TimeDateStamp:%X\n", nt->FileHeader.TimeDateStamp);
+        printf ("PointerToSymbolTable:%X\n", nt->FileHeader.PointerToSymbolTable);
+        printf ("NumberOfSymbols:%X\n", nt->FileHeader.NumberOfSymbols);
+        printf ("SizeOfOptionalHeader:%xXn", nt->FileHeader.SizeOfOptionalHeader);
+        printf ("Characteristics:%X\n", nt->FileHeader.Characteristics);
+        opt32 = (image_optional_header32*)(&nt->OptionalHeader);
+        opt64 = (image_optional_header64*)(&nt->OptionalHeader);
+        opt_magic = opt32->Magic;
+        release_assertf ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), ("file:%s opt_magic:%x", file_name, opt_magic));
+        printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, opt32, opt64);
+        printf ("opt.rvas:%X\n", opt32 ? opt32->NumberOfRvaAndSizes : opt64->NumberOfRvaAndSizes);
+        number_of_sections = nt->FileHeader.NumberOfSections;
+        printf ("number_of_sections:%X\n", number_of_sections);
+        image_section_header_t* section_header = nt->first_section_header ();
+        for (uint i = 0; i < number_of_sections; ++i, ++section_header)
+            printf ("section [%02X].Name: %.8s\n", i, section_header->Name);
+    }
 
-	int
-	rva_to_file_offset (void* base, int rva)
-	{
-	}
+    int
+    rva_to_file_offset (void* base, int rva)
+    {
+    }
 };
 
 }
@@ -2035,24 +1985,24 @@ using namespace m2;
 int
 main (int argc, char** argv)
 {
-	loaded_image_t im;
+    loaded_image_t im;
 #define X(x) printf ("%s %#x\n", #x, (int)x)
 X (sizeof (image_dos_header_t));
 X (sizeof (image_file_header_t));
 X (sizeof (image_nt_headers_t));
 X (sizeof (image_section_header_t));
 #undef X
-	try
-	{
-		im.init (argv [1]);
-	}
-	catch (int er)
-	{
-		fprintf (stderr, "error %d\n", er);
-	}
-	catch (const std::string& er)
-	{
-		fprintf (stderr, "error %s\n", er.c_str());
-	}
-	return 0;
+    try
+    {
+        im.init (argv [1]);
+    }
+    catch (int er)
+    {
+        fprintf (stderr, "error %d\n", er);
+    }
+    catch (const std::string& er)
+    {
+        fprintf (stderr, "error %s\n", er.c_str());
+    }
+    return 0;
 }
