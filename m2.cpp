@@ -346,15 +346,16 @@ struct handle_t
 
 	uint64 get_file_size (const char * file_name = "")
 	{
-		ULARGE_INTEGER b = { };
-		if (!GetFileSizeEx (h, &b))
+		LARGE_INTEGER a = { };
+		if (!GetFileSizeEx (h, &a)) // TODO NT4
 			throw_LastError (string_format ("GetFileSizeEx(%s)", file_name).c_str());
 		return a.QuadPart;
 	}
 
 	void * h = 0;
 
-	handle_t (void *a = 0) : h (a) { }
+	handle_t (void *a) : h (a) { }
+	handle_t () : h (0) { }
 
 	void* get () { return h; }
 
@@ -400,8 +401,6 @@ struct handle_t
 #endif
 
 	bool operator ! () { return !valid (); }
-
-	handle_t () : h (0) { }
 
 	~handle_t ()
 	{
@@ -483,14 +482,15 @@ struct memory_mapped_file_t
 {
 // TODO allow for redirection to built-in data
 // TODO allow for systems that must read, not mmap
-	void * base;
-	size_t size;
+	void * base = 0;
+	size_t size = 0;
 #ifdef _WIN32
 	handle_t file;
 #else
 	fd_t file;
 #endif
 	memory_mapped_file_t () : base (0), size (0) { }
+	//memory_mapped_file_t () { }
 
 	~memory_mapped_file_t ()
 	{
@@ -509,7 +509,7 @@ struct memory_mapped_file_t
 		if (!file) throw_LastError (string_format ("CreateFileA(%s)", a).c_str ());
 		// FIXME check for size==0 and >4GB.
 		size = (size_t)file.get_file_size(a);
-		handle_t h2 = CreateFileMappingW (h, 0, PAGE_READONLY, 0, 0, 0);
+		handle_t h2 = CreateFileMappingW (file, 0, PAGE_READONLY, 0, 0, 0);
 		if (!h2) throw_LastError (string_format ("CreateFileMapping(%s)", a).c_str ());
 		base = MapViewOfFile (h2, FILE_MAP_READ, 0, 0, 0);
 		if (!base) throw_LastError (string_format ("MapViewOfFile(%s)", a).c_str ());
@@ -1859,14 +1859,10 @@ struct image_clr_header // data_directory [15]
 	image_data_directory_t ManagedNativeHeader;
 };
 
-const int fixed_stream_string = 's';
-const int fixed_stream_guid = 'g';
-const int fixed_stream_user_string = 'u';
-
 struct metadata_field_type_t
 {
 	const char *name;
-	int fixed_size;
+	uint8 fixed_size;
 	codedindex_t * codedindex;
 	void (*decode)(...);
 };
@@ -1892,14 +1888,10 @@ struct metadata_field_t
 struct metadata_table_schema_t
 {
 	const char *name;
-	int field_count;
+	uint field_count;
 	metadata_field_t* fields;
-	int size; // dynamic, might live elsewhere (per assembly)
+	uint size; // dynamic, might live elsewhere (per assembly)
 };
-
-const int guid = -1;
-const int string = -2;
-const int resolutionscope = -3;
 
 metadata_field_t metata_row_schema_module_fields [ ] =
 {
