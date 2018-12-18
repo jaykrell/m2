@@ -1826,7 +1826,7 @@ struct metadata_module_t // 0
     uint32 EncId; // reserved, Guid, 0
     uint32 EncBaseId; // reserved, Guid, 0
 };
-const metadata_field_t metata_row_schema_module_fields [ ] =
+const metadata_field_t metadata_fields_Module [ ] =
 {
     { "Generation", metadata_field_type_uint16 }, // ignore
     { "Name", metadata_field_type_string },
@@ -1834,16 +1834,16 @@ const metadata_field_t metata_row_schema_module_fields [ ] =
     { "EncId", metadata_field_type_guid }, // ignore
     { "EncBaseId", metadata_field_type_guid }, // ignore
 };
-metadata_table_schema_t metata_row_schema_module = { "module", CountOf (metata_row_schema_module_fields), metata_row_schema_module_fields };
+metadata_table_schema_t metata_row_schema_module = { "Module", CountOf (metadata_fields_Module), metadata_fields_Module };
 
 // 1
-const metadata_field_t metata_row_schema_typeref_fields [ ] =
+const metadata_field_t metadata_fields_TypeRef [ ] =
 {
     { "ResolutionScope", metadata_field_type_ResolutionScope },
     { "TypeName", metadata_field_type_string },
     { "TypeNamespace", metadata_field_type_string },
 };
-metadata_table_schema_t metata_row_schema_typeref = { "typeref", CountOf (metata_row_schema_typeref_fields), metata_row_schema_typeref_fields };
+metadata_table_schema_t metata_row_schema_typeref = { "TypeRef", CountOf (metadata_fields_TypeRef), metadata_fields_TypeRef };
 
 struct metadata_typedef_t // 2
 {
@@ -1908,7 +1908,7 @@ struct metadata_typedef_t // 2
     uint32 FieldList; // index into Field table, either to last row or next start
     uint32 MethodList; // similar to previous
 };
-const metadata_field_t metata_row_schema_typedef_fields [ ] =
+const metadata_field_t metadata_fields_TypeDef [ ] =
 {
     { "Flags", metadata_field_type_uint32 },
     { "TypeName", metadata_field_type_string },
@@ -1917,7 +1917,7 @@ const metadata_field_t metata_row_schema_typedef_fields [ ] =
     { "FieldList", metadata_field_type_FieldList },
     { "MethodList", metadata_field_type_MethodList },
 };
-metadata_table_schema_t metata_row_schema_typedef = { "typedef", CountOf (metata_row_schema_typedef_fields), metata_row_schema_typedef_fields };
+metadata_table_schema_t metata_row_schema_typedef = { "TypeDef", CountOf (metadata_fields_TypeDef), metadata_fields_TypeDef };
 
 struct metadata_table_t
 {
