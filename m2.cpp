@@ -97,7 +97,6 @@ typedef int64 longint;
 namespace m2
 {
 
-
 std::string
 string_vformat (const char *format, va_list va)
 {
@@ -523,7 +522,7 @@ struct memory_mapped_file_t
     }
 };
 
-// TODO emum
+// TODO enum
 const uint COMIMAGE_FLAGS_ILONLY = 1;
 const uint COMIMAGE_FLAGS_32BITREQUIRED = 2;
 const uint COMIMAGE_FLAGS_IL_LIBRARY = 4;
@@ -531,13 +530,13 @@ const uint COMIMAGE_FLAGS_STRONGNAMESIGNED = 8;
 const uint COMIMAGE_FLAGS_NATIVE_ENTRYPOINT = 0x10;
 const uint COMIMAGE_FLAGS_TRACKDEBUGDATA = 0x10000;
 
-// TODO emum
+// TODO enum
 // Bit clear: 16 bit; bit set: 32 bit
 const uint8 HeapOffsetSize_String = 1;
 const uint8 HeapOffsetSize_Guid = 2;
 const uint8 HeapOffsetSize_Blob = 4;
 
-// TODO emum
+// TODO enum
 const uint8 Module = 0;
 const uint8 TypeRef = 1;
 const uint8 TypeDef = 2;
@@ -616,36 +615,55 @@ struct method_header_fat_t
 struct CodedIndex_t
 {
     const char name [24];
-    uint8 tag_size; // max5?
-    uint8 count; // max21?
-    uint8 map [22]; // TODO wastes bytes but ok? pointer will 8 anyway,
-                    // mono does it differently and without padding
+    uint8 tag_size;
+    uint8 count;
+    uint8 map;
 };
+
+struct CodedIndexMap_t
+{
+    uint8 TypeDefOrRef [3]        = { TypeDef, TypeRef, TypeSpec };
+    uint8 ResolutionScope [4]     = { Module, ModuleRef, AssemblyRef, TypeRef };
+    uint8 HasConstant [3]         = { Field, Param, Property };
+    uint8 HasFieldMarshal [2]     = { Field, Param };
+    uint8 HasDeclSecurity [3]     = {TypeDef, MethodDef, Assembly };
+    uint8 HasCustomAttribute [22] =
+    { MethodDef,     Field,         TypeRef,      TypeDef,          Param,          // HasCustomAttribute
+      InterfaceImpl, MemberRef,     Module,       DeclSecurity,     Property,       // HasCustomAttribute
+      Event,         StandAloneSig, ModuleRef,    TypeSpec,         Assembly,       // HasCustomAttribute
+      AssemblyRef,   File,          ExportedType, ManifestResource, GenericParam,   // HasCustomAttribute
+      GenericParamConstraint, MethodSpec                                         }; // HasCustomAttribute
+};
+
+const CodedIndexMap_t CodedIndexMap;
+
+constexpr uint8 LogBase2 (unsigned a)
+{
+#define X(x) a > (1 << x) ? (x + 1) :
+    return X(31) X(30)
+           X(29) X(28) X(27) X(28) X(27) X(26) X(25) X(24) X(23) X(22) X(21) X(20)
+           X(19) X(18) X(17) X(18) X(17) X(16) X(15) X(14) X(13) X(12) X(11) X(10)
+           X( 9) X( 8) X( 7) X( 8) X( 7) X( 6) X( 5) X( 4) X( 3) X( 2) X( 1) X( 0)
+#undef X
+           0;
+}
+
+#define CountOf(x) std::size(x)
+#define CountOfField(x, y) std::size(x().y)
+#define CodedIndex(x) {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) }
+
+const CodedIndex_t CodedIndex_TypeDefOrRef = CodedIndex(TypeDefOrRef);
+const CodedIndex_t CodedIndex_ResolutionScope = CodedIndex(ResolutionScope);
+const CodedIndex_t CodedIndex_HasConstant = CodedIndex(HasConstant);
+const CodedIndex_t CodedIndex_HasCustomAttribute = CodedIndex(HasCustomAttribute);
+const CodedIndex_t CodedIndex_HasFieldMarshal = CodedIndex(HasFieldMarshal);
+const CodedIndex_t CodedIndex_HasDeclSecurity = CodedIndex(HasDeclSecurity);
 
 struct HeapIndex_t
 {
     const char *heap_name; // string, guid, etc.
     uint8 heap_index; // dynamic?
 };
-
-const CodedIndex_t CodedIndex_TypeDefOrRef = { "TypeDefOrRef", 2, 3, { TypeDef,
-    TypeRef, TypeSpec }, };
-
-const CodedIndex_t CodedIndex_ResolutionScope = { "ResolutionScope", 2, 4, { Module,
-    ModuleRef, AssemblyRef, TypeRef } };
-
-const CodedIndex_t CodedIndex_HasConstant = { "HasConstant", 2, 3,
-    { Field, Param, Property } };
-
-const CodedIndex_t CodedIndex_HasCustomAttribute = { "HasCustomAttribute", 5, 22,
-    { MethodDef, Field, TypeRef, TypeDef, Param, InterfaceImpl, MemberRef,
-      Module, DeclSecurity, Property, Event, StandAloneSig, ModuleRef, TypeSpec,
-      Assembly, AssemblyRef, File, ExportedType, ManifestResource,
-      GenericParam, GenericParamConstraint, MethodSpec }};
-
-const CodedIndex_t CodedIndex_HasFieldMarshal = { "HasFieldMarshal", 1, 2, { Field, Param }};
-
-const CodedIndex_t CodedIndex_HasDeclSecurity = { "HasDeclSecurity", 2, 3, {TypeDef, MethodDef, Assembly }};
 
 struct metadata_header
 {
@@ -1813,8 +1831,6 @@ struct metadata_table_schema_t
     uint size; // dynamic, might live elsewhere (per assembly)
 };
 
-#define CountOf(x) (sizeof (x) / sizeof ((x)[0])) // TODO
-
 // 0
 struct metadata_module_t // 0
 {
@@ -1997,6 +2013,12 @@ X (sizeof (image_dos_header_t));
 X (sizeof (image_file_header_t));
 X (sizeof (image_nt_headers_t));
 X (sizeof (image_section_header_t));
+X (CodedIndex_TypeDefOrRef.tag_size);
+X (CodedIndex_ResolutionScope.tag_size);
+X (CodedIndex_HasConstant.tag_size);
+X (CodedIndex_HasCustomAttribute.tag_size);
+X (CodedIndex_HasFieldMarshal.tag_size);
+X (CodedIndex_HasDeclSecurity.tag_size);
 #undef X
     try
     {
