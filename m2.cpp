@@ -533,11 +533,11 @@ const uint8 HeapOffsetSize_Blob = 4;
 const int8 Module = 0;
 const int8 TypeRef = 1;
 const int8 TypeDef = 2;
-// 3?
+const int8 FiedPtr = 3; // nonstandard
 const int8 Field = 4;
-// 5?
+const int8 MethodPtr = 5; // nonstandard
 const int8 MethodDef = 6;
-// 7?
+const int8 ParamPtr = 7; // nonstandard
 const int8 Param = 8;
 const int8 InterfaceImpl = 9;
 const int8 MemberRef = 10;
@@ -551,10 +551,10 @@ const int8 ClassLayout = 15;
 const int8 FieldLayout = 16;
 const int8 StandAloneSig = 17;
 const int8 EventMap = 18;
-// 19?
+const int8 EventPtr = 19; // nonstandard
 const int8 Event = 20;
 const int8 PropertyMap = 21;
-// 22?
+const int8 ProperyPtr = 22; // nonstandard
 const int8 Property = 23;
 const int8 MethodSemantics = 24; // 0x18
 const int8 MethodImpl = 25; // 0x19
@@ -562,7 +562,8 @@ const int8 ModuleRef = 26;
 const int8 TypeSpec = 27;
 const int8 ImplMap = 28;
 const int8 FieldRVA = 29;
-// 30? 31?
+const int8 ENCLog = 30; // nonstandard
+const int8 ENCMap = 31; // nonstandard
 const int8 Assembly = 32;
 const int8 AssemblyProcessor = 33;
 const int8 AssemblyOS = 34;
@@ -2193,11 +2194,12 @@ unknown_stream:
         uint64 sorted = metadata_tables->Sorted;
         uint64 unsorted = valid & ~sorted;
         uint64 invalidSorted = sorted & ~valid;
-        printf ("metadata_tables.        Valid:%08X`%08X\n", valid >> 32, (uint32)valid);
+        printf ("metadata_tables.        Valid:%08X`%08X\n", (uint32)(valid >> 32), (uint32)valid);
         // Mono does not use sorted, and there are bits set beyond Valid.
-        printf ("metadata_tables.       Sorted:%08X`%08X\n", sorted >> 32, (uint32)sorted);
-        printf ("metadata_tables.     Unsorted:%08X`%08X\n", unsorted >> 32, (uint32)unsorted);
-        printf ("metadata_tables.InvalidSorted:%08X`%08X\n", invalidSorted >> 32, (uint32)invalidSorted);
+        // I suspect this has to do with writing/appending, and occasionally sorting.
+        printf ("metadata_tables.       Sorted:%08X`%08X\n", (uint32)(sorted >> 32), (uint32)sorted);
+        printf ("metadata_tables.     Unsorted:%08X`%08X\n", (uint32)(unsorted >> 32), (uint32)unsorted);
+        printf ("metadata_tables.InvalidSorted:%08X`%08X\n", (uint32)(invalidSorted >> 32), (uint32)invalidSorted);
     }
 
     template <typename T> T* rva_to_p (uint32 rva)
