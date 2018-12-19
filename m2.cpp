@@ -249,7 +249,7 @@ struct image_optional_header32
     uint32 SizeOfHeapCommit;
     uint32 LoaderFlags;
     uint32 NumberOfRvaAndSizes;
-    image_data_directory_t DataDirectory[16];
+    image_data_directory_t DataDirectory[1];
 };
 
 struct image_optional_header64
@@ -283,7 +283,7 @@ struct image_optional_header64
     uint64 SizeOfHeapCommit;
     uint32 LoaderFlags;
     uint32 NumberOfRvaAndSizes;
-    image_data_directory_t DataDirectory[16];
+    image_data_directory_t DataDirectory[1];
 };
 
 struct image_section_header_t;
