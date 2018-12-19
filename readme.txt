@@ -1,14 +1,18 @@
 This is a dotnet implementation
 with the primary features being:
 
-- Converts IL to C++.
-- Maybe also WebAssembly. Else the project name was mxx,
-  but m2 is punnier -- mono2. duo?
+- Converts IL to C++? Not C, because, exception handling.
+- Convert IL to WebAssembly?
+- Interpreter?
+- Understandable by me hopefully.
 - Class at a type conversion, for an LTCG/LTO balance.
   - i.e. class at a time, but outputing a source file per type.
   - i.e. not assembly at a time.
-- Uses the Mono runtime.
-- Written in C++.
+  - Benefits C++ compilation, at least.
+  - Maybe whole program-ish for WebAssembly.
+- Uses the Mono runtime?
+  Using any runtime is another layer of work.
+- Written in C++? C? C++11? C++98?
 - Very portable (like Mono, but an easier time of it
   for lack of JIT, etc.)
 
@@ -20,7 +24,7 @@ with the primary features being:
  - C is a horrible language.
 
 - Why Mono?
-  Because I worked there.
+  Familiarity? Former work.
 
 - What about System.Reflection.Emit?
   Not yet decided.
@@ -33,7 +37,7 @@ with the primary features being:
     - Nothing.
 
 - Which GC?
-  Undecided.
+  Undecided. Boehm? Mono/sgen? CoreCLR? New? Modula-3?
 
 - Compatible with CoreCLR?
   Unknown, undecided.
