@@ -15,6 +15,7 @@
 #define _DARWIN_USE_64_BIT_INODE 1
 //#define __DARWIN_ONLY_64_BIT_INO_T 1
 // TODO cmake
+// TODO big endian and packed I/O
 //#define _LARGEFILE_SOURCE
 //#define _LARGEFILE64_SOURCE
 
