@@ -12,7 +12,6 @@
 // later some JIT
 
 //#include "config.h"
-
 #define _DARWIN_USE_64_BIT_INODE 1
 //#define __DARWIN_ONLY_64_BIT_INO_T 1
 // TODO cmake
@@ -20,6 +19,7 @@
 //#define _LARGEFILE64_SOURCE
 
 #include <stdint.h>
+#include <inttypes.h>
 #include <assert.h>
 #include <string>
 #include <stdio.h>
@@ -36,6 +36,10 @@
 #include <sys/stat.h>
 #endif
 #include <vector> // TODO rewrite/rename
+
+#if !defined(PRIX64) && defined(_WIN32)
+#define PRIX64 "I64X"
+#endif
 
 typedef unsigned char uchar;
 typedef unsigned short ushort;
@@ -115,11 +119,11 @@ string_format (const char *format, ...)
 }
 
 void
-assertf_failed (const char * format, ...)
+assertf_failed (const char* condition, const char * format, ...)
 {
     va_list args;
     va_start (args, format);
-    fputs (("assertf_failed:" + m2::string_vformat (format, args) + "\n").c_str (), stderr);
+    fputs (("assertf_failed:" + std::string(condition) + ":" + m2::string_vformat (format, args) + "\n").c_str (), stderr);
     assert (0);
     abort ();
 }
@@ -133,7 +137,7 @@ assert_failed (const char * expr)
 }
 
 #define release_assert(x)     ((x) || (assert_failed (!#x), (int)0))
-#define release_assertf(x, y) ((x) || ((assertf_failed y), 0))
+#define release_assertf(x, ...) ((x) || (assertf_failed (#x, __VA_ARGS__), 0))
 #ifdef NDEBUG
 #define assertf(x, y)          /* nothing */
 #else
@@ -782,7 +786,7 @@ struct metadata_root_t
     /* 6 */ uint16 MinorVersion; // 1, ignore
     /* 8 */ uint32 Reserved;     // 0
     /* 12 */ uint32 VersionLength; // VersionLength null, round up to 4
-    /* 16 */ //char Version [ ];
+    /* 16 */ char Version[1];
     // uint16 Flags; // 0
     // uint16 NumberOfStreams;
     // metadata_stream_header_t stream_headers [NumberOfStreams];
@@ -1871,7 +1875,7 @@ typedef enum CorElementType
 #endif
 
 // COM+ 2.0 header structure.
-struct image_clr_header // data_directory [15]
+struct image_clr_header_t // data_directory [15]
 {
     uint32 cb; // count of bytes
     uint16 MajorRuntimeVersion;
@@ -2063,9 +2067,18 @@ struct loaded_image_t
     char * guids = 0;
     uint string_index_size = 0;
     uint guid_index_size = 0;
-    metadata_tables_header_t * metadata_tables_header = 0;
+    metadata_tables_header_t * metadata_tables = 0;
     uint32 * number_of_rows = 0; // points into metadata_tables_header
     uint NumberOfRvaAndSizes = 0;
+    uint number_of_streams = 0;
+    struct
+    {
+        metadata_stream_header_t* tables;
+        metadata_stream_header_t* guid;
+        metadata_stream_header_t* string; // utf8
+        metadata_stream_header_t* ustring; // unicode/user strings
+        metadata_stream_header_t* blob;
+    } streams;
 
     void init (const char *file_name)
     {
@@ -2090,12 +2103,12 @@ struct loaded_image_t
         printf ("TimeDateStamp:%X\n", nt->FileHeader.TimeDateStamp);
         printf ("PointerToSymbolTable:%X\n", nt->FileHeader.PointerToSymbolTable);
         printf ("NumberOfSymbols:%X\n", nt->FileHeader.NumberOfSymbols);
-        printf ("SizeOfOptionalHeader:%xXn", nt->FileHeader.SizeOfOptionalHeader);
+        printf ("SizeOfOptionalHeader:%X\n", nt->FileHeader.SizeOfOptionalHeader);
         printf ("Characteristics:%X\n", nt->FileHeader.Characteristics);
         opt32 = (image_optional_header32*)(&nt->OptionalHeader);
         opt64 = (image_optional_header64*)(&nt->OptionalHeader);
         opt_magic = opt32->Magic;
-        release_assertf ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), ("file:%s opt_magic:%x", file_name, opt_magic));
+        release_assertf ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), "file:%s opt_magic:%x", file_name, opt_magic);
         printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, opt32, opt64);
         NumberOfRvaAndSizes = opt32 ? opt32->NumberOfRvaAndSizes : opt64->NumberOfRvaAndSizes;
         printf ("opt.rvas:%X\n", NumberOfRvaAndSizes);
@@ -2105,15 +2118,95 @@ struct loaded_image_t
         for (uint i = 0; i < number_of_sections; ++i, ++section_header)
             printf ("section [%02X].Name: %.8s\n", i, section_header->Name);
         image_data_directory_t* DataDirectory = opt32 ? opt32->DataDirectory : opt64->DataDirectory;
-        for (uint i = 0; i < NumberOfRvaAndSizes; ++i, ++NumberOfRvaAndSizes)
+        for (uint i = 0; i < NumberOfRvaAndSizes; ++i)
         {
-            printf ("DataDirectory [%02X].Offset: %#06X\n", i, DataDirectory->VirtualAddress);
-            printf ("DataDirectory [%02X].Size: %#06X\n", i, DataDirectory->Size);
+            printf ("DataDirectory [%02X].Offset: %#06X\n", i, DataDirectory[i].VirtualAddress);
+            printf ("DataDirectory [%02X].Size: %#06X\n", i, DataDirectory[i].Size);
         }
+        release_assertf (DataDirectory [14].VirtualAddress, "Not a .NET image? %x", DataDirectory [14].VirtualAddress);
+        release_assertf (DataDirectory [14].Size, "Not a .NET image? %x", DataDirectory [14].Size);
+        auto clr = rva_to_p<image_clr_header_t>(DataDirectory [14].VirtualAddress);
+        printf ("clr.cb:%X\n", clr->cb);
+        printf ("clr.MajorRuntimeVersion:%X\n", clr->MajorRuntimeVersion);
+        printf ("clr.MinorRuntimeVersion:%X\n", clr->MinorRuntimeVersion);
+        printf ("clr.MetaData.Offset:%X\n", clr->MetaData.VirtualAddress);
+        printf ("clr.MetaData.Size:%X\n", clr->MetaData.Size);
+        release_assertf (clr->MetaData.Size, "%X", clr->MetaData.Size);
+        release_assertf (clr->cb >= sizeof (image_clr_header_t), "%X %X", clr->cb, (uint)sizeof (image_clr_header_t));
+        auto metadata_root = rva_to_p<metadata_root_t>(clr->MetaData.VirtualAddress);
+        printf ("metadata_root.Signature:%X\n", metadata_root->Signature);
+        printf ("metadata_root.MajorVersion:%X\n", metadata_root->MajorVersion);
+        printf ("metadata_root.MinorVersion:%X\n", metadata_root->MinorVersion);
+        printf ("metadata_root.Reserved:%X\n", metadata_root->Reserved);
+        printf ("metadata_root.VersionLength:%X\n", metadata_root->VersionLength);
+        release_assertf ((metadata_root->VersionLength % 4) == 0, "%X", metadata_root->VersionLength);
+        size_t VersionLength = strlen(metadata_root->Version);
+        release_assertf (VersionLength < metadata_root->VersionLength, "%X %X", VersionLength, metadata_root->VersionLength);
+        // TODO bounds checks throughout
+        auto pflags = (uint16*)&metadata_root->Version[metadata_root->VersionLength];
+        auto pnumber_of_streams = 1 + pflags;
+        number_of_streams = *pnumber_of_streams;
+        printf ("metadata_root.Version:%s\n", metadata_root->Version);
+        printf ("flags:%X\n", *pflags);
+        printf ("number_of_streams:%X\n", number_of_streams);
+        auto stream = (metadata_stream_header_t*)(pnumber_of_streams + 1);
+        for (uint i = 0; i < number_of_streams; ++i)
+        {
+            printf ("stream[%X].Offset:%X\n", i, stream->Offset);
+            printf ("stream[%X].Size:%X\n", i, stream->Size);
+            release_assertf ((stream->Size % 4) == 0, "%X", stream->Size);
+            auto name = stream->Name;
+            size_t length = strlen (name);
+            release_assertf (length <= 32, "%X:%s", length, name);
+            printf ("stream[%X].Name:%X:%.*s\n", i, (int)length, (int)length, name);
+            if (length >= 2 && name [0] == '#')
+            {
+                ++name;
+                if (length == 2 && name [0] == '~')
+                    streams.tables = stream;
+                else if (length == 5 && memcmp (name, "GUID", 4) == 0)
+                    streams.guid = stream;
+                else if (length == 5 && memcmp (name, "Blob", 4) == 0)
+                    streams.blob = stream;
+                else if (length == 8 && memcmp (name, "Strings", 7) == 0)
+                    streams.string = stream;
+                else if (length == 3 && name [0] == 'U' && name [1] == 'S')
+                    streams.ustring = stream;
+                else
+                    goto unknown_stream;
+            }
+            else {
+unknown_stream:
+                fprintf (stderr, "unknown stream %s\n", stream->Name);
+                abort ();
+            }
+            length = (length + 4) & -4;
+            stream = (metadata_stream_header_t*)(stream->Name + length);
+        }
+        metadata_tables = (metadata_tables_header_t*)(streams.tables->Offset + (char*)metadata_root);
+        printf ("metadata_tables.reserved:%X\n", metadata_tables->reserved);
+        printf ("metadata_tables.MajorVersion:%X\n", metadata_tables->MajorVersion);
+        printf ("metadata_tables.MinorVersion:%X\n", metadata_tables->MinorVersion);
+        printf ("metadata_tables.HeapSizes:%X\n", metadata_tables->HeapSizes);
+        printf ("metadata_tables.reserved2:%X\n", metadata_tables->reserved2);
+        uint64 valid = metadata_tables->Valid;
+        uint64 sorted = metadata_tables->Sorted;
+        uint64 unsorted = valid & ~sorted;
+        uint64 invalidSorted = sorted & ~valid;
+        printf ("metadata_tables.        Valid:%08X`%08X\n", valid >> 32, (uint32)valid);
+        // Mono does not use sorted, and it has bits set beyond Valid.
+        printf ("metadata_tables.       Sorted:%08X`%08X\n", sorted >> 32, (uint32)sorted);
+        printf ("metadata_tables.     Unsorted:%08X`%08X\n", unsorted >> 32, (uint32)unsorted);
+        printf ("metadata_tables.InvalidSorted:%08X`%08X\n", invalidSorted >> 32, (uint32)invalidSorted);
     }
 
-    uint32
-    rva_to_file_offset (void* base, uint32 rva)
+    template <typename T> T* rva_to_p (uint32 rva)
+    {
+        rva = rva_to_file_offset (rva);
+        return rva ? (T*)(((char*)base) + rva) : 0;
+    }
+
+    uint32 rva_to_file_offset (uint32 rva)
     {
         // TODO binary search
         image_section_header_t* section_header = nt->first_section_header ();
