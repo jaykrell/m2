@@ -537,50 +537,118 @@ const uint8 HeapOffsetSize_Guid = 2;
 const uint8 HeapOffsetSize_Blob = 4;
 
 // TODO enum
-const uint8 Module = 0;
-const uint8 TypeRef = 1;
-const uint8 TypeDef = 2;
-const uint8 Field = 4;
-const uint8 MethodDef = 6;
-const uint8 Param = 8;
-const uint8 InterfaceImpl = 9;
-const uint8 MemberRef = 10;
-const uint8 Constant = 11;
-const uint8 CustomAttribute = 12;
-const uint8 FieldMarshal = 13;
-const uint8 DeclSecurity = 14;
-const uint8 ClassLayout = 15;
-const uint8 FieldLayout = 16;
-const uint8 StandAloneSig = 17;
-const uint8 EventMap = 18;
-const uint8 Event = 20;
-const uint8 PropertyMap = 21;
-const uint8 Property = 23;
-const uint8 MethodSemantics = 24; // 0x18
-const uint8 MethodImpl = 25; // 0x19
-const uint8 ModuleRef = 26;
-const uint8 TypeSpec = 27;
-const uint8 ImplMap = 28;
-const uint8 FieldRVA = 29;
-const uint8 Assembly = 32;
-const uint8 AssemblyProcessor = 33;
-const uint8 AssemblyOS = 34;
-const uint8 AssemblyRef = 35;
-const uint8 AssemblyRefProcessor = 36;
-const uint8 AssemblyRefOS = 37;
-const uint8 File = 38;
-const uint8 ExportedType = 39;
-const uint8 ManifestResource = 40; // 0x28
-const uint8 NestedClass = 41;
-const uint8 GenericParam = 42; // 0x2A
-const uint8 MethodSpec = 0x2B;
-const uint8 GenericParamConstraint = 44; // 0x2C
+const int8 Module = 0;
+const int8 TypeRef = 1;
+const int8 TypeDef = 2;
+// 3?
+const int8 Field = 4;
+// 5?
+const int8 MethodDef = 6;
+// 7?
+const int8 Param = 8;
+const int8 InterfaceImpl = 9;
+const int8 MemberRef = 10;
+const int8 MethodRef = MemberRef;
+const int8 FierldRef = MemberRef;
+const int8 Constant = 11;
+const int8 CustomAttribute = 12;
+const int8 FieldMarshal = 13;
+const int8 DeclSecurity = 14;
+const int8 ClassLayout = 15;
+const int8 FieldLayout = 16;
+const int8 StandAloneSig = 17;
+const int8 EventMap = 18;
+// 19?
+const int8 Event = 20;
+const int8 PropertyMap = 21;
+// 22?
+const int8 Property = 23;
+const int8 MethodSemantics = 24; // 0x18
+const int8 MethodImpl = 25; // 0x19
+const int8 ModuleRef = 26;
+const int8 TypeSpec = 27;
+const int8 ImplMap = 28;
+const int8 FieldRVA = 29;
+// 30? 31?
+const int8 Assembly = 32;
+const int8 AssemblyProcessor = 33;
+const int8 AssemblyOS = 34;
+const int8 AssemblyRef = 35;
+const int8 AssemblyRefProcessor = 36;
+const int8 AssemblyRefOS = 37;
+const int8 File = 38;
+const int8 ExportedType = 39;
+const int8 ManifestResource = 40; // 0x28
+const int8 NestedClass = 41;
+const int8 GenericParam = 42; // 0x2A
+const int8 MethodSpec = 0x2B;
+const int8 GenericParamConstraint = 44; // 0x2C
 
 // TODO enum
 const uint8 CorILMethod_TinyFormat = 2;
 const uint8 CorILMethod_FatFormat = 3;
 const uint8 CorILMethod_MoreSects = 8;
 const uint8 CorILMethod_InitLocals = 0x10;
+
+struct DynamicTableInfoElement_t
+{
+    uint32 RowCount = 0;
+    uint32 RowSize = 0;
+    void*  Base = 0;
+};
+
+union DynamicTableInfo_t
+{
+    DynamicTableInfoElement_t array [45];
+    struct
+    {
+        DynamicTableInfoElement_t Module;
+        DynamicTableInfoElement_t TypeRef;
+        DynamicTableInfoElement_t TypeDef;
+        DynamicTableInfoElement_t Table3;
+        DynamicTableInfoElement_t Field;
+        DynamicTableInfoElement_t Table5;
+        DynamicTableInfoElement_t MethodDef;
+        DynamicTableInfoElement_t Table7;
+        DynamicTableInfoElement_t Param;
+        DynamicTableInfoElement_t InterfaceImpl;
+        DynamicTableInfoElement_t MemberRef;
+        DynamicTableInfoElement_t Constant;
+        DynamicTableInfoElement_t CustomAttribute;
+        DynamicTableInfoElement_t FieldMarshal;
+        DynamicTableInfoElement_t DeclSecurity;
+        DynamicTableInfoElement_t ClassLayout;
+        DynamicTableInfoElement_t FieldLayout;
+        DynamicTableInfoElement_t StandAloneSig;
+        DynamicTableInfoElement_t EventMap;
+        DynamicTableInfoElement_t Table19;
+        DynamicTableInfoElement_t Event;
+        DynamicTableInfoElement_t PropertyMap;
+        DynamicTableInfoElement_t Table22;
+        DynamicTableInfoElement_t Property;
+        DynamicTableInfoElement_t MethodSemantics;
+        DynamicTableInfoElement_t MethodImpl;
+        DynamicTableInfoElement_t ModuleRef;
+        DynamicTableInfoElement_t TypeSpec;
+        DynamicTableInfoElement_t ImplMap;
+        DynamicTableInfoElement_t FieldRVA;
+        DynamicTableInfoElement_t Table30;
+        DynamicTableInfoElement_t Table31;
+        DynamicTableInfoElement_t Assembly;
+        DynamicTableInfoElement_t AssemblyProcessor;
+        DynamicTableInfoElement_t AssemblyOS;
+        DynamicTableInfoElement_t AssemblyRef;
+        DynamicTableInfoElement_t AssemblyRefProcessor;
+        DynamicTableInfoElement_t AssemblyRefOS;
+        DynamicTableInfoElement_t File;
+        DynamicTableInfoElement_t ExportedType;
+        DynamicTableInfoElement_t ManifestResource;
+        DynamicTableInfoElement_t NestedClass;
+        DynamicTableInfoElement_t GenericParam;
+        DynamicTableInfoElement_t MethodSpec;
+        DynamicTableInfoElement_t GenericParamConstraint;
+    } name;
+};
 
 struct method_header_tiny_t
 // no locals
@@ -622,17 +690,24 @@ struct CodedIndex_t
 
 struct CodedIndexMap_t
 {
-    uint8 TypeDefOrRef [3]        = { TypeDef, TypeRef, TypeSpec };
-    uint8 ResolutionScope [4]     = { Module, ModuleRef, AssemblyRef, TypeRef };
-    uint8 HasConstant [3]         = { Field, Param, Property };
-    uint8 HasFieldMarshal [2]     = { Field, Param };
-    uint8 HasDeclSecurity [3]     = {TypeDef, MethodDef, Assembly };
-    uint8 HasCustomAttribute [22] =
+    int8 TypeDefOrRef [3]        = { TypeDef, TypeRef, TypeSpec };
+    int8 HasConstant [3]         = { Field, Param, Property };
+    int8 HasCustomAttribute [22] =
     { MethodDef,     Field,         TypeRef,      TypeDef,          Param,          // HasCustomAttribute
       InterfaceImpl, MemberRef,     Module,       DeclSecurity,     Property,       // HasCustomAttribute
       Event,         StandAloneSig, ModuleRef,    TypeSpec,         Assembly,       // HasCustomAttribute
       AssemblyRef,   File,          ExportedType, ManifestResource, GenericParam,   // HasCustomAttribute
       GenericParamConstraint, MethodSpec                                         }; // HasCustomAttribute
+    int8 HasFieldMarshal [2]     = { Field, Param };
+    int8 HasDeclSecurity [3]     = { TypeDef, MethodDef, Assembly };
+    int8 MemberRefParent [5]     = { TypeDef, TypeRef, ModuleRef, MethodDef, TypeSpec};
+    int8 HasSemantics    [2]     = { Event, Property};
+    int8 MethodDefOrRef  [2]     = { MethodDef, MethodRef };
+    int8 MemberForwarded [2]     = { Field, MethodDef };
+    int8 Implementation  [3]     = { File, AssemblyRef, ExportedType};
+    int8 CustomAttributeType [5] = { -1, -1, MethodDef, MethodRef, -1 };
+    int8 ResolutionScope [4]     = { Module, ModuleRef, AssemblyRef, TypeRef };
+    int8 TypeOrMethodDef [2]     = { TypeDef, MethodDef };
 };
 
 const CodedIndexMap_t CodedIndexMap;
@@ -650,14 +725,21 @@ constexpr uint8 LogBase2 (unsigned a)
 
 #define CountOf(x) std::size(x)
 #define CountOfField(x, y) std::size(x().y)
-#define CodedIndex(x) {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) }
+#define CodedIndex(x) const CodedIndex_t CodedIndex_##x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
 
-const CodedIndex_t CodedIndex_TypeDefOrRef = CodedIndex(TypeDefOrRef);
-const CodedIndex_t CodedIndex_ResolutionScope = CodedIndex(ResolutionScope);
-const CodedIndex_t CodedIndex_HasConstant = CodedIndex(HasConstant);
-const CodedIndex_t CodedIndex_HasCustomAttribute = CodedIndex(HasCustomAttribute);
-const CodedIndex_t CodedIndex_HasFieldMarshal = CodedIndex(HasFieldMarshal);
-const CodedIndex_t CodedIndex_HasDeclSecurity = CodedIndex(HasDeclSecurity);
+CodedIndex(CustomAttributeType)
+CodedIndex(HasConstant)
+CodedIndex(HasCustomAttribute)
+CodedIndex(HasDeclSecurity)
+CodedIndex(HasFieldMarshal)
+CodedIndex(HasSemantics)
+CodedIndex(Implementation)
+CodedIndex(MethodDefOrRef)
+CodedIndex(MemberForwarded)
+CodedIndex(MemberRefParent)
+CodedIndex(ResolutionScope)
+CodedIndex(TypeDefOrRef)
+CodedIndex(TypeOrMethodDef)
 
 struct HeapIndex_t
 {
@@ -665,26 +747,44 @@ struct HeapIndex_t
     uint8 heap_index; // dynamic?
 };
 
-struct metadata_header
+struct GuidIndex_t // TODO
 {
-    uint32 reserved;
-    uint8 MajorVersion;
-    uint8 MinorVersion;
-    uint8 HeapOffsetSizes;
-    uint8 reserved2;
-    uint64 Valid; // metadata_typedef etc.
-    uint64 Sorted; // metadata_typedef etc.
-    // uint32 NumberOfRaws [];
+    uint32 value;
 };
 
-struct metadata_header_t
+struct StringIndex_t // TODO
+{
+    uint32 value;
+};
+
+struct BlobIndex_t // TODO
+{
+    uint32 value;
+};
+
+struct metadata_tables_header_t // tilde stream
+{
+    uint32 reserved; // 0
+    uint8 MajorVersion;
+    uint8 MinorVersion;
+    union {
+        uint8 HeapOffsetSizes;
+        uint8 HeapSizes;
+    };
+    uint8 reserved2; // 1
+    uint64 Valid; // metadata_typedef etc.
+    uint64 Sorted; // metadata_typedef etc.
+    // uint32 NumberOfRows [];
+};
+
+struct metadata_root_t
 {
     /* 0 */ uint32 Signature = 0x424A5342;
     /* 4 */ uint16 MajorVersion; // 1, ignore
     /* 6 */ uint16 MinorVersion; // 1, ignore
     /* 8 */ uint32 Reserved;     // 0
-    /* 12 */ uint32 Length; // VersionLength includes null, round up to 4, includes null
-    /* 16 */ //char Version [ ]; // length is multiple of 4
+    /* 12 */ uint32 VersionLength; // VersionLength null, round up to 4
+    /* 16 */ //char Version [ ];
     // uint16 Flags; // 0
     // uint16 NumberOfStreams;
     // metadata_stream_header_t stream_headers [NumberOfStreams];
@@ -1942,6 +2042,7 @@ struct metadata_table_t
 
 struct loaded_image_t
 {
+    DynamicTableInfoElement_t table_info;
     std::vector<uint8> row_size; // index by metadata table
     uint64 file_size = 0;
     memory_mapped_file_t mmf;
