@@ -2196,6 +2196,8 @@ unknown_stream:
         printf ("metadata_tables.       Sorted:%08X`%08X\n", (uint32)(sorted >> 32), (uint32)sorted);
         printf ("metadata_tables.     Unsorted:%08X`%08X\n", (uint32)(unsorted >> 32), (uint32)unsorted);
         printf ("metadata_tables.InvalidSorted:%08X`%08X\n", (uint32)(invalidSorted >> 32), (uint32)invalidSorted);
+
+        // TODO print which tables are sorted, by name
     }
 
     template <typename T> T* rva_to_p (uint32 rva)
