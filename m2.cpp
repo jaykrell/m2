@@ -2194,7 +2194,7 @@ unknown_stream:
         uint64 unsorted = valid & ~sorted;
         uint64 invalidSorted = sorted & ~valid;
         printf ("metadata_tables.        Valid:%08X`%08X\n", valid >> 32, (uint32)valid);
-        // Mono does not use sorted, and it has bits set beyond Valid.
+        // Mono does not use sorted, and there are bits set beyond Valid.
         printf ("metadata_tables.       Sorted:%08X`%08X\n", sorted >> 32, (uint32)sorted);
         printf ("metadata_tables.     Unsorted:%08X`%08X\n", unsorted >> 32, (uint32)unsorted);
         printf ("metadata_tables.InvalidSorted:%08X`%08X\n", invalidSorted >> 32, (uint32)invalidSorted);
