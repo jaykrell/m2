@@ -117,8 +117,6 @@ string_format (const char *format, ...)
     return a;
 }
 
-}
-
 void
 assertf_failed (const char* condition, const char * format, ...)
 {
@@ -144,9 +142,6 @@ assert_failed (const char * expr)
 #else
 #define assertf(x, y)           (release_assertf (x, y))
 #endif
-
-namespace m2
-{
 
 void
 throw_int (int i, const char* a = "")
