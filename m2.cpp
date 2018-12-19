@@ -71,28 +71,17 @@ typedef          long long  int64;
 typedef unsigned long long uint64;
 #endif
 
-typedef unsigned char boolean;
-#if defined (__cplusplus) || __STDC__
-typedef void* pointer;
-#else
-typedef char* pointer;
-#endif
-
-// WORD_T/INTEGER are always exactly the same size as a pointer.
 // VMS sometimes has 32bit size_t/ptrdiff_t but 64bit pointers.
 //
 // commented out is correct, but so is the #else */
 //#if defined (_WIN64) || __INITIAL_POINTER_SIZE == 64 || defined (__LP64__) || defined (_LP64)*/
 #if __INITIAL_POINTER_SIZE == 64
-typedef int64 integer;
-typedef uint64 word_t;
+typedef int64 intptr;
+typedef uint64 uintptr;
 #else
-typedef ptrdiff_t integer;
-typedef size_t word_t;
+typedef ptrdiff_t intptr;
+typedef size_t uintptr;
 #endif
-
-/* longint is always signed and exactly 64 bits. */
-typedef int64 longint;
 
 namespace m2
 {
@@ -747,19 +736,28 @@ struct HeapIndex_t
     uint8 heap_index; // dynamic?
 };
 
-struct GuidIndex_t // TODO
+struct metadata_guid_t // TODO
 {
     uint32 value;
+    const char* pointer;
 };
 
-struct StringIndex_t // TODO
+struct metadata_string_t
 {
     uint32 value;
+    const char* pointer;
 };
 
-struct BlobIndex_t // TODO
+struct metadata_blob_t
 {
     uint32 value;
+    const void* pointer;
+};
+
+struct token_t // TODO
+{
+    uint8 table;
+    uint32 index;
 };
 
 struct metadata_tables_header_t // tilde stream
@@ -1928,17 +1926,16 @@ struct metadata_table_schema_t
     const char *name;
     uint field_count;
     const metadata_field_t* fields;
-    uint size; // dynamic, might live elsewhere (per assembly)
+    void (*unpack)();
 };
 
-// 0
 struct metadata_module_t // 0
 {
     uint16 Generation; // reserved, 0
-    uint32 Name; // index into string heap
-    uint32 Mvid; // index into guid heap
-    uint32 EncId; // reserved, Guid, 0
-    uint32 EncBaseId; // reserved, Guid, 0
+    metadata_string_t Name;
+    metadata_guid_t Mvid;
+    metadata_guid_t EncId;
+    metadata_guid_t EncBaseId; // reserved, 0
 };
 const metadata_field_t metadata_fields_Module [ ] =
 {
@@ -1951,6 +1948,12 @@ const metadata_field_t metadata_fields_Module [ ] =
 metadata_table_schema_t metata_row_schema_module = { "Module", CountOf (metadata_fields_Module), metadata_fields_Module };
 
 // 1
+struct metadata_typeref_t // 0
+{
+    token_t ResolutionScope;
+    metadata_string_t TypeName;
+    metadata_string_t TypeNameSpace;
+};
 const metadata_field_t metadata_fields_TypeRef [ ] =
 {
     { "ResolutionScope", metadata_field_type_ResolutionScope },
@@ -2016,9 +2019,9 @@ struct metadata_typedef_t // 2
     };
 
     flags_t flags;
-    uint32 TypeName; // string
-    uint32 TypeNamespace; // string
-    uint32 Extends; // TypeDef or TypeRef or TypeSpec
+    metadata_string_t TypeName; // string
+    metadata_string_t TypeNamespace; // string
+    token_t Extends; // TypeDefOrRef
     uint32 FieldList; // index into Field table, either to last row or next start
     uint32 MethodList; // similar to previous
 };
@@ -2031,18 +2034,18 @@ const metadata_field_t metadata_fields_TypeDef [ ] =
     { "FieldList", metadata_field_type_FieldList },
     { "MethodList", metadata_field_type_MethodList },
 };
-metadata_table_schema_t metata_row_schema_typedef = { "TypeDef", CountOf (metadata_fields_TypeDef), metadata_fields_TypeDef };
+const metadata_table_schema_t metata_row_schema_typedef = { "TypeDef", CountOf (metadata_fields_TypeDef), metadata_fields_TypeDef };
 
 struct metadata_table_t
 {
-    void * base;
-    uint index;
-    uint row_size;
+    void * base = 0;
+    uint index = 0;
+    uint row_size = 0;
 };
 
 struct loaded_image_t
 {
-    DynamicTableInfoElement_t table_info;
+    DynamicTableInfoElement_t table_info = { };
     std::vector<uint8> row_size; // index by metadata table
     uint64 file_size = 0;
     memory_mapped_file_t mmf;
@@ -2056,6 +2059,13 @@ struct loaded_image_t
     uint32 opt_magic = 0;
     uint number_of_sections = 0;
     std::vector<image_section_header_t*> section_headers;
+    char * strings = 0;
+    char * guids = 0;
+    uint string_index_size = 0;
+    uint guid_index_size = 0;
+    metadata_tables_header_t * metadata_tables_header = 0;
+    uint32 * number_of_rows = 0; // points into metadata_tables_header
+    uint NumberOfRvaAndSizes = 0;
 
     void init (const char *file_name)
     {
@@ -2087,17 +2097,33 @@ struct loaded_image_t
         opt_magic = opt32->Magic;
         release_assertf ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), ("file:%s opt_magic:%x", file_name, opt_magic));
         printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, opt32, opt64);
-        printf ("opt.rvas:%X\n", opt32 ? opt32->NumberOfRvaAndSizes : opt64->NumberOfRvaAndSizes);
+        NumberOfRvaAndSizes = opt32 ? opt32->NumberOfRvaAndSizes : opt64->NumberOfRvaAndSizes;
+        printf ("opt.rvas:%X\n", NumberOfRvaAndSizes);
         number_of_sections = nt->FileHeader.NumberOfSections;
         printf ("number_of_sections:%X\n", number_of_sections);
         image_section_header_t* section_header = nt->first_section_header ();
         for (uint i = 0; i < number_of_sections; ++i, ++section_header)
             printf ("section [%02X].Name: %.8s\n", i, section_header->Name);
+        image_data_directory_t* DataDirectory = opt32 ? opt32->DataDirectory : opt64->DataDirectory;
+        for (uint i = 0; i < NumberOfRvaAndSizes; ++i, ++NumberOfRvaAndSizes)
+        {
+            printf ("DataDirectory [%02X].Offset: %#06X\n", i, DataDirectory->VirtualAddress);
+            printf ("DataDirectory [%02X].Size: %#06X\n", i, DataDirectory->Size);
+        }
     }
 
-    int
-    rva_to_file_offset (void* base, int rva)
+    uint32
+    rva_to_file_offset (void* base, uint32 rva)
     {
+        // TODO binary search
+        image_section_header_t* section_header = nt->first_section_header ();
+        for (uint i = 0; i < number_of_sections; ++i, ++section_header)
+        {
+            uint32 va = section_header->VirtualAddress;
+            if (rva >= va && rva < (va + section_header->SizeOfRawData))
+                return section_header->PointerToRawData + (rva - va);
+        }
+        return 0;
     }
 };
 
