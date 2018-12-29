@@ -43,7 +43,7 @@
 #endif
 
 typedef unsigned char uchar;
-typedef unsigned short ushort;
+//typedef unsigned short ushort;
 typedef unsigned int uint;
 
 // integral typedefs from Modula-3 m3core.h.
@@ -55,7 +55,7 @@ typedef unsigned char       uint8;
 #endif
 #if USHRT_MAX == 0x0FFFFUL
 typedef          short      int16;
-typedef unsigned short     uint16;
+typedef unsigned short     uint16, char2;
 #else
 #error unable to find 16bit integer
 #endif
@@ -81,11 +81,11 @@ typedef unsigned long long uint64;
 // commented out is correct, but so is the #else */
 //#if defined (_WIN64) || __INITIAL_POINTER_SIZE == 64 || defined (__LP64__) || defined (_LP64)*/
 #if __INITIAL_POINTER_SIZE == 64
-typedef int64 intptr;
-typedef uint64 uintptr;
+//typedef int64 intptr;
+//typedef uint64 uintptr;
 #else
-typedef ptrdiff_t intptr;
-typedef size_t uintptr;
+//typedef ptrdiff_t intptr;
+//typedef size_t uintptr;
 #endif
 
 namespace m2
@@ -99,7 +99,7 @@ string_vformat (const char *format, va_list va)
     // TOOD rewrite
     // TODO %x
     va_list va2;
-    va_copy (va2, va); //C99
+    va_copy (va2, va); // C99 TODO
     std::vector <char> buf (1 + vsnprintf (0, 0, format, va));
     vsnprintf (&buf [0], buf.size (), format, va2);
     va_end (va);
@@ -217,7 +217,7 @@ struct image_data_directory_t
     uint32 Size;
 };
 
-struct image_optional_header32
+struct image_optional_header32_t
 {
     uint16 Magic;
     uint8  MajorLinkerVersion;
@@ -252,7 +252,7 @@ struct image_optional_header32
     image_data_directory_t DataDirectory[1];
 };
 
-struct image_optional_header64
+struct image_optional_header64_t
 {
     uint16 Magic;
     uint8  MajorLinkerVersion;
@@ -746,12 +746,21 @@ struct metadata_guid_t // TODO
 struct metadata_string_t
 {
     uint32 value;
+    uint32 size;
     const char* pointer;
+};
+
+struct metadata_unicode_string_t
+{
+    uint32 value;
+    uint32 size;
+    const char2* pointer;
 };
 
 struct metadata_blob_t
 {
     uint32 value;
+    uint32 size;
     const void* pointer;
 };
 
@@ -796,7 +805,7 @@ struct metadata_stream_header_t // see mono verify_metadata_header
     char   Name [32]; // multiple of 4, null terminated, max 32
 };
 
-struct metadata_fieldtable_t // 4
+struct metadata_fieldtable_t // table4
 {
     enum class flags_t : uint16
     {
@@ -834,7 +843,7 @@ struct metadata_fieldtable_t // 4
     uint32 Signature; // blob
 };
 
-struct metadata_methoddef_t // 6
+struct metadata_methoddef_t // table6
 {
     enum class flags_t : uint16
     {
@@ -912,7 +921,7 @@ struct metadata_methoddef_t // 6
     uint32 ParamList; // Param table, start, until table end, or start of next MethodDef
 };
 
-struct metadata_param_t // 8
+struct metadata_param_t // table8
 {
     enum class flags_t : uint16
     {
@@ -933,13 +942,13 @@ struct metadata_param_t // 8
     uint32 Name; // String heap
 };
 
-struct metadata_interfaceimpl_t // 9
+struct metadata_interfaceimpl_t // table9
 {
     uint32 Class; // TypeDef
     uint32 Interface; // TypeDef or TypeRef or TypeSpec, "TypeDefOrRef"
 };
 
-struct metadata_memberef_t // 10
+struct metadata_memberef_t // table10
 {
     uint32 Class; // TypeRef, ModuleRef, MethodDef, TypeSpec or TypeDef tables; more precisely, a MemberRefParent coded index
     uint32 Name; // String heap
@@ -947,7 +956,7 @@ struct metadata_memberef_t // 10
 };
 
 // TODO This probably is not correct.
-struct metadata_constant_t // 11
+struct metadata_constant_t // table11
 {
     uint8 Type;
     uint8 Pad;
@@ -956,7 +965,7 @@ struct metadata_constant_t // 11
 };
 
 // TODO This probably is not correct.
-struct metadata_customattribute_t // 12
+struct metadata_customattribute_t // table12
 {
     uint32 Parent; // HasCustomAttribute (5 bits)
     uint32 Type; // MethodDef or MethodRef, CustomAttributeType
@@ -1910,11 +1919,14 @@ const metadata_field_type_t metadata_field_type_uint16 = {"uint16", 2};
 const metadata_field_type_t metadata_field_type_uint32 = {"uint32", 4};
 const metadata_field_type_t metadata_field_type_uint64 = {"uint64", 8};
 const metadata_field_type_t metadata_field_type_ResolutionScope = {"ResolutionScope"};
+// heap indices or offsets
 const metadata_field_type_t metadata_field_type_string = {"string"};
 const metadata_field_type_t metadata_field_type_guid = {"guid"};
+const metadata_field_type_t metadata_field_type_blob = {"blob"};
 const metadata_field_type_t metadata_field_type_TypeDefOrRef = {"TypeDefOrRef"};
 const metadata_field_type_t metadata_field_type_FieldList = {"FieldList"}; // TODO
 const metadata_field_type_t metadata_field_type_MethodList = {"MethodList"}; // TODO
+const metadata_field_type_t metadata_field_type_ParamList = {"ParamList"}; // TODO
 
 struct metadata_field_t
 {
@@ -1930,7 +1942,7 @@ struct metadata_table_schema_t
     void (*unpack)();
 };
 
-struct metadata_module_t // 0
+struct metadata_module_t // table0
 {
     uint16 Generation; // reserved, 0
     metadata_string_t Name;
@@ -1946,10 +1958,9 @@ const metadata_field_t metadata_fields_Module [ ] =
     { "EncId", metadata_field_type_guid }, // ignore
     { "EncBaseId", metadata_field_type_guid }, // ignore
 };
-metadata_table_schema_t metata_row_schema_module = { "Module", CountOf (metadata_fields_Module), metadata_fields_Module };
+metadata_table_schema_t metadata_row_schema_Module = { "Module", CountOf (metadata_fields_Module), metadata_fields_Module };
 
-// 1
-struct metadata_typeref_t // 0
+struct metadata_typeref_t // table1
 {
     token_t ResolutionScope;
     metadata_string_t TypeName;
@@ -1961,9 +1972,9 @@ const metadata_field_t metadata_fields_TypeRef [ ] =
     { "TypeName", metadata_field_type_string },
     { "TypeNamespace", metadata_field_type_string },
 };
-metadata_table_schema_t metata_row_schema_typeref = { "TypeRef", CountOf (metadata_fields_TypeRef), metadata_fields_TypeRef };
+metadata_table_schema_t metadata_row_schema_TypeRef = { "TypeRef", CountOf (metadata_fields_TypeRef), metadata_fields_TypeRef };
 
-struct metadata_typedef_t // 2
+struct metadata_typedef_t // table2
 {
     enum class flags_t : uint32
     {
@@ -2035,7 +2046,26 @@ const metadata_field_t metadata_fields_TypeDef [ ] =
     { "FieldList", metadata_field_type_FieldList },
     { "MethodList", metadata_field_type_MethodList },
 };
-const metadata_table_schema_t metata_row_schema_typedef = { "TypeDef", CountOf (metadata_fields_TypeDef), metadata_fields_TypeDef };
+const metadata_table_schema_t metadata_row_schema_TypeDef = { "TypeDef", CountOf (metadata_fields_TypeDef), metadata_fields_TypeDef };
+
+const metadata_field_t metadata_fields_Field [ ] =
+{
+    { "Flags", metadata_field_type_uint16 }, // TODO bitfield decoder
+    { "Name", metadata_field_type_string },
+    { "Signature", metadata_field_type_blob }
+};
+
+const metadata_table_schema_t metadata_row_schema_Field = { "Field", CountOf (metadata_fields_Field), metadata_fields_Field };
+
+const metadata_field_t metadata_fields_MethodDef [ ] = // table6
+{
+    { "RVA", metadata_field_type_uint32 },
+    { "ImplFlags", metadata_field_type_uint16}, // TODO higher level support
+    { "Flags", metadata_field_type_uint16}, // TODO higher level support
+    { "Name", metadata_field_type_string},
+    { "Signature", metadata_field_type_blob },
+    { "ParamList", metadata_field_type_ParamList }, // index into Param table, 2 or 4 bytes
+};
 
 struct metadata_table_t
 {
@@ -2047,7 +2077,8 @@ struct metadata_table_t
 struct loaded_image_t
 {
     DynamicTableInfoElement_t table_info = { };
-    std::vector<uint8> row_size; // index by metadata table
+    std::vector<uint8> table_present; // index by metadata table, values are 0/false and 1/true
+    std::vector<uint8> row_size; // index by metadata table, values are 2 or 4
     uint64 file_size = 0;
     memory_mapped_file_t mmf;
     void * base = 0;
@@ -2055,8 +2086,8 @@ struct loaded_image_t
     uint32 pe_offset = 0;
     uchar* pe = 0;
     image_nt_headers_t *nt = 0;
-    image_optional_header32 *opt32 = 0;
-    image_optional_header64 *opt64 = 0;
+    image_optional_header32_t *opt32 = 0;
+    image_optional_header64_t *opt64 = 0;
     uint32 opt_magic = 0;
     uint number_of_sections = 0;
     std::vector<image_section_header_t*> section_headers;
@@ -2102,8 +2133,8 @@ struct loaded_image_t
         printf ("NumberOfSymbols:%X\n", nt->FileHeader.NumberOfSymbols);
         printf ("SizeOfOptionalHeader:%X\n", nt->FileHeader.SizeOfOptionalHeader);
         printf ("Characteristics:%X\n", nt->FileHeader.Characteristics);
-        opt32 = (image_optional_header32*)(&nt->OptionalHeader);
-        opt64 = (image_optional_header64*)(&nt->OptionalHeader);
+        opt32 = (image_optional_header32_t*)(&nt->OptionalHeader);
+        opt64 = (image_optional_header64_t*)(&nt->OptionalHeader);
         opt_magic = opt32->Magic;
         release_assertf ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), "file:%s opt_magic:%x", file_name, opt_magic);
         printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, opt32, opt64);
