@@ -1906,7 +1906,8 @@ struct metadata_field_type_t
 {
     const char *name;
     uint8 fixed_size;
-    CodedIndex_t * CodedIndex;
+    uint8 fixed_table_index;
+    CodedIndex_t *coded_index;
     void (*decode)(...);
 };
 
@@ -1926,7 +1927,8 @@ const metadata_field_type_t metadata_field_type_blob = {"blob"};
 const metadata_field_type_t metadata_field_type_TypeDefOrRef = {"TypeDefOrRef"};
 const metadata_field_type_t metadata_field_type_FieldList = {"FieldList"}; // TODO
 const metadata_field_type_t metadata_field_type_MethodList = {"MethodList"}; // TODO
-const metadata_field_type_t metadata_field_type_ParamList = {"ParamList"}; // TODO
+const metadata_field_type_t metadata_field_type_ParamList = {"ParamList",  0, Param};
+const metadata_field_type_t metadata_field_type_Class = {"ParamList", 0, TypeDef};
 
 struct metadata_field_t
 {
@@ -2066,6 +2068,20 @@ const metadata_field_t metadata_fields_MethodDef [ ] = // table6
     { "Signature", metadata_field_type_blob },
     { "ParamList", metadata_field_type_ParamList }, // index into Param table, 2 or 4 bytes
 };
+
+const metadata_table_schema_t metadata_row_schema_MethoDef = { "MethodDef", CountOf (metadata_fields_MethodDef), metadata_fields_MethodDef };
+
+const metadata_field_t metadata_fields_MethodImpl [ ] = // table0x19
+{
+    { "Class", metadata_field_type_Class }, // TypeDef
+    { "ImplFlags", metadata_field_type_uint16}, // TODO higher level support
+    { "Flags", metadata_field_type_uint16}, // TODO higher level support
+    { "Name", metadata_field_type_string},
+    { "Signature", metadata_field_type_blob },
+    { "ParamList", metadata_field_type_ParamList }, // index into Param table, 2 or 4 bytes
+};
+
+const metadata_table_schema_t metadata_row_schema_MethodImpl = { "MethodImpl", CountOf (metadata_fields_MethodImpl), metadata_fields_MethodImpl };
 
 struct metadata_table_t
 {
