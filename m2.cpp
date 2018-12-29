@@ -2073,7 +2073,7 @@ const metadata_table_schema_t metadata_row_schema_MethoDef = { "MethodDef", Coun
 
 const metadata_field_t metadata_fields_MethodImpl [ ] = // table0x19
 {
-    { "Class", metadata_field_type_Class }, // TypeDef
+    { "Class", metadata_field_type_Class }, // index into TypeDef, 2 or 4 bytes
     { "ImplFlags", metadata_field_type_uint16}, // TODO higher level support
     { "Flags", metadata_field_type_uint16}, // TODO higher level support
     { "Name", metadata_field_type_string},
