@@ -1797,7 +1797,7 @@ struct metadata_field_type_functions_t
 struct metadata_field_type_t
 {
     const char *name;
-    metadata_field_type_functions_t* functions;
+    metadata_field_type_functions_t const * functions;
     union {
         int8 fixed_size;
         int8 table_index;
@@ -1833,39 +1833,39 @@ void metadata_decode_guid(metadata_field_type_t* type, void* output)
 {
 }
 
-metadata_field_type_functions_t metadata_field_type_fixed =
+const metadata_field_type_functions_t metadata_field_type_fixed =
 {
     metadata_decode_fixed,
 };
 
-metadata_field_type_functions_t metadata_field_type_blob_functions =
+const metadata_field_type_functions_t metadata_field_type_blob_functions =
 {
     metadata_decode_blob,
 };
 
-metadata_field_type_functions_t metadata_field_type_string_functions =
+const metadata_field_type_functions_t metadata_field_type_string_functions =
 {
     metadata_decode_string,
 };
 
-metadata_field_type_functions_t metadata_field_type_guid_functions =
+const metadata_field_type_functions_t metadata_field_type_guid_functions =
 {
     metadata_decode_guid,
 };
 
-metadata_field_type_functions_t metadata_field_type_ustring_functions =
+const metadata_field_type_functions_t metadata_field_type_ustring_functions =
 {
     metadata_decode_ustring,
 };
 
-metadata_field_type_functions_t metadata_field_type_index =
+const metadata_field_type_functions_t metadata_field_type_index =
 {
     metadata_decode_index,
 };
 
-metadata_field_type_functions_t metadata_field_type_codedindex =
+const metadata_field_type_functions_t metadata_field_type_codedindex =
 {
-    metadata_decode_codedindex,
+    metadata_decode_codedindex
 };
 
 const metadata_field_type_t metadata_field_type_int8 = {"int8", &metadata_field_type_fixed, 1};
@@ -2052,14 +2052,12 @@ struct metadata_fieldtable_t // table0x04
     metadata_string_t Name;
     metadata_blob_t Signature;
 };
-
 const metadata_field_t metadata_fields_Field [ ] = // table0x04
 {
     { "Flags", metadata_field_type_uint16 }, // TODO bitfield decoder
     { "Name", metadata_field_type_string },
     { "Signature", metadata_field_type_blob }
 };
-
 const metadata_table_schema_t metadata_row_schema_Field = { "Field", CountOf (metadata_fields_Field), metadata_fields_Field };
 
 struct metadata_methoddef_t // table0x06
@@ -2139,7 +2137,6 @@ struct metadata_methoddef_t // table0x06
     metadata_blob_t Signature; // Blob heap, 7 bit encode/decode
     metadata_token_t ParamList; // Param table, start, until table end, or start of next MethodDef
 };
-
 const metadata_field_t metadata_fields_MethodDef [ ] = // table0x06
 {
     { "RVA", metadata_field_type_uint32 },
@@ -2149,7 +2146,6 @@ const metadata_field_t metadata_fields_MethodDef [ ] = // table0x06
     { "Signature", metadata_field_type_blob },
     { "ParamList", metadata_field_type_ParamList }, // index into Param table, 2 or 4 bytes
 };
-
 const metadata_table_schema_t metadata_row_schema_MethoDef = { "MethodDef", CountOf (metadata_fields_MethodDef), metadata_fields_MethodDef };
 
 const metadata_field_t metadata_fields_MethodImpl [ ] = // table0x19
@@ -2161,7 +2157,6 @@ const metadata_field_t metadata_fields_MethodImpl [ ] = // table0x19
     { "Signature", metadata_field_type_blob },
     { "ParamList", metadata_field_type_ParamList }, // index into Param table, 2 or 4 bytes
 };
-
 const metadata_table_schema_t metadata_row_schema_MethodImpl = { "MethodImpl", CountOf (metadata_fields_MethodImpl), metadata_fields_MethodImpl };
 
 // .property and .event
