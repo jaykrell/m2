@@ -1989,7 +1989,8 @@ const metadata_field_type_t metadata_field_type_Implementation = { "Implementati
 const metadata_field_type_t metadata_field_type_HasFieldMarshal = { "HasFieldMarshal", &metadata_field_type_codedindex, CodedIndex(HasFieldMarshal) };
 const metadata_field_type_t metadata_field_type_MemberRefParent = { "MemberRefParent", &metadata_field_type_codedindex, CodedIndex(MemberRefParent) };
 const metadata_field_type_t metadata_field_type_TypeOrMethodDef = { "TypeOrMethodDef", &metadata_field_type_codedindex, CodedIndex(TypeOrMethodDef) };
-const metadata_field_type_t metadata_field_type_GenericParam = { "GenericParam =", &metadata_field_type_index, GenericParam };
+const metadata_field_type_t metadata_field_type_GenericParam = { "GenericParam", &metadata_field_type_index, GenericParam };
+const metadata_field_type_t metadata_field_type_MemberForwarded = { "MemberForwarded", &metadata_field_type_codedindex, CodedIndex(MemberForwarded) };
 
 struct metadata_field_t
 {
@@ -2549,8 +2550,33 @@ const metadata_field_t metadata_fields_GenericParamConstraint [ ] = // table0x2C
 };
 const metadata_table_schema_t metadata_row_schema_GenericParamConstraint = { "GenericParamConstraint", CountOf (metadata_fields_GenericParamConstraint), metadata_fields_GenericParamConstraint };
 
+// TODO enum
+typedef uint16 PInvokeAttributes;
+
+struct ImplMap_t // table0x1C
+{
+    PInvokeAttributes ImplMapFlags;
+    Method_t* Method;
+    String_t ImportName;
+    //TODO //Module_t* ImportScope;
+};
+struct metadata_ImplMap_t // table0x1C
+{
+    uint16 ImplMapFlags;
+    metadata_token_t Method;
+    metadata_string_t ImportName;
+    metadata_token_t ImportScope;
+};
+const metadata_field_t metadata_fields_ImplMap [ ] = // table0x1C
+{
+    { "ImplMapFlags", metadata_field_type_uint16 },
+    { "Method", metadata_field_type_MemberForwarded },
+    { "ImportName", metadata_field_type_string },
+    { "ImportScope", metadata_field_type_string },
+};
+const metadata_table_schema_t metadata_row_schema_ImplMap = { "ImplMap", CountOf (metadata_fields_ImplMap), metadata_fields_ImplMap };
+
 // File 0x26
-// ImplMap 0x1C
 // ManifestResource 0x28
 
 struct metadata_table_t
