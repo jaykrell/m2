@@ -682,12 +682,6 @@ struct CodedIndexMap_t
 {
     int8 TypeDefOrRef [3]        = { TypeDef, TypeRef, TypeSpec };
     int8 HasConstant [3]         = { Field, Param, Property };
-    int8 HasCustomAttribute [22] =
-    { MethodDef,     Field,         TypeRef,      TypeDef,          Param,          // HasCustomAttribute
-      InterfaceImpl, MemberRef,     Module,       DeclSecurity,     Property,       // HasCustomAttribute
-      Event,         StandAloneSig, ModuleRef,    TypeSpec,         Assembly,       // HasCustomAttribute
-      AssemblyRef,   File,          ExportedType, ManifestResource, GenericParam,   // HasCustomAttribute
-      GenericParamConstraint, MethodSpec                                         }; // HasCustomAttribute
     int8 HasFieldMarshal [2]     = { Field, Param };
     int8 HasDeclSecurity [3]     = { TypeDef, MethodDef, Assembly };
     int8 MemberRefParent [5]     = { TypeDef, TypeRef, ModuleRef, MethodDef, TypeSpec};
@@ -698,6 +692,12 @@ struct CodedIndexMap_t
     int8 CustomAttributeType [5] = { -1, -1, MethodDef, MethodRef, -1 };
     int8 ResolutionScope [4]     = { Module, ModuleRef, AssemblyRef, TypeRef };
     int8 TypeOrMethodDef [2]     = { TypeDef, MethodDef };
+    int8 HasCustomAttribute [22] =
+    { MethodDef,     Field,         TypeRef,      TypeDef,          Param,          // HasCustomAttribute
+      InterfaceImpl, MemberRef,     Module,       DeclSecurity,     Property,       // HasCustomAttribute
+      Event,         StandAloneSig, ModuleRef,    TypeSpec,         Assembly,       // HasCustomAttribute
+      AssemblyRef,   File,          ExportedType, ManifestResource, GenericParam,   // HasCustomAttribute
+      GenericParamConstraint, MethodSpec                                         }; // HasCustomAttribute
 };
 
 const CodedIndexMap_t CodedIndexMap;
@@ -715,21 +715,28 @@ constexpr uint8 LogBase2 (unsigned a)
 
 #define CountOf(x) std::size(x)
 #define CountOfField(x, y) std::size(x().y)
-#define CodedIndex(x) const CodedIndex_t CodedIndex_ ## x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
+//#define CodedIndex(x) const CodedIndex_t CodedIndex_ ## x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
+#define CodedIndex(x) CodedIndex_t x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
 
-CodedIndex(CustomAttributeType)
-CodedIndex(HasConstant)
-CodedIndex(HasCustomAttribute)
-CodedIndex(HasDeclSecurity)
-CodedIndex(HasFieldMarshal)
-CodedIndex(HasSemantics)
-CodedIndex(Implementation)
-CodedIndex(MethodDefOrRef)
-CodedIndex(MemberForwarded)
-CodedIndex(MemberRefParent)
-CodedIndex(ResolutionScope)
-CodedIndex(TypeDefOrRef)
-CodedIndex(TypeOrMethodDef)
+struct CodedIndices_t
+{
+    CodedIndex(CustomAttributeType)
+    CodedIndex(HasConstant)
+    CodedIndex(HasCustomAttribute)
+    CodedIndex(HasDeclSecurity)
+    CodedIndex(HasFieldMarshal)
+    CodedIndex(HasSemantics)
+    CodedIndex(Implementation)
+    CodedIndex(MethodDefOrRef)
+    CodedIndex(MemberForwarded)
+    CodedIndex(MemberRefParent)
+    CodedIndex(ResolutionScope)
+    CodedIndex(TypeDefOrRef)
+    CodedIndex(TypeOrMethodDef)
+};
+
+#undef CodedIndex
+#define CodedIndex(x) (offsetof(CodedIndices_t, x) / sizeof (CodedIndices_t))
 
 struct HeapIndex_t
 {
@@ -737,34 +744,34 @@ struct HeapIndex_t
     uint8 heap_index; // dynamic?
 };
 
-struct metadata_guid_t // TODO
+struct metadata_guid_t
 {
-    uint32 value;
+    uint32 index;
     const char* pointer;
 };
 
 struct metadata_string_t
 {
-    uint32 value;
+    uint32 offset;
     uint32 size;
     const char* pointer;
 };
 
 struct metadata_unicode_string_t
 {
-    uint32 value;
+    uint32 offset;
     uint32 size;
     const char2* pointer;
 };
 
 struct metadata_blob_t
 {
-    uint32 value;
+    uint32 offset;
     uint32 size;
     const void* pointer;
 };
 
-struct token_t // TODO
+struct token_t
 {
     uint8 table;
     uint32 index;
@@ -839,8 +846,8 @@ struct metadata_fieldtable_t // table4
         HasFieldRVA               =   0x0100,     // Field has RVA.
     };
     flags_t Flags;
-    uint32 Name; // string
-    uint32 Signature; // blob
+    metadata_string_t Name;
+    metadata_blob_t Signature;
 };
 
 struct metadata_methoddef_t // table6
@@ -916,9 +923,9 @@ struct metadata_methoddef_t // table6
     uint32 Rva;
     implflags_t ImplFlags;
     flags_t Flags;
-    uint32 Name; // String heap
-    uint32 Signature; // Blob heap, 7 bit encode/decode
-    uint32 ParamList; // Param table, start, until table end, or start of next MethodDef
+    metadata_string_t Name; // String heap
+    metadata_blob_t Signature; // Blob heap, 7 bit encode/decode
+    token_t ParamList; // Param table, start, until table end, or start of next MethodDef
 };
 
 struct metadata_param_t // table8
@@ -939,37 +946,36 @@ struct metadata_param_t // table8
 
     flags_t Flags;
     uint16 Sequence;
-    uint32 Name; // String heap
+    metadata_string_t Name; // String heap
 };
 
 struct metadata_interfaceimpl_t // table9
 {
-    uint32 Class; // TypeDef
-    uint32 Interface; // TypeDef or TypeRef or TypeSpec, "TypeDefOrRef"
+    token_t Class; // TypeDef
+    token_t Interface; // TypeDef or TypeRef or TypeSpec, "TypeDefOrRef"
 };
 
 struct metadata_memberef_t // table10
 {
-    uint32 Class; // TypeRef, ModuleRef, MethodDef, TypeSpec or TypeDef tables; more precisely, a MemberRefParent coded index
-    uint32 Name; // String heap
-    uint32 Signature; // blob heap
+    token_t Class; // TypeRef, ModuleRef, MethodDef, TypeSpec or TypeDef tables; more precisely, a MemberRefParent coded index
+    metadata_string_t Name; // String heap
+    metadata_blob_t Signature; // blob heap
 };
 
-// TODO This probably is not correct.
 struct metadata_constant_t // table11
 {
     uint8 Type;
     uint8 Pad;
-    uint32 Parent; // Param or Field or Property, "HasConstant", Type?
-    uint32 Value; // Blob
+    token_t Parent; // Param or Field or Property, "HasConstant", Type?
+    metadata_blob_t Value; // Blob
 };
 
 // TODO This probably is not correct.
 struct metadata_customattribute_t // table12
 {
     uint32 Parent; // HasCustomAttribute (5 bits)
-    uint32 Type; // MethodDef or MethodRef, CustomAttributeType
-    uint32 Value; // blob
+    token_t Type; // MethodDef or MethodRef, CustomAttributeType
+    metadata_blob_t Value; // blob
 };
 
 #if 0 // todo
@@ -1902,35 +1908,112 @@ struct image_clr_header_t // data_directory [15]
     image_data_directory_t ManagedNativeHeader;
 };
 
+struct metadata_field_type_t;
+
+struct metadata_field_type_functions_t
+{
+    // Virtual functions, but allowing for static construction.
+    void (*decode)(metadata_field_type_t*, void*);
+    void (*to_string)(metadata_field_type_t*, void*);
+};
+
 struct metadata_field_type_t
 {
     const char *name;
-    uint8 fixed_size;
-    uint8 fixed_table_index;
-    const CodedIndex_t* coded_index;
-    void (*decode)(...);
+    metadata_field_type_functions_t* functions;
+    union {
+        int8 fixed_size;
+        int8 table_index;
+        int8 coded_index;
+   };
 };
 
-const metadata_field_type_t metadata_field_type_int8 = {"int8", 1};
-const metadata_field_type_t metadata_field_type_int16 = {"int16", 2};
-const metadata_field_type_t metadata_field_type_int32 = {"int32", 4};
-const metadata_field_type_t metadata_field_type_int64 = {"int64", 8};
-const metadata_field_type_t metadata_field_type_uint8 = {"uint8", 1};
-const metadata_field_type_t metadata_field_type_uint16 = {"uint16", 2};
-const metadata_field_type_t metadata_field_type_uint32 = {"uint32", 4};
-const metadata_field_type_t metadata_field_type_uint64 = {"uint64", 8};
+void metadata_decode_fixed(metadata_field_type_t* type, void* output)
+{
+}
+
+void metadata_decode_blob(metadata_field_type_t* type, void* output)
+{
+}
+
+void metadata_decode_string(metadata_field_type_t* type, void* output)
+{
+}
+
+void metadata_decode_ustring(metadata_field_type_t* type, void* output)
+{
+}
+
+void metadata_decode_codedindex(metadata_field_type_t* type, void* output)
+{
+}
+
+void metadata_decode_index(metadata_field_type_t* type, void* output)
+{
+}
+
+void metadata_decode_guid(metadata_field_type_t* type, void* output)
+{
+}
+
+metadata_field_type_functions_t metadata_field_type_fixed =
+{
+    metadata_decode_fixed,
+};
+
+metadata_field_type_functions_t metadata_field_type_blob_functions =
+{
+    metadata_decode_blob,
+};
+
+metadata_field_type_functions_t metadata_field_type_string_functions =
+{
+    metadata_decode_string,
+};
+
+metadata_field_type_functions_t metadata_field_type_guid_functions =
+{
+    metadata_decode_guid,
+};
+
+metadata_field_type_functions_t metadata_field_type_ustring_functions =
+{
+    metadata_decode_ustring,
+};
+
+metadata_field_type_functions_t metadata_field_type_index =
+{
+    metadata_decode_index,
+};
+
+metadata_field_type_functions_t metadata_field_type_codedindex =
+{
+    metadata_decode_codedindex,
+};
+
+const metadata_field_type_t metadata_field_type_int8 = {"int8", &metadata_field_type_fixed, 1};
+const metadata_field_type_t metadata_field_type_int16 = {"int16", &metadata_field_type_fixed, 2};
+const metadata_field_type_t metadata_field_type_int32 = {"int32", &metadata_field_type_fixed, 4};
+const metadata_field_type_t metadata_field_type_int64 = {"int64", &metadata_field_type_fixed, 8};
+const metadata_field_type_t metadata_field_type_uint8 = {"uint8", &metadata_field_type_fixed, 1};
+const metadata_field_type_t metadata_field_type_uint16 = {"uint16", &metadata_field_type_fixed, 2};
+const metadata_field_type_t metadata_field_type_uint32 = {"uint32", &metadata_field_type_fixed, 4};
+const metadata_field_type_t metadata_field_type_uint64 = {"uint64", &metadata_field_type_fixed, 8};
 const metadata_field_type_t metadata_field_type_ResolutionScope = {"ResolutionScope"};
 // heap indices or offsets
-const metadata_field_type_t metadata_field_type_string = {"string"};
+const metadata_field_type_t metadata_field_type_string = {"string", &metadata_field_type_string_functions};
 const metadata_field_type_t metadata_field_type_guid = {"guid"};
-const metadata_field_type_t metadata_field_type_blob = {"blob"};
+const metadata_field_type_t metadata_field_type_blob = {"blob",  &metadata_field_type_blob_functions};
+// table indices
 const metadata_field_type_t metadata_field_type_TypeDefOrRef = {"TypeDefOrRef"};
-const metadata_field_type_t metadata_field_type_FieldList = {"FieldList"}; // TODO
-const metadata_field_type_t metadata_field_type_MethodList = {"MethodList"}; // TODO
-const metadata_field_type_t metadata_field_type_ParamList = {"ParamList",  0, Param};
-const metadata_field_type_t metadata_field_type_Class = {"ParamList", 0, TypeDef};
-const metadata_field_type_t metadata_field_type_MethodDef = {"MethodDef", 0, MethodDef};
-const metadata_field_type_t metadata_field_type_HasSemantics = {"HasSemantics", 0, 0, &CodedIndex_HasSemantics};
+const metadata_field_type_t metadata_field_type_FieldList = {"FieldList", &metadata_field_type_index, Field };
+const metadata_field_type_t metadata_field_type_MethodList = {"MethodList", &metadata_field_type_index, MethodDef};
+const metadata_field_type_t metadata_field_type_ParamList = {"ParamList", &metadata_field_type_index, Param};
+const metadata_field_type_t metadata_field_type_TypeDef = {"TypeDef", &metadata_field_type_index, TypeDef};
+const metadata_field_type_t metadata_field_type_MethodDef = {"MethodDef", &metadata_field_type_index, MethodDef};
+const metadata_field_type_t metadata_field_type_HasSemantics = {"HasSemantics", &metadata_field_type_codedindex, CodedIndex(HasSemantics)};
+const metadata_field_type_t metadata_field_type_MethodDefOrRef = {"MethodDefOrRef", &metadata_field_type_codedindex, CodedIndex(MethodDefOrRef)};
+const metadata_field_type_t metadata_field_type_Property = {"Property", &metadata_field_type_index, Property};
 
 struct metadata_field_t
 {
@@ -2075,7 +2158,7 @@ const metadata_table_schema_t metadata_row_schema_MethoDef = { "MethodDef", Coun
 
 const metadata_field_t metadata_fields_MethodImpl [ ] = // table0x19
 {
-    { "Class", metadata_field_type_Class }, // index into TypeDef, 2 or 4 bytes
+    { "Class", metadata_field_type_TypeDef }, // index into TypeDef, 2 or 4 bytes
     { "ImplFlags", metadata_field_type_uint16}, // TODO higher level support
     { "Flags", metadata_field_type_uint16}, // TODO higher level support
     { "Name", metadata_field_type_string},
@@ -2094,6 +2177,55 @@ const metadata_field_t metadata_fields_MethodSemantics [ ] = // table0x18
 };
 
 const metadata_table_schema_t metadata_row_schema_MethodSemantics = { "MethodSemantics", CountOf (metadata_fields_MethodSemantics), metadata_fields_MethodSemantics };
+
+const metadata_field_t metadata_fields_MethodSpec [ ] = // table0x2B
+{
+    { "Method", metadata_field_type_MethodDefOrRef },
+    { "Instantiation", metadata_field_type_blob },
+};
+
+const metadata_table_schema_t metadata_row_schema_MethodSpec = { "MethodSpec", CountOf (metadata_fields_MethodSpec), metadata_fields_MethodSpec };
+
+const metadata_field_t metadata_fields_ModuleRef [ ] = // table0x1A
+{
+    { "Name", metadata_field_type_string },
+};
+
+const metadata_table_schema_t metadata_row_schema_ModuleRef = { "ModuleRef", CountOf (metadata_fields_ModuleRef), metadata_fields_ModuleRef };
+
+const metadata_field_t metadata_fields_NestedClass [ ] = // table0x28
+{
+    { "NestedClass", metadata_field_type_TypeDef },
+    { "EnclosingClass", metadata_field_type_TypeDef },
+};
+
+const metadata_table_schema_t metadata_row_schema_NestedClass = { "NestedClass", CountOf (metadata_fields_NestedClass), metadata_fields_NestedClass };
+
+const metadata_field_t metadata_fields_Param [ ] = // table0x08
+{
+    { "Flags", metadata_field_type_uint16 },
+    { "Sequence", metadata_field_type_uint16 },
+    { "Name", metadata_field_type_string },
+};
+
+const metadata_table_schema_t metadata_row_schema_Param = { "Param", CountOf (metadata_fields_Param), metadata_fields_Param };
+
+const metadata_field_t metadata_fields_Property [ ] = // table0x17
+{
+    { "Flags", metadata_field_type_uint16 },
+    { "Name", metadata_field_type_string },
+    { "Type", metadata_field_type_blob },
+};
+
+const metadata_table_schema_t metadata_row_schema_Property = { "Property", CountOf (metadata_fields_Property), metadata_fields_Property };
+
+const metadata_field_t metadata_fields_PropertyMap [ ] = // table0x15
+{
+    { "Parent", metadata_field_type_TypeDef },
+    { "PropertyList", metadata_field_type_string },
+};
+
+const metadata_table_schema_t metadata_row_schema_PropertyMap = { "PropertyMap", CountOf (metadata_fields_PropertyMap), metadata_fields_PropertyMap };
 
 struct metadata_table_t
 {
@@ -2292,12 +2424,12 @@ X (sizeof (image_dos_header_t));
 X (sizeof (image_file_header_t));
 X (sizeof (image_nt_headers_t));
 X (sizeof (image_section_header_t));
-X (CodedIndex_TypeDefOrRef.tag_size);
-X (CodedIndex_ResolutionScope.tag_size);
-X (CodedIndex_HasConstant.tag_size);
-X (CodedIndex_HasCustomAttribute.tag_size);
-X (CodedIndex_HasFieldMarshal.tag_size);
-X (CodedIndex_HasDeclSecurity.tag_size);
+//X (CodedIndex_TypeDefOrRef.tag_size);
+//X (CodedIndex_ResolutionScope.tag_size);
+//X (CodedIndex_HasConstant.tag_size);
+//X (CodedIndex_HasCustomAttribute.tag_size);
+//X (CodedIndex_HasFieldMarshal.tag_size);
+//X (CodedIndex_HasDeclSecurity.tag_size);
 #undef X
     try
     {
