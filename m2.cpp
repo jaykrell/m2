@@ -1988,6 +1988,7 @@ const metadata_field_type_t metadata_field_type_HasDeclSecurity = { "HasDeclSecu
 const metadata_field_type_t metadata_field_type_Implementation = { "Implementation", &metadata_field_type_codedindex, CodedIndex(Implementation) };
 const metadata_field_type_t metadata_field_type_HasFieldMarshal = { "HasFieldMarshal", &metadata_field_type_codedindex, CodedIndex(HasFieldMarshal) };
 const metadata_field_type_t metadata_field_type_MemberRefParent = { "MemberRefParent", &metadata_field_type_codedindex, CodedIndex(MemberRefParent) };
+const metadata_field_type_t metadata_field_type_TypeOrMethodDef = { "TypeOrMethodDef", &metadata_field_type_codedindex, CodedIndex(TypeOrMethodDef) };
 
 struct metadata_field_t
 {
@@ -2430,7 +2431,7 @@ const metadata_table_schema_t metadata_row_schema_FieldLayout = { "FieldLayout",
 
 struct MarshalSpec_t
 {
-  // TODO
+    // TODO
 };
 
 struct FieldMarshal_t // table0x0D
@@ -2504,8 +2505,33 @@ const metadata_field_t metadata_fields_InterfaceImpl [ ] = // table0x09
 };
 const metadata_table_schema_t metadata_row_schema_InterfaceImpl = { "InterfaceImpl", CountOf (metadata_fields_InterfaceImpl), metadata_fields_InterfaceImpl };
 
+struct GenericParam_t // table0x2A
+{
+    uint16 Number;
+    uint16 Flags; // TODO enum
+    union {
+        //Type_t* Type;
+        Method_t* Method;
+    } Owner;
+    String_t Name;
+};
+struct metadata_GenericParam_t // table0x2A
+{
+    uint16 Number;
+    uint16 Flags; // TODO enum
+    metadata_token_t Owner;
+    metadata_string_t Name;
+};
+const metadata_field_t metadata_fields_GenericParam [ ] = // table0x2A
+{
+    { "Number", metadata_field_type_uint16 },
+    { "Flags", metadata_field_type_uint16 },
+    { "Owner", metadata_field_type_TypeOrMethodDef },
+    { "Name", metadata_field_type_string },
+};
+const metadata_table_schema_t metadata_row_schema_GenericParam = { "GenericParam", CountOf (metadata_fields_GenericParam), metadata_fields_GenericParam };
+
 // File 0x26
-// GenericParam 0x2A
 // GenericParamConstraint 0x2C
 // ImplMap 0x1C
 // ManifestResource 0x28
