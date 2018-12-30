@@ -672,7 +672,7 @@ struct method_header_fat_t
 
 struct CodedIndex_t
 {
-    const char name [24];
+    //const char name [24];
     uint8 tag_size;
     uint8 count;
     uint8 map;
@@ -716,7 +716,8 @@ constexpr uint8 LogBase2 (unsigned a)
 #define CountOf(x) std::size(x)
 #define CountOfField(x, y) std::size(x().y)
 //#define CodedIndex(x) const CodedIndex_t CodedIndex_ ## x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
-#define CodedIndex(x) CodedIndex_t x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
+//#define CodedIndex(x) CodedIndex_t x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
+#define CodedIndex(x) CodedIndex_t x = {LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
 
 struct CodedIndices_t
 {
@@ -736,7 +737,7 @@ struct CodedIndices_t
 };
 
 #undef CodedIndex
-#define CodedIndex(x) (offsetof(CodedIndices_t, x) / sizeof (CodedIndices_t))
+#define CodedIndex(x) (offsetof(CodedIndices_t, x) / sizeof (CodedIndex_t))
 
 struct HeapIndex_t
 {
