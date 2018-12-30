@@ -1959,10 +1959,11 @@ const metadata_field_type_t metadata_field_type_guid = { "guid" };
 const metadata_field_type_t metadata_field_type_blob = { "blob",  &metadata_field_type_blob_functions };
 // table indices
 const metadata_field_type_t metadata_field_type_TypeDefOrRef = { "TypeDefOrRef" };
-const metadata_field_type_t metadata_field_type_FieldList = { "FieldList", &metadata_field_type_index, Field };
-const metadata_field_type_t metadata_field_type_EventList = { "EventList", &metadata_field_type_index, Event };
-const metadata_field_type_t metadata_field_type_MethodList = { "MethodList", &metadata_field_type_index, MethodDef };
-const metadata_field_type_t metadata_field_type_ParamList = { "ParamList", &metadata_field_type_index, Param };
+const metadata_field_type_t metadata_field_type_Field = { "FieldList", &metadata_field_type_index, Field };
+const metadata_field_type_t metadata_field_type_FieldList = { "FieldList", &metadata_field_type_index_list, Field };
+const metadata_field_type_t metadata_field_type_EventList = { "EventList", &metadata_field_type_index_list, Event };
+const metadata_field_type_t metadata_field_type_MethodList = { "MethodList", &metadata_field_type_index_list, MethodDef };
+const metadata_field_type_t metadata_field_type_ParamList = { "ParamList", &metadata_field_type_index_list, Param };
 const metadata_field_type_t metadata_field_type_TypeDef = { "TypeDef", &metadata_field_type_index, TypeDef };
 const metadata_field_type_t metadata_field_type_MethodDef = { "MethodDef", &metadata_field_type_index, MethodDef };
 const metadata_field_type_t metadata_field_type_HasSemantics = {" HasSemantics", &metadata_field_type_codedindex, CodedIndex(HasSemantics) };
@@ -2400,8 +2401,18 @@ const metadata_field_t metadata_fields_ExportedType [ ] = // table0x27
 };
 const metadata_table_schema_t metadata_row_schema_ExportedType = { "ExportedType", CountOf (metadata_fields_ExportedType), metadata_fields_ExportedType };
 
-// Field 0x04
-// FieldLayout 0x10
+struct metadata_FieldLayout_t // table0x10
+{
+    uint32 Offset;
+    metadata_token_t Field;
+};
+const struct metadata_field_t metadata_fields_FieldLayout [ ] = // table0x10
+{
+    { "Offset", metadata_field_type_uint32 },
+    { "Field", metadata_field_type_Field },
+};
+const metadata_table_schema_t metadata_row_schema_FieldLayout = { "FieldLayout", CountOf (metadata_fields_FieldLayout), metadata_fields_FieldLayout };
+
 // FieldMarshal 0x0D
 // FieldRVA 0x1D
 // File 0x26
