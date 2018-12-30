@@ -568,6 +568,10 @@ struct FieldOrParam_t
 {
 };
 
+struct Signature_t
+{
+};
+
 struct Class_t
 {
         Class_t* base;
@@ -913,13 +917,6 @@ struct metadata_interfaceimpl_t // table0x09
 {
     metadata_token_t Class; // TypeDef
     metadata_token_t Interface; // TypeDef or TypeRef or TypeSpec, "TypeDefOrRef"
-};
-
-struct metadata_memberef_t // table0x0A
-{
-    metadata_token_t Class; // TypeRef, ModuleRef, MethodDef, TypeSpec or TypeDef tables; more precisely, a MemberRefParent coded index
-    metadata_string_t Name; // String heap
-    metadata_blob_t Signature; // blob heap
 };
 
 struct metadata_constant_t // table0x0B
@@ -1990,6 +1987,7 @@ const metadata_field_type_t metadata_field_type_CustomAttributeType = { "CustomA
 const metadata_field_type_t metadata_field_type_HasDeclSecurity = { "HasDeclSecurity", &metadata_field_type_codedindex, CodedIndex(HasDeclSecurity) };
 const metadata_field_type_t metadata_field_type_Implementation = { "Implementation", &metadata_field_type_codedindex, CodedIndex(Implementation) };
 const metadata_field_type_t metadata_field_type_HasFieldMarshal = { "HasFieldMarshal", &metadata_field_type_codedindex, CodedIndex(HasFieldMarshal) };
+const metadata_field_type_t metadata_field_type_MemberRefParent = { "MemberRefParent", &metadata_field_type_codedindex, CodedIndex(MemberRefParent) };
 
 struct metadata_field_t
 {
@@ -2445,14 +2443,50 @@ struct metadata_FieldMarshal_t // table0x0D
     metadata_token_t Parent; // codedindex HasFieldMarshal
     metadata_blob_t  NativeType;
 };
-const struct metadata_field_t metadata_fields_FieldMarshal [ ] = // table0x0D
+const metadata_field_t metadata_fields_FieldMarshal [ ] = // table0x0D
 {
     { "Parent", metadata_field_type_HasFieldMarshal },
     { "NativeType", metadata_field_type_blob },
 };
 const metadata_table_schema_t metadata_row_schema_FieldMarshal = { "FieldMarshal", CountOf (metadata_fields_FieldMarshal), metadata_fields_FieldMarshal };
 
-// FieldRVA 0x1D
+struct FieldRVA_t // table0x1D
+{
+    uint32 RVA;
+    Field_t *Field;
+};
+struct metadatA_FieldRVA_t // table0x1D
+{
+    uint32 RVA;
+    metadata_token_t Field;
+};
+const metadata_field_t metadata_fields_FieldRVA [ ] = // table0x1D
+{
+    { "RVA", metadata_field_type_uint32 },
+    { "Field", metadata_field_type_Field },
+};
+const metadata_table_schema_t metadata_row_schema_FieldRVA = { "FieldRVA", CountOf (metadata_fields_FieldRVA), metadata_fields_FieldRVA };
+
+struct MemberRef_t // table0x0A
+{
+    Class_t* Class;
+    String_t Name;
+    Signature_t Signature;
+};
+struct metadata_MemberRef_t // table0x0A
+{
+    metadata_token_t Class; // TypeRef, ModuleRef, MethodDef, TypeSpec or TypeDef tables; more precisely, a MemberRefParent coded index
+    metadata_string_t Name; // String heap
+    metadata_blob_t Signature; // blob heap
+};
+const metadata_field_t metadata_fields_MemberRef [ ] = // table0x1D
+{
+    { "Class", metadata_field_type_MemberRefParent },
+    { "Name", metadata_field_type_string },
+    { "Signature", metadata_field_type_blob },
+};
+const metadata_table_schema_t metadata_row_schema_MemberRef = { "MemberRef", CountOf (metadata_fields_MemberRef), metadata_fields_MemberRef };
+
 // File 0x26
 // GenericParam 0x2A
 // GenericParamConstraint 0x2C
