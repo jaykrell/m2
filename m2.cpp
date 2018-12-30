@@ -715,7 +715,7 @@ constexpr uint8 LogBase2 (unsigned a)
 
 #define CountOf(x) std::size(x)
 #define CountOfField(x, y) std::size(x().y)
-#define CodedIndex(x) const CodedIndex_t CodedIndex_##x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
+#define CodedIndex(x) const CodedIndex_t CodedIndex_ ## x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
 
 CodedIndex(CustomAttributeType)
 CodedIndex(HasConstant)
@@ -1907,7 +1907,7 @@ struct metadata_field_type_t
     const char *name;
     uint8 fixed_size;
     uint8 fixed_table_index;
-    CodedIndex_t *coded_index;
+    const CodedIndex_t* coded_index;
     void (*decode)(...);
 };
 
@@ -1929,6 +1929,8 @@ const metadata_field_type_t metadata_field_type_FieldList = {"FieldList"}; // TO
 const metadata_field_type_t metadata_field_type_MethodList = {"MethodList"}; // TODO
 const metadata_field_type_t metadata_field_type_ParamList = {"ParamList",  0, Param};
 const metadata_field_type_t metadata_field_type_Class = {"ParamList", 0, TypeDef};
+const metadata_field_type_t metadata_field_type_MethodDef = {"MethodDef", 0, MethodDef};
+const metadata_field_type_t metadata_field_type_HasSemantics = {"HasSemantics", 0, 0, &CodedIndex_HasSemantics};
 
 struct metadata_field_t
 {
@@ -2082,6 +2084,13 @@ const metadata_field_t metadata_fields_MethodImpl [ ] = // table0x19
 };
 
 const metadata_table_schema_t metadata_row_schema_MethodImpl = { "MethodImpl", CountOf (metadata_fields_MethodImpl), metadata_fields_MethodImpl };
+
+const metadata_field_t metadata_fields_MethodSemantics [ ] = // table0x18
+{
+    { "Semantics", metadata_field_type_uint16 },
+    { "Method", metadata_field_type_MethodDef }, // index into MethodDef table, 2 or 4 bytes
+    { "Association", metadata_field_type_HasSemantics }, // CodedIndex
+};
 
 struct metadata_table_t
 {
