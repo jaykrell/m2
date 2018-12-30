@@ -1943,7 +1943,7 @@ metadata_table_schema_t metadata_row_schema_TypeRef = { "TypeRef", CountOf (meta
 
 struct metadata_typedef_t // table0x02
 {
-    enum class flags_t : uint32
+    enum class Flags_t : uint32
     {
 //TODO bitfields (need to test little and big endian)
 //TODO or bitfield decoder
@@ -1999,7 +1999,7 @@ struct metadata_typedef_t // table0x02
         HasSecurity           =   0x00040000,     // Class has security associate with it.
     };
 
-    flags_t flags;
+    Flags_t flags;
     metadata_string_t TypeName; // string
     metadata_string_t TypeNamespace; // string
     metadata_token_t Extends; // TypeDefOrRef
