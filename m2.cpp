@@ -36,8 +36,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #endif
-#include <vector> // TODO rewrite/rename
-#include <string> // TODO rewrite/rename
+#include <vector>
+#include <string>
 
 #if !defined(PRIX64) && defined(_WIN32)
 #define PRIX64 "I64X"
@@ -512,8 +512,16 @@ struct memory_mapped_file_t
     }
 };
 
-// Apart from the persistent metadata, an in-memory pointer-ful type system is required.
-// unless the metadata can aggressively be used as the in-memory data.
+// Apart from the persistent metadata, an in-memory pointer-ful type system is required,
+// unless the metadata can aggressively be used as the in-memory data, which does not
+// seem likely.
+
+enum class NativeType_t
+{
+    Boolean = 2,
+    I1 = 3,
+    // TODO
+};
 
 struct Member_t
 {
@@ -550,6 +558,14 @@ struct Field_t : Member_t
 struct Interface_t
 {
         std::vector<Method_t> methods;
+};
+
+struct Param_t
+{
+};
+
+struct FieldOrParam_t
+{
 };
 
 struct Class_t
@@ -1865,27 +1881,27 @@ struct metadata_field_type_t
 };
 
 void
-metadata_decode_fixed(metadata_field_type_t* type, void* output)
+metadata_decode_fixed (metadata_field_type_t* type, void* output)
 {
 }
 
 void
-metadata_decode_blob(metadata_field_type_t* type, void* output)
+metadata_decode_blob (metadata_field_type_t* type, void* output)
 {
 }
 
 void
-metadata_decode_string(metadata_field_type_t* type, void* output)
+metadata_decode_string (metadata_field_type_t* type, void* output)
 {
 }
 
 void
-metadata_decode_ustring(metadata_field_type_t* type, void* output)
+metadata_decode_ustring (metadata_field_type_t* type, void* output)
 {
 }
 
 void
-metadata_decode_codedindex(metadata_field_type_t* type, void* output)
+metadata_decode_codedindex (metadata_field_type_t* type, void* output)
 {
 }
 
@@ -1973,6 +1989,7 @@ const metadata_field_type_t metadata_field_type_HasCustomAttribute = { "HasCusto
 const metadata_field_type_t metadata_field_type_CustomAttributeType = { "CustomAttributeType", &metadata_field_type_codedindex, CodedIndex(CustomAttributeType) };
 const metadata_field_type_t metadata_field_type_HasDeclSecurity = { "HasDeclSecurity", &metadata_field_type_codedindex, CodedIndex(HasDeclSecurity) };
 const metadata_field_type_t metadata_field_type_Implementation = { "Implementation", &metadata_field_type_codedindex, CodedIndex(Implementation) };
+const metadata_field_type_t metadata_field_type_HasFieldMarshal = { "HasFieldMarshal", &metadata_field_type_codedindex, CodedIndex(HasFieldMarshal) };
 
 struct metadata_field_t
 {
@@ -2413,7 +2430,28 @@ const struct metadata_field_t metadata_fields_FieldLayout [ ] = // table0x10
 };
 const metadata_table_schema_t metadata_row_schema_FieldLayout = { "FieldLayout", CountOf (metadata_fields_FieldLayout), metadata_fields_FieldLayout };
 
-// FieldMarshal 0x0D
+struct MarshalSpec_t
+{
+  // TODO
+};
+
+struct FieldMarshal_t // table0x0D
+{
+    FieldOrParam_t *Parent;
+    MarshalSpec_t MarshalSpec;
+};
+struct metadata_FieldMarshal_t // table0x0D
+{
+    metadata_token_t Parent; // codedindex HasFieldMarshal
+    metadata_blob_t  NativeType;
+};
+const struct metadata_field_t metadata_fields_FieldMarshal [ ] = // table0x0D
+{
+    { "Parent", metadata_field_type_HasFieldMarshal },
+    { "NativeType", metadata_field_type_blob },
+};
+const metadata_table_schema_t metadata_row_schema_FieldMarshal = { "FieldMarshal", CountOf (metadata_fields_FieldMarshal), metadata_fields_FieldMarshal };
+
 // FieldRVA 0x1D
 // File 0x26
 // GenericParam 0x2A
@@ -2424,8 +2462,6 @@ const metadata_table_schema_t metadata_row_schema_FieldLayout = { "FieldLayout",
 // MemberRef 0x0A
 // MethodDef 0x06
 // MethodImpl 0x19
-// MethodSemantics 0x18
-// MethodSpec 0x2B
 // Module 0x00
 
 struct metadata_table_t
