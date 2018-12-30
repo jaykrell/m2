@@ -772,7 +772,7 @@ struct metadata_blob_t
     const void* pointer;
 };
 
-struct token_t
+struct metadata_token_t
 {
     uint8 table;
     uint32 index;
@@ -813,122 +813,6 @@ struct metadata_stream_header_t // see mono verify_metadata_header
     char   Name [32]; // multiple of 4, null terminated, max 32
 };
 
-struct metadata_fieldtable_t // table4
-{
-    enum class flags_t : uint16
-    {
-        // member access mask - Use this mask to retrieve accessibility information.
-        FieldAccessMask           =   0x0007,
-        PrivateScope              =   0x0000,     // Member not referenceable.
-        Private                   =   0x0001,     // Accessible only by the parent type.
-        FamANDAssem               =   0x0002,     // Accessible by sub-types only in this Assembly.
-        Assembly                  =   0x0003,     // Accessibly by anyone in the Assembly.
-        Family                    =   0x0004,     // Accessible only by type and sub-types.
-        FamORAssem                =   0x0005,     // Accessibly by sub-types anywhere, plus anyone in assembly.
-        Public                    =   0x0006,     // Accessibly by anyone who has visibility to this scope.
-        // end member access mask
-
-        // field contract attributes.
-        Static                    =   0x0010,     // Defined on type, else per instance.
-        InitOnly                  =   0x0020,     // Field may only be initialized, not written to after init.
-        Literal                   =   0x0040,     // Value is compile time constant.
-        NotSerialized             =   0x0080,     // Field does not have to be serialized when type is remoted.
-
-        SpecialName               =   0x0200,     // field is special. Name describes how.
-
-        // interop attributes
-        PinvokeImpl               =   0x2000,     // Implementation is forwarded through pinvoke.
-
-        // Reserved flags for runtime use only.
-        ReservedMask              =   0x9500,
-        RTSpecialName             =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
-        HasFieldMarshal           =   0x1000,     // Field has marshalling information.
-        HasDefault                =   0x8000,     // Field has default.
-        HasFieldRVA               =   0x0100,     // Field has RVA.
-    };
-    flags_t Flags;
-    metadata_string_t Name;
-    metadata_blob_t Signature;
-};
-
-struct metadata_methoddef_t // table6
-{
-    enum class flags_t : uint16
-    {
-        // member access mask - Use this mask to retrieve accessibility information.
-        MemberAccessMask          =   0x0007,
-        PrivateScope              =   0x0000,     // Member not referenceable.
-        Private                   =   0x0001,     // Accessible only by the parent type.
-        FamANDAssem               =   0x0002,     // Accessible by sub-types only in this Assembly.
-        Assem                     =   0x0003,     // Accessibly by anyone in the Assembly.
-        Family                    =   0x0004,     // Accessible only by type and sub-types.
-        FamORAssem                =   0x0005,     // Accessibly by sub-types anywhere, plus anyone in assembly.
-        Public                    =   0x0006,     // Accessibly by anyone who has visibility to this scope.
-        // end member access mask
-
-        // method contract attributes.
-        Static                    =   0x0010,     // Defined on type, else per instance.
-        Final                     =   0x0020,     // Method may not be overridden.
-        Virtual                   =   0x0040,     // Method virtual.
-        HideBySig                 =   0x0080,     // Method hides by name+sig, else just by name.
-
-        // vtable layout mask - Use this mask to retrieve vtable attributes.
-        VtableLayoutMask          =   0x0100,
-        ReuseSlot                 =   0x0000,     // The default.
-        NewSlot                   =   0x0100,     // Method always gets a new slot in the vtable.
-        // end vtable layout mask
-
-        // method implementation attributes.
-        CheckAccessOnOverride     =   0x0200,     // Overridability is the same as the visibility.
-        Abstract                  =   0x0400,     // Method does not provide an implementation.
-        SpecialName               =   0x0800,     // Method is special. Name describes how.
-
-        // interop attributes
-        PinvokeImpl               =   0x2000,     // Implementation is forwarded through pinvoke.
-        UnmanagedExport           =   0x0008,     // Managed method exported via thunk to unmanaged code.
-
-        // Reserved flags for runtime use only.
-        ReservedMask              =   0xd000,
-        RTSpecialName             =   0x1000,     // Runtime should check name encoding.
-        HasSecurity               =   0x4000,     // Method has security associate with it.
-        RequireSecObject          =   0x8000,     // Method calls another method containing security code.
-    };
-
-    enum class implflags_t : uint16
-    {
-        // code impl mask
-        CodeTypeMask      =   0x0003,   // Flags about code type.
-        IL                =   0x0000,   // Method impl is IL.
-        Native            =   0x0001,   // Method impl is native.
-        OPTIL             =   0x0002,   // Method impl is OPTIL
-        Runtime           =   0x0003,   // Method impl is provided by the runtime.
-        // end code impl mask
-
-        // managed mask
-        ManagedMask       =   0x0004,   // Flags specifying whether the code is managed or unmanaged.
-        Unmanaged         =   0x0004,   // Method impl is unmanaged, otherwise managed.
-        Managed           =   0x0000,   // Method impl is managed.
-        // end managed mask
-
-        // implementation info and interop
-        ForwardRef        =   0x0010,   // Indicates method is defined; used primarily in merge scenarios.
-        PreserveSig       =   0x0080,   // Indicates method sig is not to be mangled to do HRESULT conversion.
-
-        InternalCall      =   0x1000,   // Reserved for internal use.
-
-        Synchronized      =   0x0020,   // Method is single threaded through the body.
-        NoInlining        =   0x0008,   // Method may not be inlined.
-        MaxMethodImplVal  =   0xffff,   // Range check value
-    };
-
-    uint32 Rva;
-    implflags_t ImplFlags;
-    flags_t Flags;
-    metadata_string_t Name; // String heap
-    metadata_blob_t Signature; // Blob heap, 7 bit encode/decode
-    token_t ParamList; // Param table, start, until table end, or start of next MethodDef
-};
-
 struct metadata_param_t // table8
 {
     enum class flags_t : uint16
@@ -950,33 +834,25 @@ struct metadata_param_t // table8
     metadata_string_t Name; // String heap
 };
 
-struct metadata_interfaceimpl_t // table9
+struct metadata_interfaceimpl_t // table0x09
 {
-    token_t Class; // TypeDef
-    token_t Interface; // TypeDef or TypeRef or TypeSpec, "TypeDefOrRef"
+    metadata_token_t Class; // TypeDef
+    metadata_token_t Interface; // TypeDef or TypeRef or TypeSpec, "TypeDefOrRef"
 };
 
-struct metadata_memberef_t // table10
+struct metadata_memberef_t // table0x0A
 {
-    token_t Class; // TypeRef, ModuleRef, MethodDef, TypeSpec or TypeDef tables; more precisely, a MemberRefParent coded index
+    metadata_token_t Class; // TypeRef, ModuleRef, MethodDef, TypeSpec or TypeDef tables; more precisely, a MemberRefParent coded index
     metadata_string_t Name; // String heap
     metadata_blob_t Signature; // blob heap
 };
 
-struct metadata_constant_t // table11
+struct metadata_constant_t // table0x0B
 {
     uint8 Type;
     uint8 Pad;
-    token_t Parent; // Param or Field or Property, "HasConstant", Type?
+    metadata_token_t Parent; // Param or Field or Property, "HasConstant", Type?
     metadata_blob_t Value; // Blob
-};
-
-// TODO This probably is not correct.
-struct metadata_customattribute_t // table12
-{
-    uint32 Parent; // HasCustomAttribute (5 bits)
-    token_t Type; // MethodDef or MethodRef, CustomAttributeType
-    metadata_blob_t Value; // blob
 };
 
 #if 0 // todo
@@ -2015,6 +1891,8 @@ const metadata_field_type_t metadata_field_type_MethodDef = {"MethodDef", &metad
 const metadata_field_type_t metadata_field_type_HasSemantics = {"HasSemantics", &metadata_field_type_codedindex, CodedIndex(HasSemantics)};
 const metadata_field_type_t metadata_field_type_MethodDefOrRef = {"MethodDefOrRef", &metadata_field_type_codedindex, CodedIndex(MethodDefOrRef)};
 const metadata_field_type_t metadata_field_type_Property = {"Property", &metadata_field_type_index, Property};
+const metadata_field_type_t metadata_field_type_HasCustomAttribute = {"HasCustomAttribute", &metadata_field_type_codedindex, CodedIndex(HasCustomAttribute)};
+const metadata_field_type_t metadata_field_type_CustomAttributeType = {"CustomAttributeType", &metadata_field_type_codedindex, CodedIndex(CustomAttributeType)};
 
 struct metadata_field_t
 {
@@ -2030,7 +1908,7 @@ struct metadata_table_schema_t
     void (*unpack)();
 };
 
-struct metadata_module_t // table0
+struct metadata_module_t // table0x00
 {
     uint16 Generation; // reserved, 0
     metadata_string_t Name;
@@ -2038,7 +1916,7 @@ struct metadata_module_t // table0
     metadata_guid_t EncId;
     metadata_guid_t EncBaseId; // reserved, 0
 };
-const metadata_field_t metadata_fields_Module [ ] =
+const metadata_field_t metadata_fields_Module [ ] = // table0x00
 {
     { "Generation", metadata_field_type_uint16 }, // ignore
     { "Name", metadata_field_type_string },
@@ -2048,13 +1926,13 @@ const metadata_field_t metadata_fields_Module [ ] =
 };
 metadata_table_schema_t metadata_row_schema_Module = { "Module", CountOf (metadata_fields_Module), metadata_fields_Module };
 
-struct metadata_typeref_t // table1
+struct metadata_typeref_t // table0x01
 {
-    token_t ResolutionScope;
+    metadata_token_t ResolutionScope; // codedindex
     metadata_string_t TypeName;
     metadata_string_t TypeNameSpace;
 };
-const metadata_field_t metadata_fields_TypeRef [ ] =
+const metadata_field_t metadata_fields_TypeRef [ ] = // table0x01
 {
     { "ResolutionScope", metadata_field_type_ResolutionScope },
     { "TypeName", metadata_field_type_string },
@@ -2062,7 +1940,7 @@ const metadata_field_t metadata_fields_TypeRef [ ] =
 };
 metadata_table_schema_t metadata_row_schema_TypeRef = { "TypeRef", CountOf (metadata_fields_TypeRef), metadata_fields_TypeRef };
 
-struct metadata_typedef_t // table2
+struct metadata_typedef_t // table0x02
 {
     enum class flags_t : uint32
     {
@@ -2121,11 +1999,12 @@ struct metadata_typedef_t // table2
     flags_t flags;
     metadata_string_t TypeName; // string
     metadata_string_t TypeNamespace; // string
-    token_t Extends; // TypeDefOrRef
+    metadata_token_t Extends; // TypeDefOrRef
     uint32 FieldList; // index into Field table, either to last row or next start
     uint32 MethodList; // similar to previous
 };
-const metadata_field_t metadata_fields_TypeDef [ ] =
+
+const metadata_field_t metadata_fields_TypeDef [ ] = // table0x02
 {
     { "Flags", metadata_field_type_uint32 },
     { "TypeName", metadata_field_type_string },
@@ -2136,7 +2015,45 @@ const metadata_field_t metadata_fields_TypeDef [ ] =
 };
 const metadata_table_schema_t metadata_row_schema_TypeDef = { "TypeDef", CountOf (metadata_fields_TypeDef), metadata_fields_TypeDef };
 
-const metadata_field_t metadata_fields_Field [ ] =
+struct metadata_fieldtable_t // table0x04
+{
+    enum class flags_t : uint16
+    {
+        // member access mask - Use this mask to retrieve accessibility information.
+        FieldAccessMask           =   0x0007,
+        PrivateScope              =   0x0000,     // Member not referenceable.
+        Private                   =   0x0001,     // Accessible only by the parent type.
+        FamANDAssem               =   0x0002,     // Accessible by sub-types only in this Assembly.
+        Assembly                  =   0x0003,     // Accessibly by anyone in the Assembly.
+        Family                    =   0x0004,     // Accessible only by type and sub-types.
+        FamORAssem                =   0x0005,     // Accessibly by sub-types anywhere, plus anyone in assembly.
+        Public                    =   0x0006,     // Accessibly by anyone who has visibility to this scope.
+        // end member access mask
+
+        // field contract attributes.
+        Static                    =   0x0010,     // Defined on type, else per instance.
+        InitOnly                  =   0x0020,     // Field may only be initialized, not written to after init.
+        Literal                   =   0x0040,     // Value is compile time constant.
+        NotSerialized             =   0x0080,     // Field does not have to be serialized when type is remoted.
+
+        SpecialName               =   0x0200,     // field is special. Name describes how.
+
+        // interop attributes
+        PinvokeImpl               =   0x2000,     // Implementation is forwarded through pinvoke.
+
+        // Reserved flags for runtime use only.
+        ReservedMask              =   0x9500,
+        RTSpecialName             =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
+        HasFieldMarshal           =   0x1000,     // Field has marshalling information.
+        HasDefault                =   0x8000,     // Field has default.
+        HasFieldRVA               =   0x0100,     // Field has RVA.
+    };
+    flags_t Flags;
+    metadata_string_t Name;
+    metadata_blob_t Signature;
+};
+
+const metadata_field_t metadata_fields_Field [ ] = // table0x04
 {
     { "Flags", metadata_field_type_uint16 }, // TODO bitfield decoder
     { "Name", metadata_field_type_string },
@@ -2145,7 +2062,85 @@ const metadata_field_t metadata_fields_Field [ ] =
 
 const metadata_table_schema_t metadata_row_schema_Field = { "Field", CountOf (metadata_fields_Field), metadata_fields_Field };
 
-const metadata_field_t metadata_fields_MethodDef [ ] = // table6
+struct metadata_methoddef_t // table0x06
+{
+    enum class flags_t : uint16
+    {
+        // member access mask - Use this mask to retrieve accessibility information.
+        MemberAccessMask          =   0x0007,
+        PrivateScope              =   0x0000,     // Member not referenceable.
+        Private                   =   0x0001,     // Accessible only by the parent type.
+        FamANDAssem               =   0x0002,     // Accessible by sub-types only in this Assembly.
+        Assem                     =   0x0003,     // Accessibly by anyone in the Assembly.
+        Family                    =   0x0004,     // Accessible only by type and sub-types.
+        FamORAssem                =   0x0005,     // Accessibly by sub-types anywhere, plus anyone in assembly.
+        Public                    =   0x0006,     // Accessibly by anyone who has visibility to this scope.
+        // end member access mask
+
+        // method contract attributes.
+        Static                    =   0x0010,     // Defined on type, else per instance.
+        Final                     =   0x0020,     // Method may not be overridden.
+        Virtual                   =   0x0040,     // Method virtual.
+        HideBySig                 =   0x0080,     // Method hides by name+sig, else just by name.
+
+        // vtable layout mask - Use this mask to retrieve vtable attributes.
+        VtableLayoutMask          =   0x0100,
+        ReuseSlot                 =   0x0000,     // The default.
+        NewSlot                   =   0x0100,     // Method always gets a new slot in the vtable.
+        // end vtable layout mask
+
+        // method implementation attributes.
+        CheckAccessOnOverride     =   0x0200,     // Overridability is the same as the visibility.
+        Abstract                  =   0x0400,     // Method does not provide an implementation.
+        SpecialName               =   0x0800,     // Method is special. Name describes how.
+
+        // interop attributes
+        PinvokeImpl               =   0x2000,     // Implementation is forwarded through pinvoke.
+        UnmanagedExport           =   0x0008,     // Managed method exported via thunk to unmanaged code.
+
+        // Reserved flags for runtime use only.
+        ReservedMask              =   0xd000,
+        RTSpecialName             =   0x1000,     // Runtime should check name encoding.
+        HasSecurity               =   0x4000,     // Method has security associate with it.
+        RequireSecObject          =   0x8000,     // Method calls another method containing security code.
+    };
+
+    enum class implflags_t : uint16
+    {
+        // code impl mask
+        CodeTypeMask      =   0x0003,   // Flags about code type.
+        IL                =   0x0000,   // Method impl is IL.
+        Native            =   0x0001,   // Method impl is native.
+        OPTIL             =   0x0002,   // Method impl is OPTIL
+        Runtime           =   0x0003,   // Method impl is provided by the runtime.
+        // end code impl mask
+
+        // managed mask
+        ManagedMask       =   0x0004,   // Flags specifying whether the code is managed or unmanaged.
+        Unmanaged         =   0x0004,   // Method impl is unmanaged, otherwise managed.
+        Managed           =   0x0000,   // Method impl is managed.
+        // end managed mask
+
+        // implementation info and interop
+        ForwardRef        =   0x0010,   // Indicates method is defined; used primarily in merge scenarios.
+        PreserveSig       =   0x0080,   // Indicates method sig is not to be mangled to do HRESULT conversion.
+
+        InternalCall      =   0x1000,   // Reserved for internal use.
+
+        Synchronized      =   0x0020,   // Method is single threaded through the body.
+        NoInlining        =   0x0008,   // Method may not be inlined.
+        MaxMethodImplVal  =   0xffff,   // Range check value
+    };
+
+    uint32 Rva;
+    implflags_t ImplFlags;
+    flags_t Flags;
+    metadata_string_t Name; // String heap
+    metadata_blob_t Signature; // Blob heap, 7 bit encode/decode
+    metadata_token_t ParamList; // Param table, start, until table end, or start of next MethodDef
+};
+
+const metadata_field_t metadata_fields_MethodDef [ ] = // table0x06
 {
     { "RVA", metadata_field_type_uint32 },
     { "ImplFlags", metadata_field_type_uint16}, // TODO higher level support
@@ -2184,14 +2179,12 @@ const metadata_field_t metadata_fields_MethodSpec [ ] = // table0x2B
     { "Method", metadata_field_type_MethodDefOrRef },
     { "Instantiation", metadata_field_type_blob },
 };
-
 const metadata_table_schema_t metadata_row_schema_MethodSpec = { "MethodSpec", CountOf (metadata_fields_MethodSpec), metadata_fields_MethodSpec };
 
 const metadata_field_t metadata_fields_ModuleRef [ ] = // table0x1A
 {
     { "Name", metadata_field_type_string },
 };
-
 const metadata_table_schema_t metadata_row_schema_ModuleRef = { "ModuleRef", CountOf (metadata_fields_ModuleRef), metadata_fields_ModuleRef };
 
 const metadata_field_t metadata_fields_NestedClass [ ] = // table0x28
@@ -2199,7 +2192,6 @@ const metadata_field_t metadata_fields_NestedClass [ ] = // table0x28
     { "NestedClass", metadata_field_type_TypeDef },
     { "EnclosingClass", metadata_field_type_TypeDef },
 };
-
 const metadata_table_schema_t metadata_row_schema_NestedClass = { "NestedClass", CountOf (metadata_fields_NestedClass), metadata_fields_NestedClass };
 
 const metadata_field_t metadata_fields_Param [ ] = // table0x08
@@ -2208,7 +2200,6 @@ const metadata_field_t metadata_fields_Param [ ] = // table0x08
     { "Sequence", metadata_field_type_uint16 },
     { "Name", metadata_field_type_string },
 };
-
 const metadata_table_schema_t metadata_row_schema_Param = { "Param", CountOf (metadata_fields_Param), metadata_fields_Param };
 
 const metadata_field_t metadata_fields_Property [ ] = // table0x17
@@ -2217,7 +2208,6 @@ const metadata_field_t metadata_fields_Property [ ] = // table0x17
     { "Name", metadata_field_type_string },
     { "Type", metadata_field_type_blob },
 };
-
 const metadata_table_schema_t metadata_row_schema_Property = { "Property", CountOf (metadata_fields_Property), metadata_fields_Property };
 
 const metadata_field_t metadata_fields_PropertyMap [ ] = // table0x15
@@ -2225,8 +2215,27 @@ const metadata_field_t metadata_fields_PropertyMap [ ] = // table0x15
     { "Parent", metadata_field_type_TypeDef },
     { "PropertyList", metadata_field_type_string },
 };
-
 const metadata_table_schema_t metadata_row_schema_PropertyMap = { "PropertyMap", CountOf (metadata_fields_PropertyMap), metadata_fields_PropertyMap };
+
+const metadata_field_t metadata_fields_StandaloneSig [ ] = // table0x11
+{
+    { "Signature", metadata_field_type_blob },
+};
+const metadata_table_schema_t metadata_row_schema_StandaloneSig = { "StandaloneSig", CountOf (metadata_fields_StandaloneSig), metadata_fields_StandaloneSig };
+
+struct metadata_customattribute_t // table0x0C
+{
+    metadata_token_t Parent; // HasCustomAttribute (5 bits)
+    metadata_token_t Type; // MethodDef or MethodRef, CustomAttributeType
+    metadata_blob_t Value; // blob
+};
+const metadata_field_t metadata_fields_CustomAttribute [ ] = // table0x0C
+{
+    { "Parent", metadata_field_type_HasCustomAttribute },
+    { "Type", metadata_field_type_CustomAttributeType },
+    { "Value", metadata_field_type_blob },
+};
+const metadata_table_schema_t metadata_row_schema_CustomAttribute = { "CustomAttribute", CountOf (metadata_fields_CustomAttribute), metadata_fields_CustomAttribute };
 
 struct metadata_table_t
 {
