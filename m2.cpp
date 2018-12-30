@@ -2579,7 +2579,6 @@ const metadata_table_schema_t metadata_row_schema_ImplMap = { "ImplMap", CountOf
 // TODO enum
 typedef uint32 ManifestResourceAttributes;
 
-// ManifestResource 0x28
 struct ManifestResource_t // table0x28
 {
     uint32 Offset;
@@ -2606,7 +2605,28 @@ const metadata_field_t metadata_fields_ManifestResource [ ] = // table0x28
 };
 const metadata_table_schema_t metadata_row_schema_ManifestResource = { "ManifestResource", CountOf (metadata_fields_ManifestResource), metadata_fields_ManifestResource };
 
-// File 0x26
+// TODO enum
+typedef uint32 FileAttributes;
+
+struct File_t // table0x26
+{
+    FileAttributes Flags;
+    String_t Name;
+    std::vector<uint8> HashValue;
+};
+struct metadata_File_t // table0x26
+{
+    FileAttributes Flags; // TODO enum
+    metadata_string_t Name;
+    metadata_blob_t HashValue;
+};
+const metadata_field_t metadata_fields_File [ ] = // table0x26
+{
+     { "Flags", metadata_field_type_uint32 },
+     { "Name", metadata_field_type_string },
+     { "HashValue", metadata_field_type_blob },
+};
+const metadata_table_schema_t metadata_row_schema_File = { "File", CountOf (metadata_fields_File), metadata_fields_File };
 
 struct metadata_table_t
 {
