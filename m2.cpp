@@ -1893,6 +1893,7 @@ const metadata_field_type_t metadata_field_type_MethodDefOrRef = {"MethodDefOrRe
 const metadata_field_type_t metadata_field_type_Property = {"Property", &metadata_field_type_index, Property};
 const metadata_field_type_t metadata_field_type_HasCustomAttribute = {"HasCustomAttribute", &metadata_field_type_codedindex, CodedIndex(HasCustomAttribute)};
 const metadata_field_type_t metadata_field_type_CustomAttributeType = {"CustomAttributeType", &metadata_field_type_codedindex, CodedIndex(CustomAttributeType)};
+const metadata_field_type_t metadata_field_type_HasDeclSecurity = {"HasDeclSecurity", &metadata_field_type_codedindex, CodedIndex(HasDeclSecurity)};
 
 struct metadata_field_t
 {
@@ -2231,6 +2232,56 @@ const metadata_field_t metadata_fields_CustomAttribute [ ] = // table0x0C
     { "Value", metadata_field_type_blob },
 };
 const metadata_table_schema_t metadata_row_schema_CustomAttribute = { "CustomAttribute", CountOf (metadata_fields_CustomAttribute), metadata_fields_CustomAttribute };
+
+
+struct metadata_DeclSecurity_t // table0x0E
+{
+    enum class Action_t : uint16 // TODO get the values
+    {
+        Assert,
+        Demand,
+        Deny,
+        InheritanceDemand,
+        LinkDemand,
+        NonCasDemand,
+        NonCasLinkDemand,
+        PrejitGrant,
+        PermitOnlh,
+        RequestMinimum,
+        RequestOptional,
+        RequestRefuse
+    };
+    Action_t Action;
+    metadata_token_t Parent; // typedef or methoddef or assembmly, codedindex HasDeclSecurityType
+    metadata_blob_t PermissionSet; // blob
+};
+const metadata_field_t metadata_fields_declsecurity [ ] = // table0x0E
+{
+    { "Action", metadata_field_type_uint16 },
+    { "Type", metadata_field_type_HasDeclSecurity },
+    { "Value", metadata_field_type_blob },
+};
+const metadata_table_schema_t metadata_row_schema_declsecurity = { "DeclSecurity", CountOf (metadata_fields_declsecurity), metadata_fields_declsecurity };
+
+// EventMap
+// Event
+// ExportedType 0x27
+// Field 0x04
+// FieldLayout 0x10
+// FieldMarshal 0x0D
+// FieldRVA 0x1D
+// File 0x26
+// GenericParam 0x2A
+// GenericParamConstraint 0x2C
+// ImplMap 0x1C
+// InterfaceImpl 0x09
+// ManifestResource 0x28
+// MemberRef 0x0A
+// MethodDef 0x06
+// MethodImpl 0x19
+// MethodSemantics 0x18
+// MethodSpec 0x2B
+// Module 0x00
 
 struct metadata_table_t
 {
