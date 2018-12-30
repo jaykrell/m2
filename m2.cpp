@@ -2576,8 +2576,37 @@ const metadata_field_t metadata_fields_ImplMap [ ] = // table0x1C
 };
 const metadata_table_schema_t metadata_row_schema_ImplMap = { "ImplMap", CountOf (metadata_fields_ImplMap), metadata_fields_ImplMap };
 
-// File 0x26
+// TODO enum
+typedef uint32 ManifestResourceAttributes;
+
 // ManifestResource 0x28
+struct ManifestResource_t // table0x28
+{
+    uint32 Offset;
+    ManifestResourceAttributes Flags;
+    String_t Name;
+    union {
+        //File_t* File;
+        //Assembly_t* Assembly;
+    } Implementation;
+};
+struct metadata_ManifestResource_t // table0x28
+{
+    uint32 Offset;
+    uint32 Flags; // TODO enum
+    metadata_string_t Name;
+    metadata_token_t Implementation;
+};
+const metadata_field_t metadata_fields_ManifestResource [ ] = // table0x28
+{
+     { "Offset", metadata_field_type_uint32 },
+     { "Flags", metadata_field_type_uint32 },
+     { "Name", metadata_field_type_string },
+     { "Implementation", metadata_field_type_Implementation },
+};
+const metadata_table_schema_t metadata_row_schema_ManifestResource = { "ManifestResource", CountOf (metadata_fields_ManifestResource), metadata_fields_ManifestResource };
+
+// File 0x26
 
 struct metadata_table_t
 {
