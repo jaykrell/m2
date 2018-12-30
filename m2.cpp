@@ -2085,12 +2085,15 @@ const metadata_field_t metadata_fields_MethodImpl [ ] = // table0x19
 
 const metadata_table_schema_t metadata_row_schema_MethodImpl = { "MethodImpl", CountOf (metadata_fields_MethodImpl), metadata_fields_MethodImpl };
 
+// .property and .event
 const metadata_field_t metadata_fields_MethodSemantics [ ] = // table0x18
 {
     { "Semantics", metadata_field_type_uint16 },
     { "Method", metadata_field_type_MethodDef }, // index into MethodDef table, 2 or 4 bytes
     { "Association", metadata_field_type_HasSemantics }, // CodedIndex
 };
+
+const metadata_table_schema_t metadata_row_schema_MethodSemantics = { "MethodSemantics", CountOf (metadata_fields_MethodSemantics), metadata_fields_MethodSemantics };
 
 struct metadata_table_t
 {
