@@ -2502,10 +2502,7 @@ const metadata_table_schema_t metadata_row_schema_InterfaceImpl = { "InterfaceIm
 // GenericParam 0x2A
 // GenericParamConstraint 0x2C
 // ImplMap 0x1C
-// InterfaceImpl 0x09
 // ManifestResource 0x28
-// MethodDef 0x06
-// MethodImpl 0x19
 
 struct metadata_table_t
 {
