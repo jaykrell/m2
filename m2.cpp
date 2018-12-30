@@ -37,6 +37,7 @@
 #include <sys/stat.h>
 #endif
 #include <vector> // TODO rewrite/rename
+#include <string> // TODO rewrite/rename
 
 #if !defined(PRIX64) && defined(_WIN32)
 #define PRIX64 "I64X"
@@ -55,7 +56,7 @@ typedef unsigned char       uint8;
 #endif
 #if USHRT_MAX == 0x0FFFFUL
 typedef          short      int16;
-typedef unsigned short     uint16, char2;
+typedef unsigned short     uint16;
 #else
 #error unable to find 16bit integer
 #endif
@@ -511,6 +512,57 @@ struct memory_mapped_file_t
     }
 };
 
+// Apart from the persistent metadata, an in-memory pointer-ful type system is required.
+// unless the metadata can aggressively be used as the in-memory data.
+
+struct Member_t
+{
+        std::string name;
+        int64 offset;
+};
+
+struct Method_t : Member_t
+{
+};
+
+struct Event_t : Member_t
+{
+};
+
+struct Property_t : Member_t
+{
+};
+
+struct String_t : std::string
+{
+};
+
+typedef std::basic_string<char16_t> ustring;
+
+struct UString_t : ustring
+{
+};
+
+struct Field_t : Member_t
+{
+};
+
+struct Interface_t
+{
+        std::vector<Method_t> methods;
+};
+
+struct Class_t
+{
+        Class_t* base;
+        std::string name;
+        std::vector<Interface_t> interfaces;
+        std::vector<Method_t> methods;
+        std::vector<Field_t> fields;
+        std::vector<Event_t> events;
+        std::vector<Property_t> properties;
+};
+
 // TODO enum
 const uint COMIMAGE_FLAGS_ILONLY = 1;
 const uint COMIMAGE_FLAGS_32BITREQUIRED = 2;
@@ -762,7 +814,7 @@ struct metadata_unicode_string_t
 {
     uint32 offset;
     uint32 size;
-    const char2* pointer;
+    const char16_t* pointer;
 };
 
 struct metadata_blob_t
@@ -775,6 +827,13 @@ struct metadata_blob_t
 struct metadata_token_t
 {
     uint8 table;
+    uint32 index;
+};
+
+struct metadata_tokenlist_t
+{
+    uint8 table;
+    uint32 count;
     uint32 index;
 };
 
@@ -1805,31 +1864,43 @@ struct metadata_field_type_t
    };
 };
 
-void metadata_decode_fixed(metadata_field_type_t* type, void* output)
+void
+metadata_decode_fixed(metadata_field_type_t* type, void* output)
 {
 }
 
-void metadata_decode_blob(metadata_field_type_t* type, void* output)
+void
+metadata_decode_blob(metadata_field_type_t* type, void* output)
 {
 }
 
-void metadata_decode_string(metadata_field_type_t* type, void* output)
+void
+metadata_decode_string(metadata_field_type_t* type, void* output)
 {
 }
 
-void metadata_decode_ustring(metadata_field_type_t* type, void* output)
+void
+metadata_decode_ustring(metadata_field_type_t* type, void* output)
 {
 }
 
-void metadata_decode_codedindex(metadata_field_type_t* type, void* output)
+void
+metadata_decode_codedindex(metadata_field_type_t* type, void* output)
 {
 }
 
-void metadata_decode_index(metadata_field_type_t* type, void* output)
+void
+metadata_decode_index (metadata_field_type_t* type, void* output)
 {
 }
 
-void metadata_decode_guid(metadata_field_type_t* type, void* output)
+void 
+metadata_decode_index_list (metadata_field_type_t* type, void* output)
+{
+}
+
+void
+metadata_decode_guid (metadata_field_type_t* type, void* output)
 {
 }
 
@@ -1863,6 +1934,11 @@ const metadata_field_type_functions_t metadata_field_type_index =
     metadata_decode_index,
 };
 
+const metadata_field_type_functions_t metadata_field_type_index_list =
+{
+    metadata_decode_index_list,
+};
+
 const metadata_field_type_functions_t metadata_field_type_codedindex =
 {
     metadata_decode_codedindex
@@ -1884,6 +1960,7 @@ const metadata_field_type_t metadata_field_type_blob = { "blob",  &metadata_fiel
 // table indices
 const metadata_field_type_t metadata_field_type_TypeDefOrRef = { "TypeDefOrRef" };
 const metadata_field_type_t metadata_field_type_FieldList = { "FieldList", &metadata_field_type_index, Field };
+const metadata_field_type_t metadata_field_type_EventList = { "EventList", &metadata_field_type_index, Event };
 const metadata_field_type_t metadata_field_type_MethodList = { "MethodList", &metadata_field_type_index, MethodDef };
 const metadata_field_type_t metadata_field_type_ParamList = { "ParamList", &metadata_field_type_index, Param };
 const metadata_field_type_t metadata_field_type_TypeDef = { "TypeDef", &metadata_field_type_index, TypeDef };
@@ -1894,6 +1971,7 @@ const metadata_field_type_t metadata_field_type_Property = { "Property", &metada
 const metadata_field_type_t metadata_field_type_HasCustomAttribute = { "HasCustomAttribute", &metadata_field_type_codedindex, CodedIndex(HasCustomAttribute) };
 const metadata_field_type_t metadata_field_type_CustomAttributeType = { "CustomAttributeType", &metadata_field_type_codedindex, CodedIndex(CustomAttributeType) };
 const metadata_field_type_t metadata_field_type_HasDeclSecurity = { "HasDeclSecurity", &metadata_field_type_codedindex, CodedIndex(HasDeclSecurity) };
+const metadata_field_type_t metadata_field_type_Implementation = { "Implementation", &metadata_field_type_codedindex, CodedIndex(Implementation) };
 
 struct metadata_field_t
 {
@@ -2258,7 +2336,9 @@ struct metadata_DeclSecurity_t // table0x0E
         RequestRefuse
     };
     Action_t Action;
-    metadata_token_t Parent; // typedef or methoddef or assembmly, codedindex HasDeclSecurityType
+    // TODO std::vector<uint8>
+    metadata_token_t Parent; // typedef or methoddef or assembly, codedindex HasDeclSecurityType
+    // TODO std::vector<uint8>
     metadata_blob_t PermissionSet; // blob
 };
 const metadata_field_t metadata_fields_declsecurity [ ] = // table0x0E
@@ -2269,9 +2349,57 @@ const metadata_field_t metadata_fields_declsecurity [ ] = // table0x0E
 };
 const metadata_table_schema_t metadata_row_schema_declsecurity = { "DeclSecurity", CountOf (metadata_fields_declsecurity), metadata_fields_declsecurity };
 
-// EventMap
-// Event
-// ExportedType 0x27
+struct metadata_EventMap_t // table0x12
+{
+    metadata_token_t Parent; // typedef table
+    metadata_token_t EventList; // event table
+};
+const metadata_field_t metadata_fields_EventMap [ ] = // table0x12
+{
+    { "Parent", metadata_field_type_TypeDef },
+    { "EventList", metadata_field_type_EventList },
+};
+const metadata_table_schema_t metadata_row_schema_EventMap = { "EventMap", CountOf (metadata_fields_EventMap), metadata_fields_EventMap };
+
+struct metadata_Event_t // table0x14
+{
+    uint16 Flags; // TODO enum
+    metadata_string_t Name;
+    metadata_token_t EventType;
+};
+const metadata_field_t metadata_fields_Event [ ] = // table0x14
+{
+    { "Flags", metadata_field_type_uint16 },
+    { "Name", metadata_field_type_string },
+    { "EventType", metadata_field_type_TypeDefOrRef },
+};
+const metadata_table_schema_t metadata_row_schema_Event = { "Event", CountOf (metadata_fields_Event), metadata_fields_Event };
+
+enum class EventAttributes_t : uint32
+{
+    SpecialName           =   0x0200,     // event is special. Name describes how.
+    // Reserved flags for Runtime use only.
+    RTSpecialName         =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
+};
+
+struct metadata_ExportedType_t // table0x27
+{
+    EventAttributes_t Flags;
+    uint32 TypeDefId; // index into TypeDef table of another module in this assembly; hint only
+    metadata_string_t TypeName;
+    metadata_string_t TypeNameSpace;
+    metadata_token_t Implementation; // coded index Implementation
+};
+const metadata_field_t metadata_fields_ExportedType [ ] = // table0x27
+{
+    { "Flags", metadata_field_type_uint32 },
+    { "TypeDefId", metadata_field_type_uint32 },
+    { "TypeName", metadata_field_type_string },
+    { "TypeNameSpace", metadata_field_type_string },
+    { "Implementation", metadata_field_type_Implementation },
+};
+const metadata_table_schema_t metadata_row_schema_ExportedType = { "ExportedType", CountOf (metadata_fields_ExportedType), metadata_fields_ExportedType };
+
 // Field 0x04
 // FieldLayout 0x10
 // FieldMarshal 0x0D
