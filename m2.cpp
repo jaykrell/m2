@@ -145,17 +145,23 @@ assert_failed (const char * expr)
 #endif
 
 void
+throw_string (const std::string& a)
+{
+    fprintf (stderr, "%s\n", a.c_str());
+    throw a;
+    //abort ();
+}
+
+void
 throw_int (int i, const char* a = "")
 {
-    throw string_format ("error %d %s\n", i, a);
-
+    throw_string (string_format ("error %d %s\n", i, a));
 }
 
 void
 throw_errno (const char* a = "")
 {
     throw_int (errno, a);
-
 }
 
 #ifdef _WIN32
@@ -2553,14 +2559,14 @@ struct loaded_image_t
         dos = (image_dos_header_t*)base;
         printf ("mz: %02x%02x\n", ((uchar*)dos) [0], ((uchar*)dos) [1]);
         if (memcmp (base, "MZ", 2))
-            throw string_format ("incorrect MZ signature %s", file_name);
+            throw_string (string_format ("incorrect MZ signature %s", file_name));
         printf ("mz: %c%c\n", ((char*)dos) [0], ((char*)dos) [1]);
         pe_offset = dos->get_pe ();
         printf ("pe_offset: %#x\n", pe_offset);
         pe = (pe_offset + (uchar*)base);
         printf ("pe: %02x%02x%02x%02x\n", pe [0], pe [1], pe [2], pe [3]);
         if (memcmp (pe, "PE\0\0", 4))
-            throw string_format ("incorrect PE00 signature %s", file_name);
+            throw_string (string_format ("incorrect PE00 signature %s", file_name));
         printf ("pe: %c%c\\%d\\%d\n", pe [0], pe [1], pe [2], pe [3]);
         nt = (image_nt_headers_t*)pe;
         printf ("Machine:%X\n", nt->FileHeader.Machine);
