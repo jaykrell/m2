@@ -913,12 +913,6 @@ struct metadata_param_t // table8
     metadata_string_t Name; // String heap
 };
 
-struct metadata_interfaceimpl_t // table0x09
-{
-    metadata_token_t Class; // TypeDef
-    metadata_token_t Interface; // TypeDef or TypeRef or TypeSpec, "TypeDefOrRef"
-};
-
 struct metadata_constant_t // table0x0B
 {
     uint8 Type;
@@ -1971,7 +1965,7 @@ const metadata_field_type_t metadata_field_type_string = { "string", &metadata_f
 const metadata_field_type_t metadata_field_type_guid = { "guid" };
 const metadata_field_type_t metadata_field_type_blob = { "blob",  &metadata_field_type_blob_functions };
 // table indices
-const metadata_field_type_t metadata_field_type_TypeDefOrRef = { "TypeDefOrRef" };
+const metadata_field_type_t metadata_field_type_TypeDefOrRef = { "TypeDefOrRef", &metadata_field_type_codedindex, CodedIndex(TypeDefOrRef) };
 const metadata_field_type_t metadata_field_type_Field = { "FieldList", &metadata_field_type_index, Field };
 const metadata_field_type_t metadata_field_type_FieldList = { "FieldList", &metadata_field_type_index_list, Field };
 const metadata_field_type_t metadata_field_type_EventList = { "EventList", &metadata_field_type_index_list, Event };
@@ -2003,12 +1997,12 @@ struct metadata_table_schema_t
     void (*unpack)();
 };
 
-struct metadata_module_t // table0x00
+struct metadata_Module_t // table0x00
 {
     uint16 Generation; // reserved, 0
     metadata_string_t Name;
     metadata_guid_t Mvid;
-    metadata_guid_t EncId;
+    metadata_guid_t EncId; // reserved, 0
     metadata_guid_t EncBaseId; // reserved, 0
 };
 const metadata_field_t metadata_fields_Module [ ] = // table0x00
@@ -2479,7 +2473,7 @@ struct metadata_MemberRef_t // table0x0A
     metadata_string_t Name; // String heap
     metadata_blob_t Signature; // blob heap
 };
-const metadata_field_t metadata_fields_MemberRef [ ] = // table0x1D
+const metadata_field_t metadata_fields_MemberRef [ ] = // table0x0A
 {
     { "Class", metadata_field_type_MemberRefParent },
     { "Name", metadata_field_type_string },
@@ -2487,16 +2481,31 @@ const metadata_field_t metadata_fields_MemberRef [ ] = // table0x1D
 };
 const metadata_table_schema_t metadata_row_schema_MemberRef = { "MemberRef", CountOf (metadata_fields_MemberRef), metadata_fields_MemberRef };
 
+struct InterfaceImpl_t // table0x09
+{
+    Class_t* Class; // TypeDef
+    Interface_t* Interface; // TypeDef or TypeRef or TypeSpec, "TypeDefOrRef"
+};
+struct metadata_InterfaceImpl_t // table0x09
+{
+    metadata_token_t Class; // TypeDef
+    metadata_token_t Interface; // TypeDef or TypeRef or TypeSpec, "TypeDefOrRef"
+};
+const metadata_field_t metadata_fields_InterfaceImpl [ ] = // table0x09
+{
+    { "Class", metadata_field_type_TypeDef },
+    { "Interface", metadata_field_type_TypeDefOrRef },
+};
+const metadata_table_schema_t metadata_row_schema_InterfaceImpl = { "InterfaceImpl", CountOf (metadata_fields_InterfaceImpl), metadata_fields_InterfaceImpl };
+
 // File 0x26
 // GenericParam 0x2A
 // GenericParamConstraint 0x2C
 // ImplMap 0x1C
 // InterfaceImpl 0x09
 // ManifestResource 0x28
-// MemberRef 0x0A
 // MethodDef 0x06
 // MethodImpl 0x19
-// Module 0x00
 
 struct metadata_table_t
 {
