@@ -1989,6 +1989,7 @@ const metadata_field_type_t metadata_field_type_Implementation = { "Implementati
 const metadata_field_type_t metadata_field_type_HasFieldMarshal = { "HasFieldMarshal", &metadata_field_type_codedindex, CodedIndex(HasFieldMarshal) };
 const metadata_field_type_t metadata_field_type_MemberRefParent = { "MemberRefParent", &metadata_field_type_codedindex, CodedIndex(MemberRefParent) };
 const metadata_field_type_t metadata_field_type_TypeOrMethodDef = { "TypeOrMethodDef", &metadata_field_type_codedindex, CodedIndex(TypeOrMethodDef) };
+const metadata_field_type_t metadata_field_type_GenericParam = { "GenericParam =", &metadata_field_type_index, GenericParam };
 
 struct metadata_field_t
 {
@@ -2531,8 +2532,24 @@ const metadata_field_t metadata_fields_GenericParam [ ] = // table0x2A
 };
 const metadata_table_schema_t metadata_row_schema_GenericParam = { "GenericParam", CountOf (metadata_fields_GenericParam), metadata_fields_GenericParam };
 
+struct GenericParamConstraint_t // table0x2C
+{
+    GenericParam_t* Owner;
+    //TODO Type_t* Constraint;
+};
+struct metadata_GenericParamConstraint_t // table0x2C
+{
+    metadata_token_t Owner;
+    metadata_token_t Constraint;
+};
+const metadata_field_t metadata_fields_GenericParamConstraint [ ] = // table0x2C
+{
+    { "Owner", metadata_field_type_GenericParam },
+    { "Constraint", metadata_field_type_TypeDefOrRef },
+};
+const metadata_table_schema_t metadata_row_schema_GenericParamConstraint = { "GenericParamConstraint", CountOf (metadata_fields_GenericParamConstraint), metadata_fields_GenericParamConstraint };
+
 // File 0x26
-// GenericParamConstraint 0x2C
 // ImplMap 0x1C
 // ManifestResource 0x28
 
