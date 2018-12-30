@@ -2103,7 +2103,6 @@ struct metadata_typedef_t // table0x02
     uint32 FieldList; // index into Field table, either to last row or next start
     uint32 MethodList; // similar to previous
 };
-
 const metadata_field_t metadata_fields_TypeDef [ ] = // table0x02
 {
     { "Flags", metadata_field_type_uint32 },
@@ -2627,6 +2626,37 @@ const metadata_field_t metadata_fields_File [ ] = // table0x26
      { "HashValue", metadata_field_type_blob },
 };
 const metadata_table_schema_t metadata_row_schema_File = { "File", CountOf (metadata_fields_File), metadata_fields_File };
+
+
+/*
+const int8 ClassLayout = 15;
+
+const int8 MemberRef = 10;
+const int8 MethodRef = MemberRef;
+const int8 FierldRef = MemberRef;
+const int8 Constant = 11;
+const int8 CustomAttribute = 12;
+const int8 FieldMarshal = 13;
+const int8 DeclSecurity = 14;
+const int8 FieldLayout = 16;
+const int8 EventMap = 18;
+const int8 Event = 20;
+const int8 PropertyMap = 21;
+const int8 Property = 23;
+const int8 MethodSemantics = 24; // 0x18
+const int8 MethodImpl = 25; // 0x19
+const int8 ModuleRef = 26;
+const int8 TypeSpec = 27;
+const int8 ImplMap = 28;
+const int8 FieldRVA = 29;
+const int8 Assembly = 32;
+const int8 AssemblyProcessor = 33;
+const int8 AssemblyOS = 34;
+const int8 AssemblyRef = 35;
+const int8 AssemblyRefProcessor = 36;
+const int8 AssemblyRefOS = 37;
+const int8 MethodSpec = 0x2B;
+*/
 
 struct metadata_table_t
 {
