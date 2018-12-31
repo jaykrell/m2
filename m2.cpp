@@ -891,50 +891,51 @@ struct CodedIndex_t
     uint8 map;
 };
 
-#if 0
+// Coded indices are into one of a few tables.
+// A few bits indicate which table -- log base of the number of possibilities.
+// The remaining bits either fill out a total of 16 bits
+// or 32 bits, depending on the maximum index of the possible tables.
+//
+// To determine the size of a coded index therefore, check the number
+// of rows of each possible referenced table, get the maximum, see
+// if it fits 16 - n bits, where n = log base of the number of possible tables.
+// If so, the coded index is 16 bits, else 32 bits.
+#define CODED_INDICES                                                                   \
+CODED_INDEX (TypeDefOrRef,      TypeDef, TypeRef, TypeSpec)                             \
+CODED_INDEX (HasConstant,       Field, Param, Property)                                 \
+CODED_INDEX (HasFieldMarshal,   Field, Param)                                           \
+CODED_INDEX (HasDeclSecurity,   TypeDef, MethodDef, Assembly)                           \
+CODED_INDEX (MemberRefParent,   TypeDef, TypeRef, ModuleRef, MethodDef, TypeSpec)       \
+CODED_INDEX (HasSemantics,      Event, Property)                                        \
+CODED_INDEX (MethodDefOrRef,    MethodDef, MethodRef)                                   \
+CODED_INDEX (MemberForwarded,   Field, MethodDef)                                       \
+CODED_INDEX (Implementation,    File, AssemblyRef, ExportedType)                        \
+/* CodeIndex(CustomAttributeType) has a range of 5 values but only 2 are valid. */      \
+CODED_INDEX (CustomAttributeType, -1, -1, MethodDef, MethodRef, -1)                     \
+CODED_INDEX (ResolutionScope, Module, ModuleRef, AssemblyRef, TypeRef)                  \
+CODED_INDEX (TypeOrMethodDef, TypeDef, MethodDef)                                       \
+CODED_INDEX (HasCustomAttribute,                                                        \
+      MethodDef,     Field,         TypeRef,      TypeDef,          Param,          /* HasCustomAttribute */ \
+      InterfaceImpl, MemberRef,     Module,       DeclSecurity,     Property,       /* HasCustomAttribute */ \
+      Event,         StandAloneSig, ModuleRef,    TypeSpec,         Assembly,       /* HasCustomAttribute */ \
+      AssemblyRef,   File,          ExportedType, ManifestResource, GenericParam,   /* HasCustomAttribute */ \
+      GenericParamConstraint, MethodSpec                                          ) /* HasCustomAttribute */
 
-#define CODED_INDICES \
-CODED_INDEX (TypeDefOrRef, 3, { TypeDef, TypeRef, TypeSpec })
-CODED_INDEX (HasConstant, 3,         = { Field, Param, Property };
-CODED_INDEX (HasFieldMarshal, 2]     = { Field, Param };
-CODED_INDEX (HasDeclSecurity, 3]     = { TypeDef, MethodDef, Assembly };
-CODED_INDEX (MemberRefParent, 5]     = { TypeDef, TypeRef, ModuleRef, MethodDef, TypeSpec };
-CODED_INDEX (HasSemantics, 2]     = { Event, Property };
-CODED_INDEX (MethodDefOrRef, 2]     = { MethodDef, MethodRef };
-CODED_INDEX (MemberForwarded, 2]     = { Field, MethodDef };
-CODED_INDEX (Implementation, 3]     = { File, AssemblyRef, ExportedType };
-CODED_INDEX (CustomAttributeType, 5] = { -1, -1, MethodDef, MethodRef, -1 };
-CODED_INDEX (ResolutionScope, 4]     = { Module, ModuleRef, AssemblyRef, TypeRef };
-CODED_INDEX (TypeOrMethodDef, 2]     = { TypeDef, MethodDef };
-CODED_INDEX (HasCustomAttribute, 22,
-    { MethodDef,     Field,         TypeRef,      TypeDef,          Param,          // HasCustomAttribute
-      InterfaceImpl, MemberRef,     Module,       DeclSecurity,     Property,       // HasCustomAttribute
-      Event,         StandAloneSig, ModuleRef,    TypeSpec,         Assembly,       // HasCustomAttribute
-      AssemblyRef,   File,          ExportedType, ManifestResource, GenericParam,   // HasCustomAttribute
-      GenericParamConstraint, MethodSpec                                         }) // HasCustomAttribute
+#define CODED_INDEX(a, ...) a,
+enum class CodedIndex : int8
+{
+CODED_INDICES
+#undef CODED_INDEX
+    Count
+};
 
-#endif
+template <typename ...Args> constexpr size_t va_count(Args&&...) { return sizeof...(Args); }
 
 struct CodedIndexMap_t
 {
-    int8 TypeDefOrRef [3]        = { TypeDef, TypeRef, TypeSpec };
-    int8 HasConstant [3]         = { Field, Param, Property };
-    int8 HasFieldMarshal [2]     = { Field, Param };
-    int8 HasDeclSecurity [3]     = { TypeDef, MethodDef, Assembly };
-    int8 MemberRefParent [5]     = { TypeDef, TypeRef, ModuleRef, MethodDef, TypeSpec };
-    int8 HasSemantics    [2]     = { Event, Property };
-    int8 MethodDefOrRef  [2]     = { MethodDef, MethodRef };
-    int8 MemberForwarded [2]     = { Field, MethodDef };
-    int8 Implementation  [3]     = { File, AssemblyRef, ExportedType };
-    int8 CustomAttributeType [5] = { -1, -1, MethodDef, MethodRef, -1 };
-    int8 ResolutionScope [4]     = { Module, ModuleRef, AssemblyRef, TypeRef };
-    int8 TypeOrMethodDef [2]     = { TypeDef, MethodDef };
-    int8 HasCustomAttribute [22] =
-    { MethodDef,     Field,         TypeRef,      TypeDef,          Param,          // HasCustomAttribute
-      InterfaceImpl, MemberRef,     Module,       DeclSecurity,     Property,       // HasCustomAttribute
-      Event,         StandAloneSig, ModuleRef,    TypeSpec,         Assembly,       // HasCustomAttribute
-      AssemblyRef,   File,          ExportedType, ManifestResource, GenericParam,   // HasCustomAttribute
-      GenericParamConstraint, MethodSpec                                         }; // HasCustomAttribute
+#define CODED_INDEX(a, ...) int8 a [va_count (__VA_ARGS__)] = { __VA_ARGS__ };
+CODED_INDICES
+#undef CODED_INDEX
 };
 
 const CodedIndexMap_t CodedIndexMap;
@@ -954,27 +955,20 @@ constexpr uint8 LogBase2 (unsigned a)
 #define CountOfField(x, y) std::size(x().y)
 //#define CodedIndex(x) const CodedIndex_t CodedIndex_ ## x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
 //#define CodedIndex(x) CodedIndex_t x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
-#define CodedIndex(x) CodedIndex_t x = {LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
+#define CODED_INDEX(x, ...) CodedIndex_t x = {LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
 
-struct CodedIndices_t
+union CodedIndices_t
 {
-    CodedIndex(CustomAttributeType)
-    CodedIndex(HasConstant)
-    CodedIndex(HasCustomAttribute)
-    CodedIndex(HasDeclSecurity)
-    CodedIndex(HasFieldMarshal)
-    CodedIndex(HasSemantics)
-    CodedIndex(Implementation)
-    CodedIndex(MethodDefOrRef)
-    CodedIndex(MemberForwarded)
-    CodedIndex(MemberRefParent)
-    CodedIndex(ResolutionScope)
-    CodedIndex(TypeDefOrRef)
-    CodedIndex(TypeOrMethodDef)
+    CodedIndex_t array [(uint8)CodedIndex::Count];
+    struct {
+CODED_INDICES
+#undef CODED_INDEX
+};
 };
 
 #undef CodedIndex
-#define CodedIndex(x) (offsetof(CodedIndices_t, x) / sizeof (CodedIndex_t))
+//#define CodedIndex(x) (offsetof(CodedIndices_t, x) / sizeof (CodedIndex_t))
+#define CodedIndex(x) CodedIndex::x
 
 struct HeapIndex_t
 {
@@ -1993,7 +1987,7 @@ struct metadata_field_type_functions_t
 {
     // Virtual functions, but allowing for static construction.
     void (*decode)(metadata_field_type_t*, void*);
-    uint (*get_size)(metadata_field_type_t*, loaded_image_t*);
+    uint (*column_size)(metadata_field_type_t*, loaded_image_t*);
     void (*to_string)(metadata_field_type_t*, void*);
 };
 
@@ -2004,9 +1998,16 @@ struct metadata_field_type_t
     union {
         int8 fixed_size;
         int8 table_index;
-        int8 coded_index;
+        CodedIndex coded_index;
    };
 };
+
+uint loadedimage_metadata_column_size_codedindex_get (loaded_image_t* image, CodedIndex coded_index);
+
+#define CODED_INDEX(x, ...) uint metadata_column_size_codedindex_ ## x (metadata_field_type_t* type, loaded_image_t* image) \
+{ return loadedimage_metadata_column_size_codedindex_get (image, type->coded_index); }
+CODED_INDICES
+#undef CODED_INDEX
 
 void
 metadata_decode_fixed (metadata_field_type_t* type, void* output)
@@ -2141,22 +2142,22 @@ const metadata_field_type_t metadata_field_type_string = { "string", &metadata_f
 const metadata_field_type_t metadata_field_type_guid = { "guid" };
 const metadata_field_type_t metadata_field_type_blob = { "blob",  &metadata_field_type_blob_functions };
 // table indices
-const metadata_field_type_t metadata_field_type_TypeDefOrRef = { "TypeDefOrRef", &metadata_field_type_codedindex, CodedIndex(TypeDefOrRef) };
+const metadata_field_type_t metadata_field_type_TypeDefOrRef = { "TypeDefOrRef", &metadata_field_type_codedindex, (int8)CodedIndex(TypeDefOrRef) };
 const metadata_field_type_t metadata_field_type_Field = { "FieldList", &metadata_field_type_index, Field };
 const metadata_field_type_t metadata_field_type_TypeDef = { "TypeDef", &metadata_field_type_index, TypeDef };
 const metadata_field_type_t metadata_field_type_MethodDef = { "MethodDef", &metadata_field_type_index, MethodDef };
-const metadata_field_type_t metadata_field_type_HasSemantics = {" HasSemantics", &metadata_field_type_codedindex, CodedIndex(HasSemantics) };
-const metadata_field_type_t metadata_field_type_MethodDefOrRef = { "MethodDefOrRef", &metadata_field_type_codedindex, CodedIndex(MethodDefOrRef) };
+const metadata_field_type_t metadata_field_type_HasSemantics = {" HasSemantics", &metadata_field_type_codedindex, (int8)CodedIndex(HasSemantics) };
+const metadata_field_type_t metadata_field_type_MethodDefOrRef = { "MethodDefOrRef", &metadata_field_type_codedindex, (int8)CodedIndex(MethodDefOrRef) };
 const metadata_field_type_t metadata_field_type_Property = { "Property", &metadata_field_type_index, Property };
-const metadata_field_type_t metadata_field_type_HasCustomAttribute = { "HasCustomAttribute", &metadata_field_type_codedindex, CodedIndex(HasCustomAttribute) };
-const metadata_field_type_t metadata_field_type_CustomAttributeType = { "CustomAttributeType", &metadata_field_type_codedindex, CodedIndex(CustomAttributeType) };
-const metadata_field_type_t metadata_field_type_HasDeclSecurity = { "HasDeclSecurity", &metadata_field_type_codedindex, CodedIndex(HasDeclSecurity) };
-const metadata_field_type_t metadata_field_type_Implementation = { "Implementation", &metadata_field_type_codedindex, CodedIndex(Implementation) };
-const metadata_field_type_t metadata_field_type_HasFieldMarshal = { "HasFieldMarshal", &metadata_field_type_codedindex, CodedIndex(HasFieldMarshal) };
-const metadata_field_type_t metadata_field_type_MemberRefParent = { "MemberRefParent", &metadata_field_type_codedindex, CodedIndex(MemberRefParent) };
-const metadata_field_type_t metadata_field_type_TypeOrMethodDef = { "TypeOrMethodDef", &metadata_field_type_codedindex, CodedIndex(TypeOrMethodDef) };
+const metadata_field_type_t metadata_field_type_HasCustomAttribute = { "HasCustomAttribute", &metadata_field_type_codedindex, (int8)CodedIndex(HasCustomAttribute) };
+const metadata_field_type_t metadata_field_type_CustomAttributeType = { "CustomAttributeType", &metadata_field_type_codedindex, (int8)CodedIndex(CustomAttributeType) };
+const metadata_field_type_t metadata_field_type_HasDeclSecurity = { "HasDeclSecurity", &metadata_field_type_codedindex, (int8)CodedIndex(HasDeclSecurity) };
+const metadata_field_type_t metadata_field_type_Implementation = { "Implementation", &metadata_field_type_codedindex, (int8)CodedIndex(Implementation) };
+const metadata_field_type_t metadata_field_type_HasFieldMarshal = { "HasFieldMarshal", &metadata_field_type_codedindex, (int8)CodedIndex(HasFieldMarshal) };
+const metadata_field_type_t metadata_field_type_MemberRefParent = { "MemberRefParent", &metadata_field_type_codedindex, (int8)CodedIndex(MemberRefParent) };
+const metadata_field_type_t metadata_field_type_TypeOrMethodDef = { "TypeOrMethodDef", &metadata_field_type_codedindex, (int8)CodedIndex(TypeOrMethodDef) };
 const metadata_field_type_t metadata_field_type_GenericParam = { "GenericParam", &metadata_field_type_index, GenericParam };
-const metadata_field_type_t metadata_field_type_MemberForwarded = { "MemberForwarded", &metadata_field_type_codedindex, CodedIndex(MemberForwarded) };
+const metadata_field_type_t metadata_field_type_MemberForwarded = { "MemberForwarded", &metadata_field_type_codedindex, (int8)CodedIndex(MemberForwarded) };
 
 // Lists go to end of table, or start of next list, referenced from next element of same table
 const metadata_field_type_t metadata_field_type_FieldList = { "FieldList", &metadata_field_type_index_list, Field };
@@ -3022,7 +3023,6 @@ unknown_stream:
     }
 };
 
-
 uint
 metadata_column_size_blob (metadata_field_type_t* type, loaded_image_t* image)
 {
@@ -3039,6 +3039,19 @@ uint
 metadata_column_size_guid (metadata_field_type_t* type, loaded_image_t* image)
 {
     return image->blob_size;
+}
+
+uint metadata_column_size_codedindex_compute (loaded_image_t* image, CodedIndex coded_index)
+{
+    return 0;
+}
+
+uint loadedimage_metadata_column_size_codedindex_get (loaded_image_t* image, CodedIndex coded_index)
+{
+    uint a = image->coded_index_size [(int8)coded_index];
+    if (a)
+        return a;
+    return metadata_column_size_codedindex_compute (image, coded_index);
 }
 
 }
