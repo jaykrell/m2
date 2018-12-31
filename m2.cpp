@@ -1,11 +1,17 @@
 // 2-clause BSD license unless that does not suffice
 // else MIT like mono. Need to research the difference.
 
-// Much is based on https://www.ntcore.com/files/dotnetformat.htm
-// And https://www.ecma-international.org/publications/files/ECMA-ST/ECMA-335.pdf.
+// https://www.ntcore.com/files/dotnetformat.htm
+// https://www.ecma-international.org/publications/files/ECMA-ST/ECMA-335.pdf.
 
-// Implementation language is C++.
-// Exact C++ version is to be determined.
+// Implementation language is C++. At least C+11.
+// The following features of C++ are difficult to pass up:
+//   RAII
+//   non-static member initialization (C++11)
+//   enum class (C++11)
+//   thread safe static initializers, maybe (C++11)
+//   char16 (C++11)
+//   direct sprintf into std::string (C++11)
 // C++ library dependencies are likely to be removed, but we'll see.
 
 // Goals: clarity, simplicity, portability, size, interpreter, compile to C++, and maybe
@@ -93,19 +99,24 @@ namespace m2
 {
 
 std::string
-string_vformat (const char *format, va_list va)
+string_vformat (const char *format, va_list va_orig)
 {
     // TODO no double buffer
     // TODO Win32?
     // TOOD rewrite
     // TODO %x
+    va_list va;
     va_list va2;
-    va_copy (va2, va); // C99 TODO
-    std::vector <char> buf (1 + vsnprintf (0, 0, format, va));
-    vsnprintf (&buf [0], buf.size (), format, va2);
-    va_end (va);
-    va_end (va2);
-    return std::string (&buf [0]);
+    std::string s;
+    while (true)
+    {
+        va_copy (va, va_orig);
+        va_copy (va2, va_orig);
+        int size = 1 + vsnprintf (0, 0, format, va);
+        s.resize(size);
+        if (vsnprintf (s.data(), size, format, va2) < size)
+               return s;
+    }
 }
 
 std::string
