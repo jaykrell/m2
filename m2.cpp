@@ -6,12 +6,14 @@
 
 // Implementation language is C++. At least C+11.
 // The following features of C++ are difficult to pass up:
-//   RAII
-//   non-static member initialization (C++11)
+//   RAII (destructors, C++98)
 //   enum class (C++11)
+//   non-static member initialization (C++11, easy to live without)
 //   thread safe static initializers, maybe (C++11)
-//   char16 (C++11)
-//   direct sprintf into std::string (C++11)
+//   char16 (C++11, but could use C++98 unsigned short)
+//   direct sprintf into std::string (C++11, but easy slower in C++98)
+//   explicit operator bool (C++11 but easy to emulate in C++98)
+//
 // C++ library dependencies are likely to be removed, but we'll see.
 
 // Goals: clarity, simplicity, portability, size, interpreter, compile to C++, and maybe
@@ -101,10 +103,6 @@ namespace m2
 std::string
 string_vformat (const char *format, va_list va_orig)
 {
-    // TODO no double buffer
-    // TODO Win32?
-    // TOOD rewrite
-    // TODO %x
     va_list va;
     va_list va2;
     std::string s;
@@ -112,9 +110,9 @@ string_vformat (const char *format, va_list va_orig)
     {
         va_copy (va, va_orig);
         va_copy (va2, va_orig);
-        int size = 1 + vsnprintf (0, 0, format, va);
-        s.resize(size);
-        if (vsnprintf (s.data(), size, format, va2) < size)
+        int size = 2 + vsnprintf (0, 0, format, va);
+        s.resize (size);
+        if (vsnprintf (s.data (), size, format, va2) < size)
                return s;
     }
 }
@@ -134,7 +132,7 @@ assertf_failed (const char* condition, const char * format, ...)
 {
     va_list args;
     va_start (args, format);
-    fputs (("assertf_failed:" + std::string(condition) + ":" + m2::string_vformat (format, args) + "\n").c_str (), stderr);
+    fputs (("assertf_failed:" + std::string (condition) + ":" + m2::string_vformat (format, args) + "\n").c_str (), stderr);
     assert (0);
     abort ();
 }
@@ -213,7 +211,7 @@ struct image_dos_header_t
         };
         char a [64];
     };
-    
+
     bool check_sig () { return a [0] == 'M' && a [1] == 'Z'; }
     unsigned get_pe () { return unpack4le (&a [60]); }
 };
@@ -540,6 +538,20 @@ enum class NativeType_t
     // TODO
 };
 
+struct String_t : std::string
+{
+};
+
+typedef std::basic_string<char16_t> ustring;
+
+struct UString_t : ustring
+{
+};
+
+struct Blob_t
+{
+};
+
 struct Member_t
 {
         std::string name;
@@ -550,21 +562,79 @@ struct Method_t : Member_t
 {
 };
 
-struct Event_t : Member_t
+struct Type_t // class, valuetype, delegate, inteface, not char, short, int, long, float
 {
+    enum class Flags_t : uint32
+    {
+//TODO bitfields (need to test little and big endian)
+//TODO or bitfield decoder
+        // Use this mask to retrieve the type visibility information.
+        VisibilityMask        =   0x00000007,
+        NotPublic             =   0x00000000,     // Class is not public scope.
+        Public                =   0x00000001,     // Class is public scope.
+        NestedPublic          =   0x00000002,     // Class is nested with public visibility.
+        NestedPrivate         =   0x00000003,     // Class is nested with private visibility.
+        NestedFamily          =   0x00000004,     // Class is nested with family visibility.
+        NestedAssembly        =   0x00000005,     // Class is nested with assembly visibility.
+        NestedFamANDAssem     =   0x00000006,     // Class is nested with family and assembly visibility.
+        NestedFamORAssem      =   0x00000007,     // Class is nested with family or assembly visibility.
+
+        // Use this mask to retrieve class layout information
+        LayoutMask            =   0x00000018,
+        AutoLayout            =   0x00000000,     // Class fields are auto-laid out
+        SequentialLayout      =   0x00000008,     // Class fields are laid out sequentially
+        ExplicitLayout        =   0x00000010,     // Layout is supplied explicitly
+        // end layout mask
+
+        // Use this mask to retrieve class semantics information.
+        ClassSemanticsMask    =   0x00000060,
+        Class                 =   0x00000000,     // Type is a class.
+        Interface             =   0x00000020,     // Type is an interface.
+        // end semantics mask
+
+        // Special semantics in addition to class semantics.
+        Abstract              =   0x00000080,     // Class is abstract
+        Sealed                =   0x00000100,     // Class is concrete and may not be extended
+        SpecialName           =   0x00000400,     // Class name is special. Name describes how.
+
+        // Implementation attributes.
+        Import                =   0x00001000,     // Class / interface is imported
+        Serializable          =   0x00002000,     // The class is Serializable.
+
+        // Use StringFormatMask to retrieve string information for native interop
+        StringFormatMask      =   0x00030000,
+        AnsiClass             =   0x00000000,     // LPTSTR is interpreted as ANSI in this class
+        UnicodeClass          =   0x00010000,     // LPTSTR is interpreted as UNICODE
+        AutoClass             =   0x00020000,     // LPTSTR is interpreted automatically
+        CustomFormatClass     =   0x00030000,     // A non-standard encoding specified by CustomFormatMask
+        CustomFormatMask      =   0x00C00000,     // Use this mask to retrieve non-standard encoding information for native interop. The meaning of the values of these 2 bits is unspecified.
+
+        // end string format mask
+
+        BeforeFieldInit       =   0x00100000,     // Initialize the class any time before first static field access.
+        Forwarder             =   0x00200000,     // This ExportedType is a type forwarder.
+
+        // Flags reserved for runtime use.
+        ReservedMask          =   0x00040800,
+        RTSpecialName         =   0x00000800,     // Runtime should check name encoding.
+        HasSecurity           =   0x00040000,     // Class has security associate with it.
+    };
+};
+
+struct Event_t : Member_t // table0x14
+{
+    enum class Flags_t : uint16
+    {
+        SpecialName           =   0x0200,     // event is special. Name describes how.
+        // Reserved flags for Runtime use only.
+        RTSpecialName         =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
+    };
+    Flags_t Flags;
+    String_t Name;
+    Type_t* EventType;
 };
 
 struct Property_t : Member_t
-{
-};
-
-struct String_t : std::string
-{
-};
-
-typedef std::basic_string<char16_t> ustring;
-
-struct UString_t : ustring
 {
 };
 
@@ -577,9 +647,7 @@ struct Interface_t
         std::vector<Method_t> methods;
 };
 
-struct Param_t
-{
-};
+struct Param_t;
 
 struct FieldOrParam_t
 {
@@ -909,9 +977,9 @@ struct metadata_stream_header_t // see mono verify_metadata_header
     char   Name [32]; // multiple of 4, null terminated, max 32
 };
 
-struct metadata_param_t // table8
+struct Param_t
 {
-    enum class flags_t : uint16
+    enum class Flags_t : uint16 // ParamAttributes
     {
         In                        =   0x0001,     // Param is [In]
         Out                       =   0x0002,     // Param is [out]
@@ -924,15 +992,31 @@ struct metadata_param_t // table8
 
         Unused                    =   0xcfe0,
     };
+    uint16 Sequence; // 0 is return value, 1 is first param, etc.
+    String_t Name;
+};
 
-    flags_t Flags;
+struct metadata_param_t // table8
+{
+    Param_t::Flags_t Flags;
     uint16 Sequence;
     metadata_string_t Name; // String heap
 };
 
-struct metadata_constant_t // table0x0B
+struct Constant // table0x0B
 {
-    uint8 Type;
+    uint8 Type = 0; // TODO enum
+    union {
+        Param_t* Param;
+        Field_t* Field;
+        Property_t* Property;
+    } Parent = { };
+    Blob_t Value;
+    bool IsNull = false;
+};
+struct metadata_Constant_t // table0x0B
+{
+    uint8 Type; // TODO enum
     uint8 Pad;
     metadata_token_t Parent; // Param or Field or Property, "HasConstant", Type?
     metadata_blob_t Value; // Blob
@@ -991,14 +1075,6 @@ Columns:
 • Offset (a 4-byte constant)
 • Field (index into the Field table)
 
-17 - StandAloneSig Table
-
-//Each row represents a signature that isn't referenced by any other table.
-
-Columns:
-
-• Signature (index into the Blob heap)
-
 18 - EventMap Table
 
 List of events for a specific class.
@@ -1031,17 +1107,6 @@ typedef enum CorEventAttr
     evRTSpecialName         =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
 } CorEventAttr;
 
-21 - PropertyMap Table
-
-List of Properties owned by a specific class.
-
-Columns:
-
-• Parent (index into the TypeDef table)
-• PropertyList (index into Property table). It marks the first of a contiguous run of Properties owned by Parent. The run continues to the smaller of:
-        o the last row of the Property table
-        o the next run of Properties, found by inspecting the PropertyList of the next row in this PropertyMap table
-
 23 - Property Table
 
 Each row represents a property.
@@ -1066,31 +1131,14 @@ typedef enum CorPropertyAttr
     prUnused                =   0xe9ff,
 } CorPropertyAttr;
 
-24 - MethodSemantics Table
-
-Links Events and Properties to specific methods. For example one Event can be associated to more methods. A property uses this table to associate get/set methods.
-
-Columns:
-
-• Semantics (a 2-byte bitmask of type MethodSemanticsAttributes)
-• Method (index into the MethodDef table)
-• Association (index into the Event or Property table; more precisely, a HasSemantics coded index)
-
-Available flags are:
-
-typedef enum CorMethodSemanticsAttr
-{
-    msSetter    =   0x0001,     // Setter for property
-    msGetter    =   0x0002,     // Getter for property
-    msOther     =   0x0004,     // other method for property or event
-    msAddOn     =   0x0008,     // AddOn method for event
-    msRemoveOn  =   0x0010,     // RemoveOn method for event
-    msFire      =   0x0020,     // Fire method for event
-} CorMethodSemanticsAttr;
 
 25 - MethodImpl Table
 
-I quote: "MethodImpls let a compiler override the default inheritance rules provided by the CLI. Their original use was to allow a class “C”, that inherited method “Foo” from interfaces I and J, to provide implementations for both methods (rather than have only one slot for “Foo” in its vtable). But MethodImpls can be used for other reasons too, limited only by the compiler writer’s ingenuity within the constraints defined in the Validation rules below.".
+// I quote: "MethodImpls let a compiler override the default inheritance rules provided by the CLI.
+// Their original use was to allow a class “C”, that inherited method “Foo” from interfaces I and J,
+// to provide implementations for both methods (rather than have only one slot for “Foo” in its vtable).
+// But MethodImpls can be used for other reasons too, limited only by the compiler writer’s ingenuity
+// within the constraints defined in the Validation rules below.".
 
 Columns:
 
@@ -1360,17 +1408,6 @@ typedef enum CorManifestResourceFlags
 
 // If you are interested in this subject, check out that other article I wrote, since there you
 // can find code that maybe helps you understand better.
-
-41 - NestedClass Table
-
-Each row represents a nested class. You know what a nested class is, right?
-
-The columns are of course only two.
-
-Columns:
-
-• NestedClass (index into the TypeDef table)
-• EnclosingClass (index into the TypeDef table)
 
 42 - GenericParam Table
 
@@ -1918,7 +1955,7 @@ metadata_decode_index (metadata_field_type_t* type, void* output)
 {
 }
 
-void 
+void
 metadata_decode_index_list (metadata_field_type_t* type, void* output)
 {
 }
@@ -1984,10 +2021,6 @@ const metadata_field_type_t metadata_field_type_blob = { "blob",  &metadata_fiel
 // table indices
 const metadata_field_type_t metadata_field_type_TypeDefOrRef = { "TypeDefOrRef", &metadata_field_type_codedindex, CodedIndex(TypeDefOrRef) };
 const metadata_field_type_t metadata_field_type_Field = { "FieldList", &metadata_field_type_index, Field };
-const metadata_field_type_t metadata_field_type_FieldList = { "FieldList", &metadata_field_type_index_list, Field };
-const metadata_field_type_t metadata_field_type_EventList = { "EventList", &metadata_field_type_index_list, Event };
-const metadata_field_type_t metadata_field_type_MethodList = { "MethodList", &metadata_field_type_index_list, MethodDef };
-const metadata_field_type_t metadata_field_type_ParamList = { "ParamList", &metadata_field_type_index_list, Param };
 const metadata_field_type_t metadata_field_type_TypeDef = { "TypeDef", &metadata_field_type_index, TypeDef };
 const metadata_field_type_t metadata_field_type_MethodDef = { "MethodDef", &metadata_field_type_index, MethodDef };
 const metadata_field_type_t metadata_field_type_HasSemantics = {" HasSemantics", &metadata_field_type_codedindex, CodedIndex(HasSemantics) };
@@ -2002,6 +2035,13 @@ const metadata_field_type_t metadata_field_type_MemberRefParent = { "MemberRefPa
 const metadata_field_type_t metadata_field_type_TypeOrMethodDef = { "TypeOrMethodDef", &metadata_field_type_codedindex, CodedIndex(TypeOrMethodDef) };
 const metadata_field_type_t metadata_field_type_GenericParam = { "GenericParam", &metadata_field_type_index, GenericParam };
 const metadata_field_type_t metadata_field_type_MemberForwarded = { "MemberForwarded", &metadata_field_type_codedindex, CodedIndex(MemberForwarded) };
+
+// Lists go to end of table, or start of next list, referenced from next element of same table
+const metadata_field_type_t metadata_field_type_FieldList = { "FieldList", &metadata_field_type_index_list, Field };
+const metadata_field_type_t metadata_field_type_EventList = { "EventList", &metadata_field_type_index_list, Event };
+const metadata_field_type_t metadata_field_type_MethodList = { "MethodList", &metadata_field_type_index_list, MethodDef };
+const metadata_field_type_t metadata_field_type_ParamList = { "ParamList", &metadata_field_type_index_list, Param };
+const metadata_field_type_t metadata_field_type_PropertyList = { "PropertyList", &metadata_field_type_index_list, Property };
 
 struct metadata_field_t
 {
@@ -2051,63 +2091,7 @@ metadata_table_schema_t metadata_row_schema_TypeRef = { "TypeRef", CountOf (meta
 
 struct metadata_typedef_t // table0x02
 {
-    enum class Flags_t : uint32
-    {
-//TODO bitfields (need to test little and big endian)
-//TODO or bitfield decoder
-        // Use this mask to retrieve the type visibility information.
-        VisibilityMask        =   0x00000007,
-        NotPublic             =   0x00000000,     // Class is not public scope.
-        Public                =   0x00000001,     // Class is public scope.
-        NestedPublic          =   0x00000002,     // Class is nested with public visibility.
-        NestedPrivate         =   0x00000003,     // Class is nested with private visibility.
-        NestedFamily          =   0x00000004,     // Class is nested with family visibility.
-        NestedAssembly        =   0x00000005,     // Class is nested with assembly visibility.
-        NestedFamANDAssem     =   0x00000006,     // Class is nested with family and assembly visibility.
-        NestedFamORAssem      =   0x00000007,     // Class is nested with family or assembly visibility.
-
-        // Use this mask to retrieve class layout information
-        LayoutMask            =   0x00000018,
-        AutoLayout            =   0x00000000,     // Class fields are auto-laid out
-        SequentialLayout      =   0x00000008,     // Class fields are laid out sequentially
-        ExplicitLayout        =   0x00000010,     // Layout is supplied explicitly
-        // end layout mask
-
-        // Use this mask to retrieve class semantics information.
-        ClassSemanticsMask    =   0x00000060,
-        Class                 =   0x00000000,     // Type is a class.
-        Interface             =   0x00000020,     // Type is an interface.
-        // end semantics mask
-
-        // Special semantics in addition to class semantics.
-        Abstract              =   0x00000080,     // Class is abstract
-        Sealed                =   0x00000100,     // Class is concrete and may not be extended
-        SpecialName           =   0x00000400,     // Class name is special. Name describes how.
-
-        // Implementation attributes.
-        Import                =   0x00001000,     // Class / interface is imported
-        Serializable          =   0x00002000,     // The class is Serializable.
-
-        // Use StringFormatMask to retrieve string information for native interop
-        StringFormatMask      =   0x00030000,
-        AnsiClass             =   0x00000000,     // LPTSTR is interpreted as ANSI in this class
-        UnicodeClass          =   0x00010000,     // LPTSTR is interpreted as UNICODE
-        AutoClass             =   0x00020000,     // LPTSTR is interpreted automatically
-        CustomFormatClass     =   0x00030000,     // A non-standard encoding specified by CustomFormatMask
-        CustomFormatMask      =   0x00C00000,     // Use this mask to retrieve non-standard encoding information for native interop. The meaning of the values of these 2 bits is unspecified.
-
-        // end string format mask
-
-        BeforeFieldInit       =   0x00100000,     // Initialize the class any time before first static field access.
-        Forwarder             =   0x00200000,     // This ExportedType is a type forwarder.
-
-        // Flags reserved for runtime use.
-        ReservedMask          =   0x00040800,
-        RTSpecialName         =   0x00000800,     // Runtime should check name encoding.
-        HasSecurity           =   0x00040000,     // Class has security associate with it.
-    };
-
-    Flags_t flags;
+    Type_t::Flags_t Flags;
     metadata_string_t TypeName; // string
     metadata_string_t TypeNamespace; // string
     metadata_token_t Extends; // TypeDefOrRef
@@ -2274,13 +2258,33 @@ const metadata_field_t metadata_fields_MethodImpl [ ] = // table0x19
 const metadata_table_schema_t metadata_row_schema_MethodImpl = { "MethodImpl", CountOf (metadata_fields_MethodImpl), metadata_fields_MethodImpl };
 
 // .property and .event
+// Links Events and Properties to specific methods.
+// For example one Event can be associated to more methods.
+// A property uses this table to associate get/set methods.
+struct MethodSemantics_t // table0x18
+{
+    enum class Attributes_t : uint16 // CorMethodSemanticsAttr
+    {
+        Setter = 1, // msSetter
+        Getter = 2,
+        Other = 4,
+        AddOn = 8,
+        RemoveOn = 0x10,
+        Fire = 0x20,
+    };
+    Attributes_t Semantics;
+    Method_t* Method;
+    union {
+        Event_t* Event;
+        Property_t* Property;
+    } Association;
+};
 const metadata_field_t metadata_fields_MethodSemantics [ ] = // table0x18
 {
     { "Semantics", metadata_field_type_uint16 },
     { "Method", metadata_field_type_MethodDef }, // index into MethodDef table, 2 or 4 bytes
-    { "Association", metadata_field_type_HasSemantics }, // CodedIndex
+    { "Association", metadata_field_type_HasSemantics }, // Event or Property, CodedIndex
 };
-
 const metadata_table_schema_t metadata_row_schema_MethodSemantics = { "MethodSemantics", CountOf (metadata_fields_MethodSemantics), metadata_fields_MethodSemantics };
 
 const metadata_field_t metadata_fields_MethodSpec [ ] = // table0x2B
@@ -2296,7 +2300,17 @@ const metadata_field_t metadata_fields_ModuleRef [ ] = // table0x1A
 };
 const metadata_table_schema_t metadata_row_schema_ModuleRef = { "ModuleRef", CountOf (metadata_fields_ModuleRef), metadata_fields_ModuleRef };
 
-const metadata_field_t metadata_fields_NestedClass [ ] = // table0x28
+struct NestedClass_t // table0x29
+{
+    Type_t* NestedClass;
+    Type_t* EnclosingClass;
+};
+struct metadata_NestedClass_t // table0x29
+{
+    metadata_token_t NestedClass;
+    metadata_token_t EnclosingClass;
+};
+const metadata_field_t metadata_fields_NestedClass [ ] = // table0x29
 {
     { "NestedClass", metadata_field_type_TypeDef },
     { "EnclosingClass", metadata_field_type_TypeDef },
@@ -2319,13 +2333,22 @@ const metadata_field_t metadata_fields_Property [ ] = // table0x17
 };
 const metadata_table_schema_t metadata_row_schema_Property = { "Property", CountOf (metadata_fields_Property), metadata_fields_Property };
 
+struct PropertyMap_t // table0x15
+{
+    Type_t* Parent;
+    std::vector<Property_t*> PropertyList;
+};
 const metadata_field_t metadata_fields_PropertyMap [ ] = // table0x15
 {
     { "Parent", metadata_field_type_TypeDef },
-    { "PropertyList", metadata_field_type_string },
+    { "PropertyList", metadata_field_type_PropertyList },
 };
 const metadata_table_schema_t metadata_row_schema_PropertyMap = { "PropertyMap", CountOf (metadata_fields_PropertyMap), metadata_fields_PropertyMap };
 
+struct metadata_StandaloneSig_t // table0x11
+{
+    metadata_blob_t Signature;
+};
 const metadata_field_t metadata_fields_StandaloneSig [ ] = // table0x11
 {
     { "Signature", metadata_field_type_blob },
@@ -2392,7 +2415,7 @@ const metadata_table_schema_t metadata_row_schema_EventMap = { "EventMap", Count
 
 struct metadata_Event_t // table0x14
 {
-    uint16 Flags; // TODO enum
+    Event_t::Flags_t Flags;
     metadata_string_t Name;
     metadata_token_t EventType;
 };
@@ -2404,16 +2427,12 @@ const metadata_field_t metadata_fields_Event [ ] = // table0x14
 };
 const metadata_table_schema_t metadata_row_schema_Event = { "Event", CountOf (metadata_fields_Event), metadata_fields_Event };
 
-enum class EventAttributes_t : uint32
+struct ExportedType_t // table0x27
 {
-    SpecialName           =   0x0200,     // event is special. Name describes how.
-    // Reserved flags for Runtime use only.
-    RTSpecialName         =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
 };
-
 struct metadata_ExportedType_t // table0x27
 {
-    EventAttributes_t Flags;
+    Type_t::Flags_t Flags;
     uint32 TypeDefId; // index into TypeDef table of another module in this assembly; hint only
     metadata_string_t TypeName;
     metadata_string_t TypeNameSpace;
