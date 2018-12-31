@@ -891,6 +891,30 @@ struct CodedIndex_t
     uint8 map;
 };
 
+#if 0
+
+#define CODED_INDICES \
+CODED_INDEX (TypeDefOrRef, 3, { TypeDef, TypeRef, TypeSpec })
+CODED_INDEX (HasConstant, 3,         = { Field, Param, Property };
+CODED_INDEX (HasFieldMarshal, 2]     = { Field, Param };
+CODED_INDEX (HasDeclSecurity, 3]     = { TypeDef, MethodDef, Assembly };
+CODED_INDEX (MemberRefParent, 5]     = { TypeDef, TypeRef, ModuleRef, MethodDef, TypeSpec };
+CODED_INDEX (HasSemantics, 2]     = { Event, Property };
+CODED_INDEX (MethodDefOrRef, 2]     = { MethodDef, MethodRef };
+CODED_INDEX (MemberForwarded, 2]     = { Field, MethodDef };
+CODED_INDEX (Implementation, 3]     = { File, AssemblyRef, ExportedType };
+CODED_INDEX (CustomAttributeType, 5] = { -1, -1, MethodDef, MethodRef, -1 };
+CODED_INDEX (ResolutionScope, 4]     = { Module, ModuleRef, AssemblyRef, TypeRef };
+CODED_INDEX (TypeOrMethodDef, 2]     = { TypeDef, MethodDef };
+CODED_INDEX (HasCustomAttribute, 22,
+    { MethodDef,     Field,         TypeRef,      TypeDef,          Param,          // HasCustomAttribute
+      InterfaceImpl, MemberRef,     Module,       DeclSecurity,     Property,       // HasCustomAttribute
+      Event,         StandAloneSig, ModuleRef,    TypeSpec,         Assembly,       // HasCustomAttribute
+      AssemblyRef,   File,          ExportedType, ManifestResource, GenericParam,   // HasCustomAttribute
+      GenericParamConstraint, MethodSpec                                         }) // HasCustomAttribute
+
+#endif
+
 struct CodedIndexMap_t
 {
     int8 TypeDefOrRef [3]        = { TypeDef, TypeRef, TypeSpec };
