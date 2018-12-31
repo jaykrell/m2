@@ -752,6 +752,7 @@ union DynamicTableInfo_t
     DynamicTableInfoElement_t array [45];
     struct
     {
+        // TODO #define METADATA_TABLES METADATA_TABLE
         DynamicTableInfoElement_t Module;
         DynamicTableInfoElement_t TypeRef;
         DynamicTableInfoElement_t TypeDef;
@@ -1988,9 +1989,9 @@ struct loaded_image_t;
 struct metadata_field_type_functions_t
 {
     // Virtual functions, but allowing for static construction.
-    void (*decode)(metadata_field_type_t*, void*);
-    uint (*column_size)(metadata_field_type_t*, loaded_image_t*);
-    void (*to_string)(metadata_field_type_t*, void*);
+    void (*decode)(const metadata_field_type_t*, void*);
+    uint (*column_size)(const metadata_field_type_t*, loaded_image_t*);
+    void (*to_string)(const metadata_field_type_t*, void*);
 };
 
 struct metadata_field_type_t
@@ -2012,107 +2013,112 @@ CODED_INDICES
 #undef CODED_INDEX
 
 void
-metadata_decode_fixed (metadata_field_type_t* type, void* output)
+metadata_decode_fixed (const metadata_field_type_t* type, void* output)
 {
 }
 
 void
-metadata_decode_blob (metadata_field_type_t* type, void* output)
+metadata_decode_blob (const metadata_field_type_t* type, void* output)
 {
 }
 
 void
-metadata_decode_string (metadata_field_type_t* type, void* output)
+metadata_decode_string (const metadata_field_type_t* type, void* output)
 {
 }
 
 void
-metadata_decode_ustring (metadata_field_type_t* type, void* output)
+metadata_decode_ustring (const metadata_field_type_t* type, void* output)
 {
 }
 
 void
-metadata_decode_codedindex (metadata_field_type_t* type, void* output)
+metadata_decode_codedindex (const metadata_field_type_t* type, void* output)
 {
 }
 
 void
-metadata_decode_index (metadata_field_type_t* type, void* output)
+metadata_decode_index (const metadata_field_type_t* type, void* output)
 {
 }
 
 void
-metadata_decode_index_list (metadata_field_type_t* type, void* output)
+metadata_decode_index_list (const metadata_field_type_t* type, void* output)
 {
 }
 
 void
-metadata_decode_guid (metadata_field_type_t* type, void* output)
+metadata_decode_guid (const metadata_field_type_t* type, void* output)
 {
 }
 
 uint
-metadata_column_size_fixed (metadata_field_type_t* type, loaded_image_t* image)
+metadata_column_size_fixed (const metadata_field_type_t* type, loaded_image_t* image)
 {
     return type->fixed_size;
 }
 
 uint
-metadata_column_size_blob (metadata_field_type_t* type, loaded_image_t* image);
+metadata_column_size_blob (const metadata_field_type_t* type, loaded_image_t* image);
 
 uint
-metadata_column_size_string (metadata_field_type_t* type, loaded_image_t* image);
+metadata_column_size_string (const metadata_field_type_t* type, loaded_image_t* image);
 
 uint
-metadata_column_size_ustring (metadata_field_type_t* type, loaded_image_t* image)
+metadata_column_size_ustring (const metadata_field_type_t* type, loaded_image_t* image)
 {
     return 4;
 }
 
 uint
-metadata_column_size_codedindex (metadata_field_type_t* type, loaded_image_t* image)
+metadata_column_size_codedindex (const metadata_field_type_t* type, loaded_image_t* image)
 {
     return 0;
 }
 
 uint
-metadata_column_size_index (metadata_field_type_t* type, loaded_image_t* image)
+metadata_column_size_index (const metadata_field_type_t* type, loaded_image_t* image)
 {
     return 0;
 }
 
 uint
-metadata_column_size_index_list (metadata_field_type_t* type, loaded_image_t* image)
+metadata_column_size_index_list (const metadata_field_type_t* type, loaded_image_t* image)
 {
     return metadata_column_size_index (type, image);
 }
 
 uint
-metadata_column_size_guid (metadata_field_type_t* type, loaded_image_t* image);
+metadata_column_size_guid (const metadata_field_type_t* type, loaded_image_t* image);
 
 const metadata_field_type_functions_t metadata_field_type_fixed =
 {
     metadata_decode_fixed,
+    metadata_column_size_fixed,
 };
 
 const metadata_field_type_functions_t metadata_field_type_blob_functions =
 {
     metadata_decode_blob,
+    metadata_column_size_blob,
 };
 
 const metadata_field_type_functions_t metadata_field_type_string_functions =
 {
     metadata_decode_string,
+    metadata_column_size_string,
 };
 
 const metadata_field_type_functions_t metadata_field_type_guid_functions =
 {
     metadata_decode_guid,
+    metadata_column_size_guid,
 };
 
 const metadata_field_type_functions_t metadata_field_type_ustring_functions =
 {
     metadata_decode_ustring,
+    metadata_column_size_ustring,
 };
 
 const metadata_field_type_functions_t metadata_field_type_index =
@@ -2177,7 +2183,7 @@ struct metadata_field_t
 struct metadata_table_schema_t
 {
     const char *name;
-    uint field_count;
+    uint8 count;
     const metadata_field_t* fields;
     void (*unpack)();
 };
@@ -2820,8 +2826,45 @@ struct metadata_table_t
     uint row_size = 0;
 };
 
+static const metadata_table_schema_t *  const metadata_int_to_table_schema [ ] =
+{
+    // TODO
+    &metadata_row_schema_Module,
+    &metadata_row_schema_TypeRef,
+    &metadata_row_schema_TypeDef,
+};
+
 struct loaded_image_t
 {
+    uint compute_row_size (const metadata_table_schema_t* schema)
+    {
+        uint count = schema->count;
+        uint size = 0;
+        auto fields = schema->fields;
+        for (uint i = 0; i < count; ++i)
+        {
+                auto& type = fields [i].type;
+                size += type.functions->column_size (&type, this);
+        }
+        return size;
+    }
+    uint get_row_size (uint8 a)
+    {
+        uint b = row_size [a];
+        if (b)
+                return b;
+        b = compute_row_size (metadata_int_to_table_schema [a]);
+        row_size [a] = b;
+        return b;
+    }
+    void dump_table (uint a)
+    {
+        uint64 one = 1;
+        auto prefix = string_format ("table %X (%s)", a, GetTableName (a));
+        printf ("%s\n", prefix.c_str ());
+        printf ("%s present:%u\n", prefix.c_str (), table_present [a]);
+        printf ("%s row_size:%u\n", prefix.c_str (), get_row_size (a));
+    }
     DynamicTableInfo_t table_info = { };
     bool table_present [64] = { }; // index by metadata table, values are 0/false and 1/true
     uint8 row_size [64] = { }; // index by metadata table
@@ -3003,6 +3046,7 @@ unknown_stream:
                 printf ("table 0x%X (%s) is absent\n", i, GetTableName (i));
             }
         }
+        dump_table (TypeDef);
     }
 
     template <typename T> T* rva_to_p (uint32 rva)
@@ -3013,7 +3057,7 @@ unknown_stream:
 
     uint32 rva_to_file_offset (uint32 rva)
     {
-        // TODO binary search
+        // TODO binary search and/or cache
         image_section_header_t* section_header = nt->first_section_header ();
         for (uint i = 0; i < number_of_sections; ++i, ++section_header)
         {
@@ -3026,19 +3070,19 @@ unknown_stream:
 };
 
 uint
-metadata_column_size_blob (metadata_field_type_t* type, loaded_image_t* image)
+metadata_column_size_blob (const metadata_field_type_t* type, loaded_image_t* image)
 {
     return image->blob_size;
 }
 
 uint
-metadata_column_size_string (metadata_field_type_t* type, loaded_image_t* image)
+metadata_column_size_string (const metadata_field_type_t* type, loaded_image_t* image)
 {
     return image->string_size;
 }
 
 uint
-metadata_column_size_guid (metadata_field_type_t* type, loaded_image_t* image)
+metadata_column_size_guid (const metadata_field_type_t* type, loaded_image_t* image)
 {
     return image->blob_size;
 }
