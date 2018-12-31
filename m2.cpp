@@ -1963,10 +1963,13 @@ struct image_clr_header_t // data_directory [15]
 
 struct metadata_field_type_t;
 
+struct loaded_image_t;
+
 struct metadata_field_type_functions_t
 {
     // Virtual functions, but allowing for static construction.
     void (*decode)(metadata_field_type_t*, void*);
+    uint (*get_size)(metadata_field_type_t*, loaded_image_t*);
     void (*to_string)(metadata_field_type_t*, void*);
 };
 
@@ -2020,6 +2023,45 @@ void
 metadata_decode_guid (metadata_field_type_t* type, void* output)
 {
 }
+
+uint
+metadata_column_size_fixed (metadata_field_type_t* type, loaded_image_t* image)
+{
+    return type->fixed_size;
+}
+
+uint
+metadata_column_size_blob (metadata_field_type_t* type, loaded_image_t* image);
+
+uint
+metadata_column_size_string (metadata_field_type_t* type, loaded_image_t* image);
+
+uint
+metadata_column_size_ustring (metadata_field_type_t* type, loaded_image_t* image)
+{
+    return 4;
+}
+
+uint
+metadata_column_size_codedindex (metadata_field_type_t* type, loaded_image_t* image)
+{
+    return 0;
+}
+
+uint
+metadata_column_size_index (metadata_field_type_t* type, loaded_image_t* image)
+{
+    return 0;
+}
+
+uint
+metadata_column_size_index_list (metadata_field_type_t* type, loaded_image_t* image)
+{
+    return metadata_column_size_index (type, image);
+}
+
+uint
+metadata_column_size_guid (metadata_field_type_t* type, loaded_image_t* image);
 
 const metadata_field_type_functions_t metadata_field_type_fixed =
 {
@@ -2755,8 +2797,9 @@ struct loaded_image_t
 {
     DynamicTableInfo_t table_info = { };
     bool table_present [64] = { }; // index by metadata table, values are 0/false and 1/true
-    uint8 row_size [64] = { }; // index by metadata table, values are 2 or 4
+    uint8 row_size [64] = { }; // index by metadata table
     uint8 coded_index_size [64] = { }; // 2 or 4
+    uint8 index_size [64] = { }; // 2 or 4
     uint64 file_size = 0;
     memory_mapped_file_t mmf;
     void * base = 0;
@@ -2954,6 +2997,25 @@ unknown_stream:
         return 0;
     }
 };
+
+
+uint
+metadata_column_size_blob (metadata_field_type_t* type, loaded_image_t* image)
+{
+    return image->blob_size;
+}
+
+uint
+metadata_column_size_string (metadata_field_type_t* type, loaded_image_t* image)
+{
+    return image->string_size;
+}
+
+uint
+metadata_column_size_guid (metadata_field_type_t* type, loaded_image_t* image)
+{
+    return image->blob_size;
+}
 
 }
 
