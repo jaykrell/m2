@@ -13,6 +13,8 @@
 //   char16 (C++11, but could use C++98 unsigned short)
 //   direct sprintf into std::string (C++11, but easy slower in C++98)
 //   explicit operator bool (C++11 but easy to emulate in C++98)
+//   variadic template (C++11, really needed?)
+//   variadic macros (really needed?)
 //
 // C++ library dependencies are likely to be removed, but we'll see.
 
@@ -922,14 +924,14 @@ CODED_INDEX (HasCustomAttribute,                                                
       GenericParamConstraint, MethodSpec                                          ) /* HasCustomAttribute */
 
 #define CODED_INDEX(a, ...) a,
-enum class CodedIndex : int8
+enum class CodedIndex : uint8
 {
 CODED_INDICES
 #undef CODED_INDEX
     Count
 };
 
-template <typename ...Args> constexpr size_t va_count(Args&&...) { return sizeof...(Args); }
+template <typename ...Args> constexpr size_t va_count (Args&&...) { return sizeof...(Args); }
 
 struct CodedIndexMap_t
 {
@@ -3048,7 +3050,7 @@ uint metadata_column_size_codedindex_compute (loaded_image_t* image, CodedIndex 
 
 uint loadedimage_metadata_column_size_codedindex_get (loaded_image_t* image, CodedIndex coded_index)
 {
-    uint a = image->coded_index_size [(int8)coded_index];
+    uint a = image->coded_index_size [(uint8)coded_index];
     if (a)
         return a;
     return metadata_column_size_codedindex_compute (image, coded_index);
