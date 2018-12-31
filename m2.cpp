@@ -670,7 +670,7 @@ struct Class_t
         std::vector<Property_t> properties;
 };
 
-// TODO enum
+// TODO enum or bitfield
 const uint COMIMAGE_FLAGS_ILONLY = 1;
 const uint COMIMAGE_FLAGS_32BITREQUIRED = 2;
 const uint COMIMAGE_FLAGS_IL_LIBRARY = 4;
@@ -678,62 +678,62 @@ const uint COMIMAGE_FLAGS_STRONGNAMESIGNED = 8;
 const uint COMIMAGE_FLAGS_NATIVE_ENTRYPOINT = 0x10;
 const uint COMIMAGE_FLAGS_TRACKDEBUGDATA = 0x10000;
 
-// TODO enum
+// TODO enum or bitfield
 // Bit clear: 16 bit; bit set: 32 bit
 const uint8 HeapOffsetSize_String = 1;
 const uint8 HeapOffsetSize_Guid = 2;
 const uint8 HeapOffsetSize_Blob = 4;
 
 // TODO enum
-const int8 Module = 0;
-const int8 TypeRef = 1;
-const int8 TypeDef = 2;
-const int8 FiedPtr = 3; // nonstandard
-const int8 Field = 4;
-const int8 MethodPtr = 5; // nonstandard
-const int8 MethodDef = 6;
-const int8 ParamPtr = 7; // nonstandard
-const int8 Param = 8;
-const int8 InterfaceImpl = 9;
-const int8 MemberRef = 10;
-const int8 MethodRef = MemberRef;
-const int8 FierldRef = MemberRef;
-const int8 Constant = 11;
-const int8 CustomAttribute = 12;
-const int8 FieldMarshal = 13;
-const int8 DeclSecurity = 14;
-const int8 ClassLayout = 15;
-const int8 FieldLayout = 16;
-const int8 StandAloneSig = 17;
-const int8 EventMap = 18;
-const int8 EventPtr = 19; // nonstandard
-const int8 Event = 20;
-const int8 PropertyMap = 21;
-const int8 ProperyPtr = 22; // nonstandard
-const int8 Property = 23;
-const int8 MethodSemantics = 24; // 0x18
-const int8 MethodImpl = 25; // 0x19
-const int8 ModuleRef = 26;
-const int8 TypeSpec = 27;
-const int8 ImplMap = 28;
-const int8 FieldRVA = 29;
-const int8 ENCLog = 30; // nonstandard
-const int8 ENCMap = 31; // nonstandard
-const int8 Assembly = 32;
-const int8 AssemblyProcessor = 33;
-const int8 AssemblyOS = 34;
-const int8 AssemblyRef = 35;
-const int8 AssemblyRefProcessor = 36;
-const int8 AssemblyRefOS = 37;
-const int8 File = 38;
-const int8 ExportedType = 39;
-const int8 ManifestResource = 40; // 0x28
-const int8 NestedClass = 41;
-const int8 GenericParam = 42; // 0x2A
-const int8 MethodSpec = 0x2B;
-const int8 GenericParamConstraint = 44; // 0x2C
+const uint8 Module = 0;
+const uint8 TypeRef = 1;
+const uint8 TypeDef = 2;
+const uint8 FiedPtr = 3; // nonstandard
+const uint8 Field = 4;
+const uint8 MethodPtr = 5; // nonstandard
+const uint8 MethodDef = 6;
+const uint8 ParamPtr = 7; // nonstandard
+const uint8 Param = 8;
+const uint8 InterfaceImpl = 9;
+const uint8 MemberRef = 10;
+const uint8 MethodRef = MemberRef;
+const uint8 FierldRef = MemberRef;
+const uint8 Constant = 11;
+const uint8 CustomAttribute = 12;
+const uint8 FieldMarshal = 13;
+const uint8 DeclSecurity = 14;
+const uint8 ClassLayout = 15;
+const uint8 FieldLayout = 16;
+const uint8 StandAloneSig = 17;
+const uint8 EventMap = 18;
+const uint8 EventPtr = 19; // nonstandard
+const uint8 Event = 20;
+const uint8 PropertyMap = 21;
+const uint8 ProperyPtr = 22; // nonstandard
+const uint8 Property = 23;
+const uint8 MethodSemantics = 24; // 0x18
+const uint8 MethodImpl = 25; // 0x19
+const uint8 ModuleRef = 26;
+const uint8 TypeSpec = 27;
+const uint8 ImplMap = 28;
+const uint8 FieldRVA = 29;
+const uint8 ENCLog = 30; // nonstandard
+const uint8 ENCMap = 31; // nonstandard
+const uint8 Assembly = 32;
+const uint8 AssemblyProcessor = 33;
+const uint8 AssemblyOS = 34;
+const uint8 AssemblyRef = 35;
+const uint8 AssemblyRefProcessor = 36;
+const uint8 AssemblyRefOS = 37;
+const uint8 File = 38;
+const uint8 ExportedType = 39;
+const uint8 ManifestResource = 40; // 0x28
+const uint8 NestedClass = 41;
+const uint8 GenericParam = 42; // 0x2A
+const uint8 MethodSpec = 0x2B;
+const uint8 GenericParamConstraint = 44; // 0x2C
 
-// TODO enum
+// TODO enum/bitfield
 const uint8 CorILMethod_TinyFormat = 2;
 const uint8 CorILMethod_FatFormat = 3;
 const uint8 CorILMethod_MoreSects = 8;
@@ -743,7 +743,7 @@ struct DynamicTableInfoElement_t
 {
     uint32 RowCount = 0;
     uint32 RowSize = 0;
-    void*  Base = 0;
+    void* Base = 0;
     bool Present = false;
 };
 
