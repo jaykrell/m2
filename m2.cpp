@@ -742,6 +742,7 @@ struct DynamicTableInfoElement_t
     uint32 RowCount = 0;
     uint32 RowSize = 0;
     void*  Base = 0;
+    bool Present = false;
 };
 
 union DynamicTableInfo_t
@@ -796,6 +797,61 @@ union DynamicTableInfo_t
         DynamicTableInfoElement_t GenericParamConstraint;
     } name;
 };
+
+const char * GetTableName (int a)
+{
+static const char * const table_names [ ] =
+{
+"Module",
+"TypeRef",
+"TypeDef",
+"Table3",
+"Field",
+"Table5",
+"MethodDef",
+"Table7",
+"Param",
+"InterfaceImpl",
+"MemberRef",
+"Constant",
+"CustomAttribute",
+"FieldMarshal",
+"DeclSecurity",
+"ClassLayout",
+"FieldLayout",
+"StandAloneSig",
+"EventMap",
+"Table19",
+"Event",
+"PropertyMap",
+"Table22",
+"Property",
+"MethodSemantics",
+"MethodImpl",
+"ModuleRef",
+"TypeSpec",
+"ImplMap",
+"FieldRVA",
+"Table30",
+"Table31",
+"Assembly",
+"AssemblyProcessor",
+"AssemblyOS",
+"AssemblyRef",
+"AssemblyRefProcessor",
+"AssemblyRefOS",
+"File",
+"ExportedType",
+"ManifestResource",
+"NestedClass",
+"GenericParam",
+"MethodSpec",
+"GenericParamConstraint",
+};
+    if (a < std::size (table_names))
+        return table_names [a];
+    return "unknown";
+}
 
 struct method_header_tiny_t
 // no locals
@@ -964,7 +1020,7 @@ struct metadata_root_t
     /* 6 */ uint16 MinorVersion; // 1, ignore
     /* 8 */ uint32 Reserved;     // 0
     /* 12 */ uint32 VersionLength; // VersionLength null, round up to 4
-    /* 16 */ char Version[1];
+    /* 16 */ char Version [1];
     // uint16 Flags; // 0
     // uint16 NumberOfStreams;
     // metadata_stream_header_t stream_headers [NumberOfStreams];
@@ -2697,9 +2753,10 @@ struct metadata_table_t
 
 struct loaded_image_t
 {
-    DynamicTableInfoElement_t table_info = { };
-    std::vector<uint8> table_present; // index by metadata table, values are 0/false and 1/true
-    std::vector<uint8> row_size; // index by metadata table, values are 2 or 4
+    DynamicTableInfo_t table_info = { };
+    bool table_present [64] = { }; // index by metadata table, values are 0/false and 1/true
+    uint8 row_size [64] = { }; // index by metadata table, values are 2 or 4
+    uint8 coded_index_size [64] = { }; // 2 or 4
     uint64 file_size = 0;
     memory_mapped_file_t mmf;
     void * base = 0;
@@ -2848,6 +2905,25 @@ unknown_stream:
         printf ("metadata_tables.       Sorted:%08X`%08X\n", (uint32)(sorted >> 32), (uint32)sorted);
         printf ("metadata_tables.     Unsorted:%08X`%08X\n", (uint32)(unsorted >> 32), (uint32)unsorted);
         printf ("metadata_tables.InvalidSorted:%08X`%08X\n", (uint32)(invalidSorted >> 32), (uint32)invalidSorted);
+        uint64 one = 1;
+        uint j = 0;
+        for (uint i = 0; i < std::size (table_info.array); ++i)
+        {
+            auto const mask = one << i;
+            bool Present = (valid & mask) != 0;
+            table_info.array [i].Present = Present;
+            if (Present)
+            {
+                uint32 RowCount = ((uint32*)(metadata_tables + 1)) [j];
+                printf ("table 0x%X (%s) has %u rows (%s)\n", i, GetTableName (i), RowCount, (sorted & mask) ? "sorted" : "unsorted");
+                table_info.array [i].RowCount = RowCount;
+                ++j;
+            }
+            else
+            {
+                printf ("table 0x%X (%s) is absent\n", i, GetTableName (i));
+            }
+        }
 
         // TODO print which tables are sorted, by name
     }
