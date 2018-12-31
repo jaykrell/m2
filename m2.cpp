@@ -2777,6 +2777,10 @@ struct loaded_image_t
     uint32 * number_of_rows = 0; // points into metadata_tables_header
     uint NumberOfRvaAndSizes = 0;
     uint number_of_streams = 0;
+    uint blob_size = 0; // 2 or 4
+    uint string_size = 0; // 2 or 4
+    uint ustring_size = 0; // 2 or 4
+    uint guid_size = 0; // 2 or 4
     struct
     {
         metadata_stream_header_t* tables;
@@ -2894,6 +2898,10 @@ unknown_stream:
         printf ("metadata_tables.MajorVersion:%X\n", metadata_tables->MajorVersion);
         printf ("metadata_tables.MinorVersion:%X\n", metadata_tables->MinorVersion);
         printf ("metadata_tables.HeapSizes:%X\n", metadata_tables->HeapSizes);
+        auto const HeapSize = metadata_tables->HeapSizes;
+        string_size = (HeapSize & 1) ? 4 : 2;
+        guid_size = (HeapSize & 2) ? 4 : 2;
+        blob_size = (HeapSize & 4) ? 4 : 2;
         printf ("metadata_tables.reserved2:%X\n", metadata_tables->reserved2);
         uint64 valid = metadata_tables->Valid;
         uint64 sorted = metadata_tables->Sorted;
@@ -2907,6 +2915,7 @@ unknown_stream:
         printf ("metadata_tables.InvalidSorted:%08X`%08X\n", (uint32)(invalidSorted >> 32), (uint32)invalidSorted);
         uint64 one = 1;
         uint j = 0;
+        auto RowCount = (uint32*)(metadata_tables + 1);
         for (uint i = 0; i < std::size (table_info.array); ++i)
         {
             auto const mask = one << i;
@@ -2914,18 +2923,16 @@ unknown_stream:
             table_info.array [i].Present = Present;
             if (Present)
             {
-                uint32 RowCount = ((uint32*)(metadata_tables + 1)) [j];
-                printf ("table 0x%X (%s) has %u rows (%s)\n", i, GetTableName (i), RowCount, (sorted & mask) ? "sorted" : "unsorted");
-                table_info.array [i].RowCount = RowCount;
+                printf ("table 0x%X (%s) has %u rows (%s)\n", i, GetTableName (i), *RowCount, (sorted & mask) ? "sorted" : "unsorted");
+                table_info.array [i].RowCount = *RowCount;
                 ++j;
+                ++RowCount;
             }
             else
             {
                 printf ("table 0x%X (%s) is absent\n", i, GetTableName (i));
             }
         }
-
-        // TODO print which tables are sorted, by name
     }
 
     template <typename T> T* rva_to_p (uint32 rva)
