@@ -566,6 +566,17 @@ struct Member_t
     int64 offset;
 };
 
+struct Param_t;
+struct Field_t;
+struct Property_t;
+
+union Parent_t // Constant table0x0B
+{
+    Param_t* Param;
+    Field_t* Field;
+    Property_t* Property;
+};
+
 enum class MethodDefFlags_t : uint16 // table0x06
 {
 //TODO bitfields (need to test little and big endian)
@@ -717,55 +728,44 @@ struct Property_t : Member_t
 {
 };
 
-    enum class FieldFlags_t : uint16
-    {
+enum class FieldFlags_t : uint16
+{
 //TODO bitfields (need to test little and big endian)
 //TODO or bitfield decoder
-        // member access mask - Use this mask to retrieve accessibility information.
-        FieldAccessMask           =   0x0007,
-        PrivateScope              =   0x0000,     // Member not referenceable.
-        Private                   =   0x0001,     // Accessible only by the parent type.
-        FamANDAssem               =   0x0002,     // Accessible by sub-types only in this Assembly.
-        Assembly                  =   0x0003,     // Accessibly by anyone in the Assembly.
-        Family                    =   0x0004,     // Accessible only by type and sub-types.
-        FamORAssem                =   0x0005,     // Accessibly by sub-types anywhere, plus anyone in assembly.
-        Public                    =   0x0006,     // Accessibly by anyone who has visibility to this scope.
-        // end member access mask
+// member access mask - Use this mask to retrieve accessibility information.
+    FieldAccessMask           =   0x0007,
+    PrivateScope              =   0x0000,     // Member not referenceable.
+    Private                   =   0x0001,     // Accessible only by the parent type.
+    FamANDAssem               =   0x0002,     // Accessible by sub-types only in this Assembly.
+    Assembly                  =   0x0003,     // Accessibly by anyone in the Assembly.
+    Family                    =   0x0004,     // Accessible only by type and sub-types.
+    FamORAssem                =   0x0005,     // Accessibly by sub-types anywhere, plus anyone in assembly.
+    Public                    =   0x0006,     // Accessibly by anyone who has visibility to this scope.
+    // end member access mask
 
-        // field contract attributes.
-        Static                    =   0x0010,     // Defined on type, else per instance.
-        InitOnly                  =   0x0020,     // Field may only be initialized, not written to after init.
-        Literal                   =   0x0040,     // Value is compile time constant.
-        NotSerialized             =   0x0080,     // Field does not have to be serialized when type is remoted.
+    // field contract attributes.
+    Static                    =   0x0010,     // Defined on type, else per instance.
+    InitOnly                  =   0x0020,     // Field may only be initialized, not written to after init.
+    Literal                   =   0x0040,     // Value is compile time constant.
+    NotSerialized             =   0x0080,     // Field does not have to be serialized when type is remoted.
 
-        SpecialName
-               =   0x0200,     // field is special. Name describes how.
+    SpecialName               =   0x0200,     // field is special. Name describes how.
 
-        // interop attributes
-        PinvokeImpl               =   0x2000,     // Implementation is forwarded through pinvoke.
+    // interop attributes
+    PinvokeImpl               =   0x2000,     // Implementation is forwarded through pinvoke.
 
-        // Reserved flags for runtime use only.
-        ReservedMask              =   0x9500,
-        RTSpecialName             =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
-        HasFieldMarshal           =   0x1000,     // Field has marshalling information.
-        HasDefault                =   0x8000,     // Field has default.
-        HasFieldRVA               =   0x0100,     // Field has RVA.
-    };
-
-struct Field_t;
-
-/*
-struct Field_t : Member_t
-{
+    // Reserved flags for runtime use only.
+    ReservedMask              =   0x9500,
+    RTSpecialName             =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
+    HasFieldMarshal           =   0x1000,     // Field has marshalling information.
+    HasDefault                =   0x8000,     // Field has default.
+    HasFieldRVA               =   0x0100,     // Field has RVA.
 };
-*/
 
 struct Interface_t
 {
     std::vector<Method_t*> methods;
 };
-
-struct Param_t;
 
 struct FieldOrParam_t
 {
@@ -1074,25 +1074,6 @@ enum class ParamFlags_t : uint16 // ParamAttributes
     HasFieldMarshal           =   0x2000,     // Param has FieldMarshal.
 
     Unused                    =   0xcfe0,
-};
-
-struct Constant // table0x0B
-{
-    uint8 Type = 0; // TODO enum
-    union {
-        Param_t* Param;
-        Field_t* Field;
-        Property_t* Property;
-    } Parent = { };
-    Blob_t Value;
-    bool IsNull = false;
-};
-struct metadata_Constant_t // table0x0B
-{
-    uint8 Type; // TODO enum
-    uint8 Pad;
-    MetadataToken_t Parent; // Param or Field or Property, "HasConstant", Type?
-    metadata_blob_t Value; // Blob
 };
 
 #if 0 // todo
@@ -2121,7 +2102,7 @@ const MetadataTypeFunctions_t MetadataType_ustring_functions =
     metadata_size_ustring,
 };
 
-const MetadataTypeFunctions_t MetadataType_index =
+const MetadataTypeFunctions_t MetadataType_Index =
 {
     MetadataDecode_index,
     metadata_size_index,
@@ -2153,22 +2134,22 @@ const MetadataType_t MetadataType_string = { "string", &MetadataType_string_func
 const MetadataType_t MetadataType_guid = { "guid", &MetadataType_Fixed, 16 };
 const MetadataType_t MetadataType_blob = { "blob",  &MetadataType_blob_functions };
 // table indices
-const MetadataType_t MetadataType_TypeDefOrRef = { "TypeDefOrRef", &MetadataType_CodedIndex, (int8)CodedIndex(TypeDefOrRef) };
-const MetadataType_t MetadataType_Field = { "FieldList", &MetadataType_index, Field };
-const MetadataType_t MetadataType_TypeDef = { "TypeDef", &MetadataType_index, TypeDef };
-const MetadataType_t MetadataType_MethodDef = { "MethodDef", &MetadataType_index, MethodDef };
-const MetadataType_t MetadataType_HasSemantics = {" HasSemantics", &MetadataType_CodedIndex, (int8)CodedIndex(HasSemantics) };
-const MetadataType_t MetadataType_MethodDefOrRef = { "MethodDefOrRef", &MetadataType_CodedIndex, (int8)CodedIndex(MethodDefOrRef) };
-const MetadataType_t MetadataType_Property = { "Property", &MetadataType_index, Property };
+const MetadataType_t MetadataType_Field = { "FieldList", &MetadataType_Index, Field };
 const MetadataType_t MetadataType_HasCustomAttribute = { "HasCustomAttribute", &MetadataType_CodedIndex, (int8)CodedIndex(HasCustomAttribute) };
-const MetadataType_t MetadataType_CustomAttributeType = { "CustomAttributeType", &MetadataType_CodedIndex, (int8)CodedIndex(CustomAttributeType) };
-const MetadataType_t MetadataType_HasDeclSecurity = { "HasDeclSecurity", &MetadataType_CodedIndex, (int8)CodedIndex(HasDeclSecurity) };
-const MetadataType_t MetadataType_Implementation = { "Implementation", &MetadataType_CodedIndex, (int8)CodedIndex(Implementation) };
 const MetadataType_t MetadataType_HasFieldMarshal = { "HasFieldMarshal", &MetadataType_CodedIndex, (int8)CodedIndex(HasFieldMarshal) };
-const MetadataType_t MetadataType_MemberRefParent = { "MemberRefParent", &MetadataType_CodedIndex, (int8)CodedIndex(MemberRefParent) };
-const MetadataType_t MetadataType_TypeOrMethodDef = { "TypeOrMethodDef", &MetadataType_CodedIndex, (int8)CodedIndex(TypeOrMethodDef) };
-const MetadataType_t MetadataType_GenericParam = { "GenericParam", &MetadataType_index, GenericParam };
+const MetadataType_t MetadataType_HasSemantics = {" HasSemantics", &MetadataType_CodedIndex, (int8)CodedIndex(HasSemantics) };
+const MetadataType_t MetadataType_HasDeclSecurity = { "HasDeclSecurity", &MetadataType_CodedIndex, (int8)CodedIndex(HasDeclSecurity) };
+const MetadataType_t MetadataType_GenericParam = { "GenericParam", &MetadataType_Index, GenericParam };
 const MetadataType_t MetadataType_MemberForwarded = { "MemberForwarded", &MetadataType_CodedIndex, (int8)CodedIndex(MemberForwarded) };
+const MetadataType_t MetadataType_MemberRefParent = { "MemberRefParent", &MetadataType_CodedIndex, (int8)CodedIndex(MemberRefParent) };
+const MetadataType_t MetadataType_MethodDef = { "MethodDef", &MetadataType_Index, MethodDef };
+const MetadataType_t MetadataType_MethodDefOrRef = { "MethodDefOrRef", &MetadataType_CodedIndex, (int8)CodedIndex(MethodDefOrRef) };
+const MetadataType_t MetadataType_Property = { "Property", &MetadataType_Index, Property };
+const MetadataType_t MetadataType_TypeDefOrRef = { "TypeDefOrRef", &MetadataType_CodedIndex, (int8)CodedIndex(TypeDefOrRef) };
+const MetadataType_t MetadataType_TypeDef = { "TypeDef", &MetadataType_Index, TypeDef };
+const MetadataType_t MetadataType_CustomAttributeType = { "CustomAttributeType", &MetadataType_CodedIndex, (int8)CodedIndex(CustomAttributeType) };
+const MetadataType_t MetadataType_Implementation = { "Implementation", &MetadataType_CodedIndex, (int8)CodedIndex(Implementation) };
+const MetadataType_t MetadataType_TypeOrMethodDef = { "TypeOrMethodDef", &MetadataType_CodedIndex, (int8)CodedIndex(TypeOrMethodDef) };
 
 // Lists go to end of table, or start of next list, referenced from next element of same table
 const MetadataType_t MetadataType_EventList = { "EventList", &MetadataType_IndexList, Event };
@@ -2176,15 +2157,26 @@ const MetadataType_t MetadataType_FieldList = { "FieldList", &MetadataType_Index
 const MetadataType_t MetadataType_MethodList = { "MethodList", &MetadataType_IndexList, MethodDef };
 const MetadataType_t MetadataType_ParamList = { "ParamList", &MetadataType_IndexList, Param };
 const MetadataType_t MetadataType_PropertyList = { "PropertyList", &MetadataType_IndexList, Property };
-const MetadataType_t MetadataType_UnusedType = { "UnusedType" /* TODO runtime error */ };
+const MetadataType_t MetadataType_Unused = { "Unused" /* TODO runtime error */ };
+const MetadataType_t MetadataType_NotStored = { "NotStored", &MetadataType_Fixed, 0 };
 
 // enums/flags
 #define MetadataType_TypeFlags          MetadataType_uint32 /* TODO? */
 #define MetadataType_FieldFlags         MetadataType_uint16 /* TODO? */
 #define MetadataType_MethodDefFlags     MetadataType_uint16 /* TODO? */
 #define MetadataType_MethodDefImplFlags MetadataType_uint16 /* TODO? */
-#define MetadataType_Class              MetadataType_TypeDef /* TODO? creater? */
-#define MetadataType_Interface          MetadataType_TypeDefOrRef /* TODO? creater? */
+#define MetadataType_Interface          MetadataType_TypeDefOrRef /* or spec, TODO? creater? */
+
+#define MetadataType_Signature          MetadataType_blob /* TODO? decode and maybe creater */
+#define MetadataType_Name               MetadataType_string
+#define MetadataType_RVA                MetadataType_uint32
+#define MetadataType_Extends            MetadataType_TypeDefOrRef
+#define MetadataType_Sequence           MetadataType_uint16
+#define MetadataType_Mvid               MetadataType_guid
+#define MetadataType_TypeName           MetadataType_string
+#define MetadataType_TypeNameSpace      MetadataType_string
+#define MetadataType_Unused             MetadataType_Unused
+#define MetadataType_Parent             MetadataType_MemberRefParent
 
 struct metadata_schema_column_t
 {
@@ -2206,56 +2198,70 @@ struct EmptyBase_t
 
 // The ordering of the tables here is important -- it assigns their enums.
 // The ordering of the columns within the tables is also important.
-#define METADATA_TABLES                                     \
-/* table0x00*/ METADATA_TABLE (Module,  EmptyBase_t,        \
-    METADATA_COLUMN (Generation, uint16) /* ignore */       \
-    METADATA_COLUMN (Name, string)                          \
-    METADATA_COLUMN (Mvid, guid)                            \
-    METADATA_COLUMN (EncId, guid) /* ignore */              \
-    METADATA_COLUMN (EncBaseId, guid)) /* ignore */         \
-                                                            \
-/*table0x00*/ METADATA_TABLE (TypeRef, EmptyBase_t,         \
-    METADATA_COLUMN (ResolutionScope, ResolutionScope)      \
-    METADATA_COLUMN (TypeName, string)                      \
-    METADATA_COLUMN (TypeNameSpace, string))                \
-                                                            \
-/*table0x01*/ METADATA_TABLE (TypeDef, EmptyBase_t, METADATA_COLUMN (Flags, TypeFlags)        \
-    METADATA_COLUMN (TypeName, string)                      \
-    METADATA_COLUMN (TypeNameSpace, string)                 \
-    METADATA_COLUMN (Extends, TypeDefOrRef)                 \
-    METADATA_COLUMN (FieldList, FieldList)                  \
-    METADATA_COLUMN (MethodList, MethodList))               \
-                                                            \
-/*table0x03*/ METADATA_TABLE (Table3, EmptyBase_t, METADATA_COLUMN (Unused, UnusedType))      \
+// The second parameter to METADATA_COLUMN can go away.
+#define METADATA_TABLES                                 \
+/* table0x00*/ METADATA_TABLE (Module,  EmptyBase_t,    \
+    METADATA_COLUMN2 (Generation, uint16) /* ignore */  \
+    METADATA_COLUMN (Name)                              \
+    METADATA_COLUMN (Mvid)                              \
+    METADATA_COLUMN2 (EncId, guid) /* ignore */         \
+    METADATA_COLUMN2 (EncBaseId, guid)) /* ignore */    \
+                                                        \
+/*table0x00*/ METADATA_TABLE (TypeRef, EmptyBase_t,     \
+    METADATA_COLUMN (ResolutionScope)                   \
+    METADATA_COLUMN (TypeName)                          \
+    METADATA_COLUMN (TypeNameSpace))                    \
+                                                        \
+/*table0x01*/ METADATA_TABLE (TypeDef, EmptyBase_t,     \
+    METADATA_COLUMN2 (Flags, TypeFlags)                 \
+    METADATA_COLUMN (TypeName)                          \
+    METADATA_COLUMN (TypeNameSpace)                     \
+    METADATA_COLUMN (Extends)                           \
+    METADATA_COLUMN (FieldList)                         \
+    METADATA_COLUMN (MethodList))                       \
+                                                        \
+/*table0x03*/ METADATA_TABLE (Table3, EmptyBase_t, METADATA_COLUMN (Unused)) \
                                                             \
 /*table0x04*/ METADATA_TABLE (Field, Member_t,              \
-    METADATA_COLUMN (Flags, FieldFlags)                     \
-    METADATA_COLUMN (Name, string)                          \
-    METADATA_COLUMN (Signature, blob))                      \
+    METADATA_COLUMN2 (Flags, FieldFlags)                    \
+    METADATA_COLUMN (Name)                                  \
+    METADATA_COLUMN (Signature))                            \
                                                             \
-/*table0x05*/METADATA_TABLE (Table5 /*MethodPtr nonstandard*/, EmptyBase_t, METADATA_COLUMN (Unused, UnusedType))      \
+/*table0x05*/METADATA_TABLE (Table5 /*MethodPtr nonstandard*/, EmptyBase_t, METADATA_COLUMN (Unused))      \
                                                             \
 /*table0x06*/METADATA_TABLE (MethodDef, EmptyBase_t,        \
-    METADATA_COLUMN (RVA, uint32)                           \
-    METADATA_COLUMN (ImplFlags, MethodDefImplFlags) /* TODO higher level support */     \
-    METADATA_COLUMN (Flags, MethodDefFlags) /* TODO higher level support */             \
-    METADATA_COLUMN (Name, string)                          \
-    METADATA_COLUMN (Signature, blob)      /* Blob heap, 7 bit encode/decode */         \
-    METADATA_COLUMN (ParamList, ParamList)) /* Param table, start, until table end, or start of next MethodDef; index into Param table, 2 or 4 bytes */ \
+    METADATA_COLUMN (RVA)                           \
+    METADATA_COLUMN2 (ImplFlags, MethodDefImplFlags) /* TODO higher level support */     \
+    METADATA_COLUMN2 (Flags, MethodDefFlags) /* TODO higher level support */             \
+    METADATA_COLUMN (Name)                          \
+    METADATA_COLUMN (Signature)      /* Blob heap, 7 bit encode/decode */         \
+    METADATA_COLUMN (ParamList)) /* Param table, start, until table end, or start of next MethodDef; index into Param table, 2 or 4 bytes */ \
                                                                                 \
-/*table0x07*/METADATA_TABLE (Table7 /*ParamPtr nonstandard*/, EmptyBase_t, METADATA_COLUMN (Unused, UnusedType))      \
-                                                                            \
-/*table0x08*/METADATA_TABLE (Param, EmptyBase_t,                            \
-    METADATA_COLUMN (Flags, uint16)                                         \
-    METADATA_COLUMN (Sequence, uint16)                                      \
-    METADATA_COLUMN (Name, string))                                         \
-                                                                            \
-/*table0x09*/METADATA_TABLE (InterfaceImpl, EmptyBase_t,                    \
-    METADATA_COLUMN (Class, Class)                                          \
-    METADATA_COLUMN (Interface, Interface)) /* TypeDerOrRef or Spec */      \
+/*table0x07*/METADATA_TABLE (Table7 /*ParamPtr nonstandard*/, EmptyBase_t, METADATA_COLUMN (Unused))      \
+                                                                        \
+/*table0x08*/METADATA_TABLE (Param, EmptyBase_t,                        \
+    METADATA_COLUMN2 (Flags, uint16)                                    \
+    METADATA_COLUMN (Sequence)                                          \
+    METADATA_COLUMN (Name))                                             \
+                                                                        \
+/*table0x09*/METADATA_TABLE (InterfaceImpl, EmptyBase_t,                \
+    METADATA_COLUMN2 (Class, TypeDef)                                   \
+    METADATA_COLUMN (Interface)) /* TypeDefOrRef or Spec */             \
+                                                                        \
+/*table0x0A*/METADATA_TABLE (MemberRef, EmptyBase_t,                    \
+    METADATA_COLUMN2 (Class, MemberRefParent)                           \
+    METADATA_COLUMN (Name)       /*string*/                             \
+    METADATA_COLUMN (Signature)) /*blob*/                               \
+                                                                        \
+/*table0x0B*/METADATA_TABLE (Constant, EmptyBase_t,     \
+    METADATA_COLUMN2 (Type, uint8)                      \
+    METADATA_COLUMN2 (Pad, uint8)                       \
+    METADATA_COLUMN (Parent)                            \
+    METADATA_COLUMN2 (Value, blob)                      \
+    METADATA_COLUMN2 (IsNull, NotStored))               \
 
 typedef void *voidp;
-typedef struct _UnusedType { } *UnusedType;
+typedef struct _Unused_t { } *Unused_t;
 
 // Every table has two maybe three maybe four sets of types/data/forms.
 // 1. A very typed form. Convenient to work with. Does the most work to form.
@@ -2266,23 +2272,36 @@ typedef struct _UnusedType { } *UnusedType;
 //    with form 3. While a row of all fixed size/offset type is possible,
 //    this is simply correctly sized arrays of size/offset and maybe link to form 3.
 
-#define metadata_schema_TYPED_string           String_t
-#define metadata_schema_TYPED_blob             Blob_t
-#define metadata_schema_TYPED_uint16           uint16
-#define metadata_schema_TYPED_uint32           uint32
-#define metadata_schema_TYPED_guid             Guid_t
-#define metadata_schema_TYPED_ResolutionScope  voidp /* TODO union? */
-#define metadata_schema_TYPED_TypeDefOrRef     voidp /* TODO union? */
-#define metadata_schema_TYPED_FieldList        std::vector<Field_t*>
-#define metadata_schema_TYPED_MethodList       std::vector<Method_t*>
-#define metadata_schema_TYPED_TypeFlags        TypeFlags_t
-#define metadata_schema_TYPED_FieldFlags       FieldFlags_t
-#define metadata_schema_TYPED_MethodDefFlags    MethodDefFlags_t
-#define metadata_schema_TYPED_MethodDefImplFlags    MethodDefImplFlags_t
-#define metadata_schema_TYPED_UnusedType        UnusedType
-#define metadata_schema_TYPED_ParamList         std::vector<Param_t*>
+#define metadata_schema_TYPED_blob              Blob_t
+#define metadata_schema_TYPED_guid              Guid_t
+#define metadata_schema_TYPED_string            String_t
+#define metadata_schema_TYPED_uint16            uint16
+#define metadata_schema_TYPED_uint32            uint32
+#define metadata_schema_TYPED_uint8             uint8
 #define metadata_schema_TYPED_Class             Class_t*
+#define metadata_schema_TYPED_Extends           voidp /* TODO union? */
+#define metadata_schema_TYPED_FieldFlags        FieldFlags_t
+#define metadata_schema_TYPED_FieldList         std::vector<Field_t*>
 #define metadata_schema_TYPED_Interface         Interface_t*
+#define metadata_schema_TYPED_MemberRefParent   Parent_t
+#define metadata_schema_TYPED_MethodDefFlags    MethodDefFlags_t
+#define metadata_schema_TYPED_MethodDefImplFlags  MethodDefImplFlags_t
+#define metadata_schema_TYPED_MethodList        std::vector<Method_t*>
+#define metadata_schema_TYPED_Mvid              Guid_t
+#define metadata_schema_TYPED_Name              String_t
+#define metadata_schema_TYPED_ParamList         std::vector<Param_t*>
+#define metadata_schema_TYPED_Parent            Parent_t
+#define metadata_schema_TYPED_RVA               uint32
+#define metadata_schema_TYPED_ResolutionScope   voidp /* TODO union? */
+#define metadata_schema_TYPED_Sequence          uint16
+#define metadata_schema_TYPED_Signature         Signature_t
+#define metadata_schema_TYPED_TypeDef           Type_t*
+#define metadata_schema_TYPED_TypeDefOrRef      voidp /* TODO union? */
+#define metadata_schema_TYPED_TypeFlags         TypeFlags_t
+#define metadata_schema_TYPED_TypeName          String_t
+#define metadata_schema_TYPED_TypeNameSpace     String_t
+#define metadata_schema_TYPED_Unused            Unused_t
+#define metadata_schema_TYPED_NotStored         Unused_t
 
 // needed?
 //#define metadata_schema_TOKENED_string           MetadataString_t
@@ -2293,18 +2312,20 @@ typedef struct _UnusedType { } *UnusedType;
 //#define metadata_schema_TOKENED_FieldList        MetadataTokenList_t
 //#define metadata_schema_TOKENED_MethodList       MetadataTokenList_t
 
+#define METADATA_COLUMN(name) METADATA_COLUMN2 (name, name)
+
 #undef METADATA_TABLE
-#undef METADATA_COLUMN
+#undef METADATA_COLUMN2
 #define METADATA_TABLE(name, base, columns)  struct name ##  _t : base { columns };
-#define METADATA_COLUMN(name, type) metadata_schema_TYPED_ ## type name;
+#define METADATA_COLUMN2(name, type) metadata_schema_TYPED_ ## type name;
 METADATA_TABLES
 
 #undef METADATA_TABLE
-#undef METADATA_COLUMN
+#undef METADATA_COLUMN2
 #define METADATA_TABLE(name, base, columns) \
 const metadata_schema_column_t metadata_column_ ## name [ ] = { columns }; \
 const metadata_table_schema_t metadata_row_schema_ ## name = { #name, CountOf (metadata_column_ ## name), metadata_column_ ## name };
-#define METADATA_COLUMN(name, type) { # name, MetadataType_  ## type },
+#define METADATA_COLUMN2(name, type) { # name, MetadataType_  ## type },
 METADATA_TABLES
 
 const metadata_schema_column_t metadata_columns_MethodImpl [ ] = // table0x19
@@ -2552,26 +2573,6 @@ const metadata_schema_column_t metadata_columns_FieldRVA [ ] = // table0x1D
 };
 const metadata_table_schema_t metadata_row_schema_FieldRVA = { "FieldRVA", CountOf (metadata_columns_FieldRVA), metadata_columns_FieldRVA };
 
-struct MemberRef_t // table0x0A
-{
-    Class_t* Class;
-    String_t Name;
-    Signature_t Signature;
-};
-struct metadata_MemberRef_t // table0x0A
-{
-    MetadataToken_t Class; // TypeRef, ModuleRef, MethodDef, TypeSpec or TypeDef tables; more precisely, a MemberRefParent coded index
-    MetadataString_t Name; // String heap
-    metadata_blob_t Signature; // blob heap
-};
-const metadata_schema_column_t metadata_columns_MemberRef [ ] = // table0x0A
-{
-    { "Class", MetadataType_MemberRefParent },
-    { "Name", MetadataType_string },
-    { "Signature", MetadataType_blob },
-};
-const metadata_table_schema_t metadata_row_schema_MemberRef = { "MemberRef", CountOf (metadata_columns_MemberRef), metadata_columns_MemberRef };
-
 struct GenericParam_t // table0x2A
 {
     uint16 Number;
@@ -2642,12 +2643,12 @@ const metadata_schema_column_t metadata_columns_ImplMap [ ] = // table0x1C
 const metadata_table_schema_t metadata_row_schema_ImplMap = { "ImplMap", CountOf (metadata_columns_ImplMap), metadata_columns_ImplMap };
 
 // TODO enum
-typedef uint32 ManifestResourceAttributes;
+typedef uint32 ManifestResourceFlags_t;
 
 struct ManifestResource_t // table0x28
 {
     uint32 Offset;
-    ManifestResourceAttributes Flags;
+    ManifestResourceFlags_t Flags;
     String_t Name;
     union {
         //File_t* File;
@@ -2657,7 +2658,7 @@ struct ManifestResource_t // table0x28
 struct metadata_ManifestResource_t // table0x28
 {
     uint32 Offset;
-    uint32 Flags; // TODO enum
+    ManifestResourceFlags_t Flags; // TODO enum
     MetadataString_t Name;
     MetadataToken_t Implementation;
 };
@@ -2752,14 +2753,12 @@ union DynamicTableInfo_t
 {
     DynamicTableInfoElement_t array [
 #undef METADATA_TABLE
-#undef METADATA_COLUMN
 #define METADATA_TABLE(name, base, columns) 1+
 METADATA_TABLES
         0];
     struct
     {
 #undef METADATA_TABLE
-#undef METADATA_COLUMN
 #define METADATA_TABLE(name, base, columns) DynamicTableInfoElement_t name;
 METADATA_TABLES
     } name;
