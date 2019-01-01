@@ -609,7 +609,7 @@ enum class MethodDefFlags_t : uint16 // table0x06
     RequireSecObject          =   0x8000,     // Method calls another method containing security code.
 };
 
-enum class MethodDefImplFlags_t : uint16
+enum class MethodDefImplFlags_t : uint16 // table0x06
 {
     // code impl mask
     CodeTypeMask      =   0x0003,   // Flags about code type.
@@ -762,7 +762,7 @@ struct Field_t : Member_t
 
 struct Interface_t
 {
-    std::vector<Method_t> methods;
+    std::vector<Method_t*> methods;
 };
 
 struct Param_t;
@@ -2155,7 +2155,7 @@ const MetadataType_t MetadataType_blob = { "blob",  &MetadataType_blob_functions
 // table indices
 const MetadataType_t MetadataType_TypeDefOrRef = { "TypeDefOrRef", &MetadataType_CodedIndex, (int8)CodedIndex(TypeDefOrRef) };
 const MetadataType_t MetadataType_Field = { "FieldList", &MetadataType_index, Field };
-const MetadataType_t MetadataType_typeDef = { "TypeDef", &MetadataType_index, TypeDef };
+const MetadataType_t MetadataType_TypeDef = { "TypeDef", &MetadataType_index, TypeDef };
 const MetadataType_t MetadataType_MethodDef = { "MethodDef", &MetadataType_index, MethodDef };
 const MetadataType_t MetadataType_HasSemantics = {" HasSemantics", &MetadataType_CodedIndex, (int8)CodedIndex(HasSemantics) };
 const MetadataType_t MetadataType_MethodDefOrRef = { "MethodDefOrRef", &MetadataType_CodedIndex, (int8)CodedIndex(MethodDefOrRef) };
@@ -2179,10 +2179,12 @@ const MetadataType_t MetadataType_PropertyList = { "PropertyList", &MetadataType
 const MetadataType_t MetadataType_UnusedType = { "UnusedType" /* TODO runtime error */ };
 
 // enums/flags
-#define MetadataType_TypeFlags MetadataType_uint32 /* TODO? */
-#define MetadataType_FieldFlags MetadataType_uint16 /* TODO? */
-#define MetadataType_MethodDefFlags MetadataType_uint16 /* TODO? */
+#define MetadataType_TypeFlags          MetadataType_uint32 /* TODO? */
+#define MetadataType_FieldFlags         MetadataType_uint16 /* TODO? */
+#define MetadataType_MethodDefFlags     MetadataType_uint16 /* TODO? */
 #define MetadataType_MethodDefImplFlags MetadataType_uint16 /* TODO? */
+#define MetadataType_Class              MetadataType_TypeDef /* TODO? creater? */
+#define MetadataType_Interface          MetadataType_TypeDefOrRef /* TODO? creater? */
 
 struct metadata_schema_column_t
 {
@@ -2242,11 +2244,15 @@ struct EmptyBase_t
     METADATA_COLUMN (ParamList, ParamList)) /* Param table, start, until table end, or start of next MethodDef; index into Param table, 2 or 4 bytes */ \
                                                                                 \
 /*table0x07*/METADATA_TABLE (Table7 /*ParamPtr nonstandard*/, EmptyBase_t, METADATA_COLUMN (Unused, UnusedType))      \
-                                                                                \
-/*table0x08*/METADATA_TABLE (Param, EmptyBase_t,      \
-    METADATA_COLUMN (Flags, uint16)                         \
-    METADATA_COLUMN (Sequence, uint16)                          \
-    METADATA_COLUMN (Name, string))                          \
+                                                                            \
+/*table0x08*/METADATA_TABLE (Param, EmptyBase_t,                            \
+    METADATA_COLUMN (Flags, uint16)                                         \
+    METADATA_COLUMN (Sequence, uint16)                                      \
+    METADATA_COLUMN (Name, string))                                         \
+                                                                            \
+/*table0x09*/METADATA_TABLE (InterfaceImpl, EmptyBase_t,                    \
+    METADATA_COLUMN (Class, Class)                                          \
+    METADATA_COLUMN (Interface, Interface)) /* TypeDerOrRef or Spec */      \
 
 typedef void *voidp;
 typedef struct _UnusedType { } *UnusedType;
@@ -2275,6 +2281,8 @@ typedef struct _UnusedType { } *UnusedType;
 #define metadata_schema_TYPED_MethodDefImplFlags    MethodDefImplFlags_t
 #define metadata_schema_TYPED_UnusedType        UnusedType
 #define metadata_schema_TYPED_ParamList         std::vector<Param_t*>
+#define metadata_schema_TYPED_Class             Class_t*
+#define metadata_schema_TYPED_Interface         Interface_t*
 
 // needed?
 //#define metadata_schema_TOKENED_string           MetadataString_t
@@ -2301,7 +2309,7 @@ METADATA_TABLES
 
 const metadata_schema_column_t metadata_columns_MethodImpl [ ] = // table0x19
 {
-    { "Class", MetadataType_typeDef }, // index into TypeDef, 2 or 4 bytes
+    { "Class", MetadataType_TypeDef }, // index into TypeDef, 2 or 4 bytes
     { "ImplFlags", MetadataType_uint16 }, // TODO higher level support
     { "Flags", MetadataType_uint16 }, // TODO higher level support
     { "Name", MetadataType_string },
@@ -2365,8 +2373,8 @@ struct metadata_NestedClass_t // table0x29
 };
 const metadata_schema_column_t metadata_columns_NestedClass [ ] = // table0x29
 {
-    { "NestedClass", MetadataType_typeDef },
-    { "EnclosingClass", MetadataType_typeDef },
+    { "NestedClass", MetadataType_TypeDef },
+    { "EnclosingClass", MetadataType_TypeDef },
 };
 const metadata_table_schema_t metadata_row_schema_NestedClass = { "NestedClass", CountOf (metadata_columns_NestedClass), metadata_columns_NestedClass };
 
@@ -2385,7 +2393,7 @@ struct PropertyMap_t // table0x15
 };
 const metadata_schema_column_t metadata_columns_PropertyMap [ ] = // table0x15
 {
-    { "Parent", MetadataType_typeDef },
+    { "Parent", MetadataType_TypeDef },
     { "PropertyList", MetadataType_PropertyList },
 };
 const metadata_table_schema_t metadata_row_schema_PropertyMap = { "PropertyMap", CountOf (metadata_columns_PropertyMap), metadata_columns_PropertyMap };
@@ -2453,7 +2461,7 @@ struct metadata_EventMap_t // table0x12
 };
 const metadata_schema_column_t metadata_columns_EventMap [ ] = // table0x12
 {
-    { "Parent", MetadataType_typeDef },
+    { "Parent", MetadataType_TypeDef },
     { "EventList", MetadataType_EventList },
 };
 const metadata_table_schema_t metadata_row_schema_EventMap = { "EventMap", CountOf (metadata_columns_EventMap), metadata_columns_EventMap };
@@ -2563,23 +2571,6 @@ const metadata_schema_column_t metadata_columns_MemberRef [ ] = // table0x0A
     { "Signature", MetadataType_blob },
 };
 const metadata_table_schema_t metadata_row_schema_MemberRef = { "MemberRef", CountOf (metadata_columns_MemberRef), metadata_columns_MemberRef };
-
-struct InterfaceImpl_t // table0x09
-{
-    Class_t* Class; // TypeDef
-    Interface_t* Interface; // TypeDef or TypeRef or TypeSpec, "TypeDefOrRef"
-};
-struct metadata_InterfaceImpl_t // table0x09
-{
-    MetadataToken_t Class; // TypeDef
-    MetadataToken_t Interface; // TypeDef or TypeRef or TypeSpec, "TypeDefOrRef"
-};
-const metadata_schema_column_t metadata_columns_InterfaceImpl [ ] = // table0x09
-{
-    { "Class", MetadataType_typeDef },
-    { "Interface", MetadataType_TypeDefOrRef },
-};
-const metadata_table_schema_t metadata_row_schema_InterfaceImpl = { "InterfaceImpl", CountOf (metadata_columns_InterfaceImpl), metadata_columns_InterfaceImpl };
 
 struct GenericParam_t // table0x2A
 {
