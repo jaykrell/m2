@@ -6,6 +6,9 @@ all: mac win32.exe win64.exe
 run: mac
 	./mac /s/mono/mcs/class/lib/build-macos/mscorlib.dll
 
+debug: mac
+	lldb --  ./mac /s/mono/mcs/class/lib/build-macos/mscorlib.dll
+
 clean:
 	rm -f mac win32 win32.exe win64 win64.exe win win.exe
 

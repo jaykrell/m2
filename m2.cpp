@@ -129,6 +129,8 @@ string_format (const char *format, ...)
     return a;
 }
 
+#define not_implemented_yet() (assertf (0, "not yet implemented %s %d ", __func__, __LINE__))
+
 void
 assertf_failed (const char* condition, const char * format, ...)
 {
@@ -152,7 +154,7 @@ assert_failed (const char * expr)
 #ifdef NDEBUG
 #define assertf(x, y)          /* nothing */
 #else
-#define assertf(x, y)           (release_assertf (x, y))
+#define assertf           release_assertf
 #endif
 
 void
@@ -2005,7 +2007,8 @@ struct metadata_field_type_t
    };
 };
 
-uint loadedimage_metadata_column_size_codedindex_get (loaded_image_t* image, CodedIndex coded_index);
+uint
+loadedimage_metadata_column_size_codedindex_get (loaded_image_t* image, CodedIndex coded_index);
 
 #define CODED_INDEX(x, ...) uint metadata_column_size_codedindex_ ## x (metadata_field_type_t* type, loaded_image_t* image) \
 { return loadedimage_metadata_column_size_codedindex_get (image, type->coded_index); }
@@ -2077,8 +2080,13 @@ metadata_column_size_codedindex (const metadata_field_type_t* type, loaded_image
 }
 
 uint
+image_metadata_column_size_index (loaded_image_t* image, uint8 /* todo enum */ table_index);
+
+uint
 metadata_column_size_index (const metadata_field_type_t* type, loaded_image_t* image)
 {
+    not_implemented_yet ();
+    return image_metadata_column_size_index (image, type->table_index);
     return 0;
 }
 
@@ -2124,16 +2132,19 @@ const metadata_field_type_functions_t metadata_field_type_ustring_functions =
 const metadata_field_type_functions_t metadata_field_type_index =
 {
     metadata_decode_index,
+    metadata_column_size_index,
 };
 
 const metadata_field_type_functions_t metadata_field_type_index_list =
 {
     metadata_decode_index_list,
+    metadata_column_size_index, // TODO?
 };
 
 const metadata_field_type_functions_t metadata_field_type_codedindex =
 {
-    metadata_decode_codedindex
+    metadata_decode_codedindex,
+    metadata_column_size_codedindex,
 };
 
 const metadata_field_type_t metadata_field_type_int8 = { "int8", &metadata_field_type_fixed, 1 };
@@ -3087,17 +3098,37 @@ metadata_column_size_guid (const metadata_field_type_t* type, loaded_image_t* im
     return image->blob_size;
 }
 
-uint metadata_column_size_codedindex_compute (loaded_image_t* image, CodedIndex coded_index)
+uint
+metadata_column_size_codedindex_compute (loaded_image_t* image, CodedIndex coded_index)
 {
+    not_implemented_yet ();
     return 0;
 }
 
-uint loadedimage_metadata_column_size_codedindex_get (loaded_image_t* image, CodedIndex coded_index)
+uint
+loadedimage_metadata_column_size_codedindex_get (loaded_image_t* image, CodedIndex coded_index)
 {
     uint a = image->coded_index_size [(uint8)coded_index];
     if (a)
         return a;
     return metadata_column_size_codedindex_compute (image, coded_index);
+}
+
+uint
+metadata_column_size_index_compute (loaded_image_t* image, int8 /* todo enum */ table_index)
+{
+    not_implemented_yet ();
+    return 0;
+}
+
+uint
+image_metadata_column_size_index (loaded_image_t* image, uint8 /* todo enum */ table_index)
+{
+    not_implemented_yet ();
+    uint a = image->row_size [(uint8)table_index];
+    if (a)
+        return a;
+    return metadata_column_size_index_compute (image, table_index);
 }
 
 }
