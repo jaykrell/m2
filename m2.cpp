@@ -8,6 +8,8 @@
 // The following features of C++ are difficult to pass up:
 //   RAII (destructors, C++98)
 //   enum class (C++11)
+//   std::size (C++17)
+//   std::string::data (C++17)
 //   non-static member initialization (C++11, easy to live without)
 //   thread safe static initializers, maybe (C++11)
 //   char16 (C++11, but could use C++98 unsigned short)
@@ -956,8 +958,9 @@ constexpr uint8 LogBase2 (unsigned a)
            0;
 }
 
-#define CountOf(x) std::size(x)
-#define CountOfField(x, y) std::size(x().y)
+#define CountOf(x) (std::size(x)) //C++17
+//#define CountOf(x) (sizeof (x) / sizeof ((x)[0])) // TODO
+#define CountOfField(x, y) (CountOf(x().y))
 //#define CodedIndex(x) const CodedIndex_t CodedIndex_ ## x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
 //#define CodedIndex(x) CodedIndex_t x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
 #define CODED_INDEX(x, ...) CodedIndex_t x = {LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
@@ -1059,30 +1062,18 @@ struct metadata_stream_header_t // see mono verify_metadata_header
     char   Name [32]; // multiple of 4, null terminated, max 32
 };
 
-struct Param_t
+enum class ParamFlags_t : uint16 // ParamAttributes
 {
-    enum class Flags_t : uint16 // ParamAttributes
-    {
-        In                        =   0x0001,     // Param is [In]
-        Out                       =   0x0002,     // Param is [out]
-        Optional                  =   0x0010,     // Param is optional
+    In                        =   0x0001,     // Param is [In]
+    Out                       =   0x0002,     // Param is [out]
+    Optional                  =   0x0010,     // Param is optional
 
-        // Reserved flags for Runtime use only.
-        ReservedMask              =   0xf000,
-        HasDefault                =   0x1000,     // Param has default value.
-        HasFieldMarshal           =   0x2000,     // Param has FieldMarshal.
+    // Reserved flags for Runtime use only.
+    ReservedMask              =   0xf000,
+    HasDefault                =   0x1000,     // Param has default value.
+    HasFieldMarshal           =   0x2000,     // Param has FieldMarshal.
 
-        Unused                    =   0xcfe0,
-    };
-    uint16 Sequence; // 0 is return value, 1 is first param, etc.
-    String_t Name;
-};
-
-struct metadata_param_t // table8
-{
-    Param_t::Flags_t Flags;
-    uint16 Sequence;
-    MetadataString_t Name; // String heap
+    Unused                    =   0xcfe0,
 };
 
 struct Constant // table0x0B
@@ -2248,7 +2239,14 @@ struct EmptyBase_t
     METADATA_COLUMN (Flags, MethodDefFlags) /* TODO higher level support */             \
     METADATA_COLUMN (Name, string)                          \
     METADATA_COLUMN (Signature, blob)      /* Blob heap, 7 bit encode/decode */         \
-    METADATA_COLUMN (ParamList, ParamList)) /* Param table, start, until table end, or start of next MethodDef; index into Param table, 2 or 4 bytes */
+    METADATA_COLUMN (ParamList, ParamList)) /* Param table, start, until table end, or start of next MethodDef; index into Param table, 2 or 4 bytes */ \
+                                                                                \
+/*table0x07*/METADATA_TABLE (Table7 /*ParamPtr nonstandard*/, EmptyBase_t, METADATA_COLUMN (Unused, UnusedType))      \
+                                                                                \
+/*table0x08*/METADATA_TABLE (Param, EmptyBase_t,      \
+    METADATA_COLUMN (Flags, uint16)                         \
+    METADATA_COLUMN (Sequence, uint16)                          \
+    METADATA_COLUMN (Name, string))                          \
 
 typedef void *voidp;
 typedef struct _UnusedType { } *UnusedType;
@@ -2371,14 +2369,6 @@ const metadata_schema_column_t metadata_columns_NestedClass [ ] = // table0x29
     { "EnclosingClass", MetadataType_typeDef },
 };
 const metadata_table_schema_t metadata_row_schema_NestedClass = { "NestedClass", CountOf (metadata_columns_NestedClass), metadata_columns_NestedClass };
-
-const metadata_schema_column_t metadata_columns_Param [ ] = // table0x08
-{
-    { "Flags", MetadataType_uint16 },
-    { "Sequence", MetadataType_uint16 },
-    { "Name", MetadataType_string },
-};
-const metadata_table_schema_t metadata_row_schema_Param = { "Param", CountOf (metadata_columns_Param), metadata_columns_Param };
 
 const metadata_schema_column_t metadata_columns_Property [ ] = // table0x17
 {
