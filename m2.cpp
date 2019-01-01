@@ -3037,7 +3037,7 @@ unknown_stream:
         printf ("metadata_tables.       Sorted:%08X`%08X\n", (uint32)(sorted >> 32), (uint32)sorted);
         printf ("metadata_tables.     Unsorted:%08X`%08X\n", (uint32)(unsorted >> 32), (uint32)unsorted);
         printf ("metadata_tables.InvalidSorted:%08X`%08X\n", (uint32)(invalidSorted >> 32), (uint32)invalidSorted);
-        uint64 one = 1;
+        const uint64 one = 1;
         uint j = 0;
         auto RowCount = (uint32*)(metadata_tables + 1);
         for (uint i = 0; i < std::size (table_info.array); ++i)
@@ -3108,14 +3108,14 @@ metadata_column_size_codedindex_compute (loaded_image_t* image, CodedIndex coded
 uint
 loadedimage_metadata_column_size_codedindex_get (loaded_image_t* image, CodedIndex coded_index)
 {
-    uint a = image->coded_index_size [(uint8)coded_index];
+    const uint a = image->coded_index_size [(uint8)coded_index];
     if (a)
         return a;
     return metadata_column_size_codedindex_compute (image, coded_index);
 }
 
 uint
-metadata_column_size_index_compute (loaded_image_t* image, int8 /* todo enum */ table_index)
+metadata_column_size_index_compute (loaded_image_t* image, uint8 /* todo enum */ table_index)
 {
     not_implemented_yet ();
     return 0;
@@ -3125,7 +3125,7 @@ uint
 image_metadata_column_size_index (loaded_image_t* image, uint8 /* todo enum */ table_index)
 {
     not_implemented_yet ();
-    uint a = image->row_size [(uint8)table_index];
+    const uint a = image->row_size [(uint8)table_index];
     if (a)
         return a;
     return metadata_column_size_index_compute (image, table_index);
