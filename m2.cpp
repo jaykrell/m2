@@ -554,76 +554,78 @@ struct UString_t : ustring
 
 struct Blob_t
 {
+    void* data;
+    uint32 size;
 };
 
 struct Member_t
 {
-        std::string name;
-        int64 offset;
+    std::string name;
+    int64 offset;
 };
 
 struct Method_t : Member_t
 {
 };
 
+enum class TypeFlags_t : uint32
+{
+    //TODO bitfields (need to test little and big endian)
+    //TODO or bitfield decoder
+    // Use this mask to retrieve the type visibility information.
+    VisibilityMask        =   0x00000007,
+    NotPublic             =   0x00000000,     // Class is not public scope.
+    Public                =   0x00000001,     // Class is public scope.
+    NestedPublic          =   0x00000002,     // Class is nested with public visibility.
+    NestedPrivate         =   0x00000003,     // Class is nested with private visibility.
+    NestedFamily          =   0x00000004,     // Class is nested with family visibility.
+    NestedAssembly        =   0x00000005,     // Class is nested with assembly visibility.
+    NestedFamANDAssem     =   0x00000006,     // Class is nested with family and assembly visibility.
+    NestedFamORAssem      =   0x00000007,     // Class is nested with family or assembly visibility.
+
+    // Use this mask to retrieve class layout information
+    LayoutMask            =   0x00000018,
+    AutoLayout            =   0x00000000,     // Class fields are auto-laid out
+    SequentialLayout      =   0x00000008,     // Class fields are laid out sequentially
+    ExplicitLayout        =   0x00000010,     // Layout is supplied explicitly
+    // end layout mask
+
+    // Use this mask to retrieve class semantics information.
+    ClassSemanticsMask    =   0x00000060,
+    Class                 =   0x00000000,     // Type is a class.
+    Interface             =   0x00000020,     // Type is an interface.
+    // end semantics mask
+
+    // Special semantics in addition to class semantics.
+    Abstract              =   0x00000080,     // Class is abstract
+    Sealed                =   0x00000100,     // Class is concrete and may not be extended
+    SpecialName           =   0x00000400,     // Class name is special. Name describes how.
+
+    // Implementation attributes.
+    Import                =   0x00001000,     // Class / interface is imported
+    Serializable          =   0x00002000,     // The class is Serializable.
+
+    // Use StringFormatMask to retrieve string information for native interop
+    StringFormatMask      =   0x00030000,
+    AnsiClass             =   0x00000000,     // LPTSTR is interpreted as ANSI in this class
+    UnicodeClass          =   0x00010000,     // LPTSTR is interpreted as UNICODE
+    AutoClass             =   0x00020000,     // LPTSTR is interpreted automatically
+    CustomFormatClass     =   0x00030000,     // A non-standard encoding specified by CustomFormatMask
+    CustomFormatMask      =   0x00C00000,     // Use this mask to retrieve non-standard encoding information for native interop. The meaning of the values of these 2 bits is unspecified.
+
+    // end string format mask
+
+    BeforeFieldInit       =   0x00100000,     // Initialize the class any time before first static field access.
+    Forwarder             =   0x00200000,     // This ExportedType is a type forwarder.
+
+    // Flags reserved for runtime use.
+    ReservedMask          =   0x00040800,
+    RTSpecialName         =   0x00000800,     // Runtime should check name encoding.
+    HasSecurity           =   0x00040000,     // Class has security associate with it.
+    };
+
 struct Type_t // class, valuetype, delegate, inteface, not char, short, int, long, float
 {
-    // TODO move into Type_t (Type_t::Flags_t)
-    enum class Flags_t : uint32
-    {
-        //TODO bitfields (need to test little and big endian)
-        //TODO or bitfield decoder
-        // Use this mask to retrieve the type visibility information.
-        VisibilityMask        =   0x00000007,
-        NotPublic             =   0x00000000,     // Class is not public scope.
-        Public                =   0x00000001,     // Class is public scope.
-        NestedPublic          =   0x00000002,     // Class is nested with public visibility.
-        NestedPrivate         =   0x00000003,     // Class is nested with private visibility.
-        NestedFamily          =   0x00000004,     // Class is nested with family visibility.
-        NestedAssembly        =   0x00000005,     // Class is nested with assembly visibility.
-        NestedFamANDAssem     =   0x00000006,     // Class is nested with family and assembly visibility.
-        NestedFamORAssem      =   0x00000007,     // Class is nested with family or assembly visibility.
-
-        // Use this mask to retrieve class layout information
-        LayoutMask            =   0x00000018,
-        AutoLayout            =   0x00000000,     // Class fields are auto-laid out
-        SequentialLayout      =   0x00000008,     // Class fields are laid out sequentially
-        ExplicitLayout        =   0x00000010,     // Layout is supplied explicitly
-        // end layout mask
-
-        // Use this mask to retrieve class semantics information.
-        ClassSemanticsMask    =   0x00000060,
-        Class                 =   0x00000000,     // Type is a class.
-        Interface             =   0x00000020,     // Type is an interface.
-        // end semantics mask
-
-        // Special semantics in addition to class semantics.
-        Abstract              =   0x00000080,     // Class is abstract
-        Sealed                =   0x00000100,     // Class is concrete and may not be extended
-        SpecialName           =   0x00000400,     // Class name is special. Name describes how.
-
-        // Implementation attributes.
-        Import                =   0x00001000,     // Class / interface is imported
-        Serializable          =   0x00002000,     // The class is Serializable.
-
-        // Use StringFormatMask to retrieve string information for native interop
-        StringFormatMask      =   0x00030000,
-        AnsiClass             =   0x00000000,     // LPTSTR is interpreted as ANSI in this class
-        UnicodeClass          =   0x00010000,     // LPTSTR is interpreted as UNICODE
-        AutoClass             =   0x00020000,     // LPTSTR is interpreted automatically
-        CustomFormatClass     =   0x00030000,     // A non-standard encoding specified by CustomFormatMask
-        CustomFormatMask      =   0x00C00000,     // Use this mask to retrieve non-standard encoding information for native interop. The meaning of the values of these 2 bits is unspecified.
-
-        // end string format mask
-
-        BeforeFieldInit       =   0x00100000,     // Initialize the class any time before first static field access.
-        Forwarder             =   0x00200000,     // This ExportedType is a type forwarder.
-
-        // Flags reserved for runtime use.
-        ReservedMask          =   0x00040800,
-        RTSpecialName         =   0x00000800,     // Runtime should check name encoding.
-        HasSecurity           =   0x00040000,     // Class has security associate with it.
-    };
 };
 
 struct Event_t : Member_t // table0x14
@@ -643,13 +645,52 @@ struct Property_t : Member_t
 {
 };
 
+    enum class FieldFlags_t : uint16
+    {
+//TODO bitfields (need to test little and big endian)
+//TODO or bitfield decoder
+        // member access mask - Use this mask to retrieve accessibility information.
+        FieldAccessMask           =   0x0007,
+        PrivateScope              =   0x0000,     // Member not referenceable.
+        Private                   =   0x0001,     // Accessible only by the parent type.
+        FamANDAssem               =   0x0002,     // Accessible by sub-types only in this Assembly.
+        Assembly                  =   0x0003,     // Accessibly by anyone in the Assembly.
+        Family                    =   0x0004,     // Accessible only by type and sub-types.
+        FamORAssem                =   0x0005,     // Accessibly by sub-types anywhere, plus anyone in assembly.
+        Public                    =   0x0006,     // Accessibly by anyone who has visibility to this scope.
+        // end member access mask
+
+        // field contract attributes.
+        Static                    =   0x0010,     // Defined on type, else per instance.
+        InitOnly                  =   0x0020,     // Field may only be initialized, not written to after init.
+        Literal                   =   0x0040,     // Value is compile time constant.
+        NotSerialized             =   0x0080,     // Field does not have to be serialized when type is remoted.
+
+        SpecialName
+               =   0x0200,     // field is special. Name describes how.
+
+        // interop attributes
+        PinvokeImpl               =   0x2000,     // Implementation is forwarded through pinvoke.
+
+        // Reserved flags for runtime use only.
+        ReservedMask              =   0x9500,
+        RTSpecialName             =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
+        HasFieldMarshal           =   0x1000,     // Field has marshalling information.
+        HasDefault                =   0x8000,     // Field has default.
+        HasFieldRVA               =   0x0100,     // Field has RVA.
+    };
+
+struct Field_t;
+
+/*
 struct Field_t : Member_t
 {
 };
+*/
 
 struct Interface_t
 {
-        std::vector<Method_t> methods;
+    std::vector<Method_t> methods;
 };
 
 struct Param_t;
@@ -746,140 +787,6 @@ const uint8 CorILMethod_TinyFormat = 2;
 const uint8 CorILMethod_FatFormat = 3;
 const uint8 CorILMethod_MoreSects = 8;
 const uint8 CorILMethod_InitLocals = 0x10;
-
-struct DynamicTableColumn_t;
-struct DynamicTableColumnFunctions_t;
-
-struct DynamicTableColumnFunctions_t
-{
-};
-
-struct DynamicTableColumn_t
-{
-    uint8 size = 0;
-    uint8 offset = 0;
-};
-
-struct DynamicTableInfoElement_t
-{
-    uint32 RowCount = 0;
-    uint32 RowSize = 0;
-    void* Base = 0;
-    bool Present = false;
-    uint32 ColumnCount = 0;
-    DynamicTableColumn_t* ColumnInfo = 0;
-};
-
-// TODO expand from METADATA_TABLES, i.e. for size and order and names
-union DynamicTableInfo_t
-{
-    DynamicTableInfoElement_t array [45];
-    struct
-    {
-        // TODO #define METADATA_TABLES METADATA_TABLE
-        DynamicTableInfoElement_t Module;
-        DynamicTableInfoElement_t TypeRef;
-        DynamicTableInfoElement_t TypeDef;
-        DynamicTableInfoElement_t Table3;
-        DynamicTableInfoElement_t Field;
-        DynamicTableInfoElement_t Table5;
-        DynamicTableInfoElement_t MethodDef;
-        DynamicTableInfoElement_t Table7;
-        DynamicTableInfoElement_t Param;
-        DynamicTableInfoElement_t InterfaceImpl;
-        DynamicTableInfoElement_t MemberRef;
-        DynamicTableInfoElement_t Constant;
-        DynamicTableInfoElement_t CustomAttribute;
-        DynamicTableInfoElement_t FieldMarshal;
-        DynamicTableInfoElement_t DeclSecurity;
-        DynamicTableInfoElement_t ClassLayout;
-        DynamicTableInfoElement_t FieldLayout;
-        DynamicTableInfoElement_t StandAloneSig;
-        DynamicTableInfoElement_t EventMap;
-        DynamicTableInfoElement_t Table19;
-        DynamicTableInfoElement_t Event;
-        DynamicTableInfoElement_t PropertyMap;
-        DynamicTableInfoElement_t Table22;
-        DynamicTableInfoElement_t Property;
-        DynamicTableInfoElement_t MethodSemantics;
-        DynamicTableInfoElement_t MethodImpl;
-        DynamicTableInfoElement_t ModuleRef;
-        DynamicTableInfoElement_t TypeSpec;
-        DynamicTableInfoElement_t ImplMap;
-        DynamicTableInfoElement_t FieldRVA;
-        DynamicTableInfoElement_t Table30;
-        DynamicTableInfoElement_t Table31;
-        DynamicTableInfoElement_t Assembly;
-        DynamicTableInfoElement_t AssemblyProcessor;
-        DynamicTableInfoElement_t AssemblyOS;
-        DynamicTableInfoElement_t AssemblyRef;
-        DynamicTableInfoElement_t AssemblyRefProcessor;
-        DynamicTableInfoElement_t AssemblyRefOS;
-        DynamicTableInfoElement_t File;
-        DynamicTableInfoElement_t ExportedType;
-        DynamicTableInfoElement_t ManifestResource;
-        DynamicTableInfoElement_t NestedClass;
-        DynamicTableInfoElement_t GenericParam;
-        DynamicTableInfoElement_t MethodSpec;
-        DynamicTableInfoElement_t GenericParamConstraint;
-    } name;
-};
-
-// TODO expand from METADATA_TABLES, i.e. for size and order and names
-const char * GetTableName (int a)
-{
-static const char * const table_names [ ] =
-{
-"Module",
-"TypeRef",
-"TypeDef",
-"Table3",
-"Field",
-"Table5",
-"MethodDef",
-"Table7",
-"Param",
-"InterfaceImpl",
-"MemberRef",
-"Constant",
-"CustomAttribute",
-"FieldMarshal",
-"DeclSecurity",
-"ClassLayout",
-"FieldLayout",
-"StandAloneSig",
-"EventMap",
-"Table19",
-"Event",
-"PropertyMap",
-"Table22",
-"Property",
-"MethodSemantics",
-"MethodImpl",
-"ModuleRef",
-"TypeSpec",
-"ImplMap",
-"FieldRVA",
-"Table30",
-"Table31",
-"Assembly",
-"AssemblyProcessor",
-"AssemblyOS",
-"AssemblyRef",
-"AssemblyRefProcessor",
-"AssemblyRefOS",
-"File",
-"ExportedType",
-"ManifestResource",
-"NestedClass",
-"GenericParam",
-"MethodSpec",
-"GenericParamConstraint",
-};
-    if (a < std::size (table_names))
-        return table_names [a];
-    return "unknown";
-}
 
 struct method_header_tiny_t
 // no locals
@@ -2178,6 +2085,7 @@ const MetadataType_t MetadataType_int64 = { "int64", &MetadataType_fixed, 8 };
 const MetadataType_t MetadataType_uint8 = { "uint8", &MetadataType_fixed, 1 };
 const MetadataType_t MetadataType_uint16 = { "uint16", &MetadataType_fixed, 2 };
 #define MetadataType_TypeFlags MetadataType_uint32 /* TODO? */
+#define MetadataType_FieldFlags MetadataType_uint16 /* TODO? */
 const MetadataType_t MetadataType_uint32 = { "uint32", &MetadataType_fixed, 4 };
 const MetadataType_t MetadataType_uint64 = { "uint64", &MetadataType_fixed, 8 };
 const MetadataType_t MetadataType_ResolutionScope = { "ResolutionScope", &MetadataType_codedindex, (int8)CodedIndex(ResolutionScope) };
@@ -2225,30 +2133,51 @@ struct metadata_table_schema_t
     void (*unpack)();
 };
 
+struct EmptyBase_t
+{
+};
+
 // The ordering of the tables here is important -- it assigns their enums.
 // The ordering of the columns within the tables is also important.
 #define METADATA_TABLES \
-METADATA_TABLE (Module,  METADATA_COLUMN (Generation, uint16) /* ignore */      \
+METADATA_TABLE (Module,  EmptyBase_t, METADATA_COLUMN (Generation, uint16) /* ignore */      \
                          METADATA_COLUMN (Name, string)                         \
                          METADATA_COLUMN (Mvid, guid)                           \
                          METADATA_COLUMN (EncId, guid) /* ignore */             \
                          METADATA_COLUMN (EncBaseId, guid)) /* ignore */        \
                                                                                 \
-METADATA_TABLE (TypeRef, METADATA_COLUMN (ResolutionScope, ResolutionScope)     \
+METADATA_TABLE (TypeRef, EmptyBase_t, METADATA_COLUMN (ResolutionScope, ResolutionScope)     \
                          METADATA_COLUMN (TypeName, string)                     \
                          METADATA_COLUMN (TypeNameSpace, string))               \
                                                                                 \
-METADATA_TABLE (TypeDef, METADATA_COLUMN (Flags, TypeFlags)                     \
+METADATA_TABLE (TypeDef, EmptyBase_t, METADATA_COLUMN (Flags, TypeFlags)        \
                          METADATA_COLUMN (TypeName, string)                     \
                          METADATA_COLUMN (TypeNameSpace, string)                \
                          METADATA_COLUMN (Extends, TypeDefOrRef)                \
                          METADATA_COLUMN (FieldList, FieldList)                 \
                          METADATA_COLUMN (MethodList, MethodList))              \
                                                                                 \
-METADATA_TABLE (Table3, METADATA_COLUMN (Unused, UnusedType))
+METADATA_TABLE (Table3, EmptyBase_t, METADATA_COLUMN (Unused, UnusedType))      \
+                                                                                \
+METADATA_TABLE (Field, Member_t, METADATA_COLUMN (Flags, FieldFlags)            \
+                       METADATA_COLUMN (Name, string)                           \
+                       METADATA_COLUMN (Signature, blob))                       \
+                                                                                \
+METADATA_TABLE (Table5, EmptyBase_t, METADATA_COLUMN (Unused, UnusedType))      \
+                                                                                \
+METADATA_TABLE (Table6, EmptyBase_t, METADATA_COLUMN (Unused, UnusedType))                   \
+                                                                                \
+METADATA_TABLE (Table7, EmptyBase_t, METADATA_COLUMN (Unused, UnusedType))                   \
+                                                                                \
+METADATA_TABLE (Table8, EmptyBase_t, METADATA_COLUMN (Unused, UnusedType))                   \
+                                                                                \
+METADATA_TABLE (Table9, EmptyBase_t, METADATA_COLUMN (Unused, UnusedType))                   \
+                                                                                \
+METADATA_TABLE (Table10, EmptyBase_t, METADATA_COLUMN (Unused, UnusedType))                  \
+                                                                                \
 
 typedef void *voidp;
-typedef void *UnusedType;
+typedef struct _UnusedType { } *UnusedType;
 
 // Every table has two maybe three maybe four sets of types/data/forms.
 // 1. A very typed form. Convenient to work with. Does the most work to form.
@@ -2260,13 +2189,15 @@ typedef void *UnusedType;
 //    this is simply correctly sized arrays of size/offset and maybe link to form 3.
 
 #define metadata_schema_TYPED_string           String_t
+#define metadata_schema_TYPED_blob             Blob_t
 #define metadata_schema_TYPED_uint16           uint16
 #define metadata_schema_TYPED_guid             Guid_t
 #define metadata_schema_TYPED_ResolutionScope  voidp /* TODO union? */
 #define metadata_schema_TYPED_TypeDefOrRef     voidp /* TODO union? */
 #define metadata_schema_TYPED_FieldList        std::vector<Field_t*>
 #define metadata_schema_TYPED_MethodList       std::vector<Method_t*>
-#define metadata_schema_TYPED_TypeFlags        Type_t::Flags_t
+#define metadata_schema_TYPED_TypeFlags        TypeFlags_t
+#define metadata_schema_TYPED_FieldFlags       FieldFlags_t
 #define metadata_schema_TYPED_UnusedType       UnusedType
 
 // needed?
@@ -2280,54 +2211,23 @@ typedef void *UnusedType;
 
 #undef METADATA_TABLE
 #undef METADATA_COLUMN
-#define METADATA_TABLE(name, columns)  struct name ##  _t { columns };
+#define METADATA_TABLE(name, base, columns)  struct name ##  _t : base { columns };
 #define METADATA_COLUMN(name, type) metadata_schema_TYPED_ ## type name;
 METADATA_TABLES
 
 #undef METADATA_TABLE
 #undef METADATA_COLUMN
-#define METADATA_TABLE(name, columns) \
+#define METADATA_TABLE(name, base, columns) \
 const metadata_schema_column_t metadata_column_ ## name [ ] = { columns }; \
 const metadata_table_schema_t metadata_row_schema_ ## name = { #name, CountOf (metadata_column_ ## name), metadata_column_ ## name };
 #define METADATA_COLUMN(name, type) { # name, MetadataType_  ## type },
 METADATA_TABLES
 
+#if 0
+
 struct metadata_field_t // table0x04
 {
-    enum class flags_t : uint16
-    {
-//TODO bitfields (need to test little and big endian)
-//TODO or bitfield decoder
-        // member access mask - Use this mask to retrieve accessibility information.
-        FieldAccessMask           =   0x0007,
-        PrivateScope              =   0x0000,     // Member not referenceable.
-        Private                   =   0x0001,     // Accessible only by the parent type.
-        FamANDAssem               =   0x0002,     // Accessible by sub-types only in this Assembly.
-        Assembly                  =   0x0003,     // Accessibly by anyone in the Assembly.
-        Family                    =   0x0004,     // Accessible only by type and sub-types.
-        FamORAssem                =   0x0005,     // Accessibly by sub-types anywhere, plus anyone in assembly.
-        Public                    =   0x0006,     // Accessibly by anyone who has visibility to this scope.
-        // end member access mask
-
-        // field contract attributes.
-        Static                    =   0x0010,     // Defined on type, else per instance.
-        InitOnly                  =   0x0020,     // Field may only be initialized, not written to after init.
-        Literal                   =   0x0040,     // Value is compile time constant.
-        NotSerialized             =   0x0080,     // Field does not have to be serialized when type is remoted.
-
-        SpecialName               =   0x0200,     // field is special. Name describes how.
-
-        // interop attributes
-        PinvokeImpl               =   0x2000,     // Implementation is forwarded through pinvoke.
-
-        // Reserved flags for runtime use only.
-        ReservedMask              =   0x9500,
-        RTSpecialName             =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
-        HasFieldMarshal           =   0x1000,     // Field has marshalling information.
-        HasDefault                =   0x8000,     // Field has default.
-        HasFieldRVA               =   0x0100,     // Field has RVA.
-    };
-    flags_t Flags;
+    EventFlags_t Flags;
     MetadataString_t Name;
     metadata_blob_t Signature;
 };
@@ -2338,6 +2238,8 @@ const metadata_schema_column_t metadata_columns_Field [ ] = // table0x04
     { "Signature", MetadataType_blob }
 };
 const metadata_table_schema_t metadata_row_schema_Field = { "Field", CountOf (metadata_columns_Field), metadata_columns_Field };
+
+#endif
 
 struct metadata_methoddef_t // table0x06
 {
@@ -2615,7 +2517,7 @@ struct ExportedType_t // table0x27
 };
 struct metadata_ExportedType_t // table0x27
 {
-    Type_t::Flags_t Flags;
+    TypeFlags_t Flags;
     uint32 TypeDefId; // index into TypeDef table of another module in this assembly; hint only
     MetadataString_t TypeName;
     MetadataString_t TypeNameSpace;
@@ -2870,6 +2772,103 @@ const int8 AssemblyRefProcessor = 36;
 const int8 AssemblyRefOS = 37;
 const int8 MethodSpec = 0x2B;
 */
+
+
+struct DynamicTableColumn_t;
+struct DynamicTableColumnFunctions_t;
+
+struct DynamicTableColumnFunctions_t
+{
+};
+
+struct DynamicTableColumn_t
+{
+    uint8 size = 0;
+    uint8 offset = 0;
+};
+
+struct DynamicTableInfoElement_t
+{
+    uint32 RowCount = 0;
+    uint32 RowSize = 0;
+    void* Base = 0;
+    bool Present = false;
+    uint32 ColumnCount = 0;
+    DynamicTableColumn_t* ColumnInfo = 0;
+};
+
+union DynamicTableInfo_t
+{
+    DynamicTableInfoElement_t array [
+#undef METADATA_TABLE
+#undef METADATA_COLUMN
+#define METADATA_TABLE(name, base, columns) 1+
+METADATA_TABLES
+        0];
+    struct
+    {
+#undef METADATA_TABLE
+#undef METADATA_COLUMN
+#define METADATA_TABLE(name, base, columns) DynamicTableInfoElement_t name;
+METADATA_TABLES
+    } name;
+};
+
+// TODO expand from METADATA_TABLES, i.e. for size and order and names
+const char * GetTableName (int a)
+{
+static const char * const table_names [ ] =
+{
+"Module",
+"TypeRef",
+"TypeDef",
+"Table3",
+"Field",
+"Table5",
+"MethodDef",
+"Table7",
+"Param",
+"InterfaceImpl",
+"MemberRef",
+"Constant",
+"CustomAttribute",
+"FieldMarshal",
+"DeclSecurity",
+"ClassLayout",
+"FieldLayout",
+"StandAloneSig",
+"EventMap",
+"Table19",
+"Event",
+"PropertyMap",
+"Table22",
+"Property",
+"MethodSemantics",
+"MethodImpl",
+"ModuleRef",
+"TypeSpec",
+"ImplMap",
+"FieldRVA",
+"Table30",
+"Table31",
+"Assembly",
+"AssemblyProcessor",
+"AssemblyOS",
+"AssemblyRef",
+"AssemblyRefProcessor",
+"AssemblyRefOS",
+"File",
+"ExportedType",
+"ManifestResource",
+"NestedClass",
+"GenericParam",
+"MethodSpec",
+"GenericParamConstraint",
+};
+    if (a < std::size (table_names))
+        return table_names [a];
+    return "unknown";
+}
 
 struct metadata_table_t
 {
