@@ -936,7 +936,7 @@ CODED_INDICES
 
 template <typename ...Args> constexpr size_t va_count (Args&&...) { return sizeof...(Args); }
 
-struct CodedIndexMap_t
+struct CodedIndexMap_t // TODO array and named
 {
 #define CODED_INDEX(a, ...) int8 a [va_count (__VA_ARGS__)] = { __VA_ARGS__ };
 CODED_INDICES
@@ -964,12 +964,15 @@ constexpr uint8 LogBase2 (unsigned a)
 
 union CodedIndices_t
 {
+    CodedIndices_t () { }
     CodedIndex_t array [(uint8)CodedIndex::Count];
     struct {
 CODED_INDICES
 #undef CODED_INDEX
 };
 };
+
+const CodedIndices_t CodedIndices;
 
 #undef CodedIndex
 //#define CodedIndex(x) (offsetof(CodedIndices_t, x) / sizeof (CodedIndex_t))
@@ -2085,9 +2088,7 @@ image_metadata_column_size_index (loaded_image_t* image, uint8 /* todo enum */ t
 uint
 metadata_column_size_index (const metadata_field_type_t* type, loaded_image_t* image)
 {
-    not_implemented_yet ();
     return image_metadata_column_size_index (image, type->table_index);
-    return 0;
 }
 
 uint
@@ -3101,8 +3102,13 @@ metadata_column_size_guid (const metadata_field_type_t* type, loaded_image_t* im
 uint
 metadata_column_size_codedindex_compute (loaded_image_t* image, CodedIndex coded_index)
 {
-    not_implemented_yet ();
-    return 0;
+    const CodedIndex_t* data = &CodedIndices.array [(uint)coded_index];
+    uint32 max_rows = 0;
+    auto const map = data->map;
+    auto const count = data->count;
+    for (uint i = 0; i < count; ++i)
+        max_rows = std::max (max_rows, image->table_info.array[((uint8*)&CodedIndexMap) [map + i]].RowCount);
+    return (max_rows <= (0xFFFFu >> data->tag_size)) ? 2 : 4;
 }
 
 uint
@@ -3117,14 +3123,13 @@ loadedimage_metadata_column_size_codedindex_get (loaded_image_t* image, CodedInd
 uint
 metadata_column_size_index_compute (loaded_image_t* image, uint8 /* todo enum */ table_index)
 {
-    not_implemented_yet ();
-    return 0;
+    uint row_count = image->table_info.array [table_index].RowCount;
+    return (row_count <= 0xFFFF) ? 2 : 4;
 }
 
 uint
 image_metadata_column_size_index (loaded_image_t* image, uint8 /* todo enum */ table_index)
 {
-    not_implemented_yet ();
     const uint a = image->row_size [(uint8)table_index];
     if (a)
         return a;
