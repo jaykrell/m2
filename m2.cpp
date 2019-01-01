@@ -2200,19 +2200,19 @@ struct EmptyBase_t
 // The ordering of the columns within the tables is also important.
 // The second parameter to METADATA_COLUMN can go away.
 #define METADATA_TABLES                                 \
-/* table0x00*/ METADATA_TABLE (Module,  EmptyBase_t,    \
+/* table0x00*/ METADATA_TABLE (Module, ,                \
     METADATA_COLUMN2 (Generation, uint16) /* ignore */  \
     METADATA_COLUMN (Name)                              \
     METADATA_COLUMN (Mvid)                              \
     METADATA_COLUMN2 (EncId, guid) /* ignore */         \
     METADATA_COLUMN2 (EncBaseId, guid)) /* ignore */    \
                                                         \
-/*table0x00*/ METADATA_TABLE (TypeRef, EmptyBase_t,     \
+/*table0x00*/ METADATA_TABLE (TypeRef, ,                \
     METADATA_COLUMN (ResolutionScope)                   \
     METADATA_COLUMN (TypeName)                          \
     METADATA_COLUMN (TypeNameSpace))                    \
                                                         \
-/*table0x01*/ METADATA_TABLE (TypeDef, EmptyBase_t,     \
+/*table0x01*/ METADATA_TABLE (TypeDef, ,                \
     METADATA_COLUMN2 (Flags, TypeFlags)                 \
     METADATA_COLUMN (TypeName)                          \
     METADATA_COLUMN (TypeNameSpace)                     \
@@ -2220,16 +2220,16 @@ struct EmptyBase_t
     METADATA_COLUMN (FieldList)                         \
     METADATA_COLUMN (MethodList))                       \
                                                         \
-/*table0x03*/ METADATA_TABLE (Table3, EmptyBase_t, METADATA_COLUMN (Unused)) \
+/*table0x03*/ METADATA_TABLE (Table3, , METADATA_COLUMN (Unused)) \
                                                             \
-/*table0x04*/ METADATA_TABLE (Field, Member_t,              \
+/*table0x04*/ METADATA_TABLE (Field, : Member_t,            \
     METADATA_COLUMN2 (Flags, FieldFlags)                    \
     METADATA_COLUMN (Name)                                  \
     METADATA_COLUMN (Signature))                            \
                                                             \
-/*table0x05*/METADATA_TABLE (Table5 /*MethodPtr nonstandard*/, EmptyBase_t, METADATA_COLUMN (Unused))      \
+/*table0x05*/METADATA_TABLE (Table5 /*MethodPtr nonstandard*/, , METADATA_COLUMN (Unused))  \
                                                             \
-/*table0x06*/METADATA_TABLE (MethodDef, EmptyBase_t,        \
+/*table0x06*/METADATA_TABLE (MethodDef, ,           \
     METADATA_COLUMN (RVA)                           \
     METADATA_COLUMN2 (ImplFlags, MethodDefImplFlags) /* TODO higher level support */     \
     METADATA_COLUMN2 (Flags, MethodDefFlags) /* TODO higher level support */             \
@@ -2237,23 +2237,23 @@ struct EmptyBase_t
     METADATA_COLUMN (Signature)      /* Blob heap, 7 bit encode/decode */         \
     METADATA_COLUMN (ParamList)) /* Param table, start, until table end, or start of next MethodDef; index into Param table, 2 or 4 bytes */ \
                                                                                 \
-/*table0x07*/METADATA_TABLE (Table7 /*ParamPtr nonstandard*/, EmptyBase_t, METADATA_COLUMN (Unused))      \
+/*table0x07*/METADATA_TABLE (Table7 /*ParamPtr nonstandard*/, , METADATA_COLUMN (Unused))      \
                                                                         \
-/*table0x08*/METADATA_TABLE (Param, EmptyBase_t,                        \
+/*table0x08*/METADATA_TABLE (Param, ,                                   \
     METADATA_COLUMN2 (Flags, uint16)                                    \
     METADATA_COLUMN (Sequence)                                          \
     METADATA_COLUMN (Name))                                             \
                                                                         \
-/*table0x09*/METADATA_TABLE (InterfaceImpl, EmptyBase_t,                \
+/*table0x09*/METADATA_TABLE (InterfaceImpl, ,                           \
     METADATA_COLUMN2 (Class, TypeDef)                                   \
     METADATA_COLUMN (Interface)) /* TypeDefOrRef or Spec */             \
                                                                         \
-/*table0x0A*/METADATA_TABLE (MemberRef, EmptyBase_t,                    \
+/*table0x0A*/METADATA_TABLE (MemberRef, ,                               \
     METADATA_COLUMN2 (Class, MemberRefParent)                           \
     METADATA_COLUMN (Name)       /*string*/                             \
     METADATA_COLUMN (Signature)) /*blob*/                               \
                                                                         \
-/*table0x0B*/METADATA_TABLE (Constant, EmptyBase_t,     \
+/*table0x0B*/METADATA_TABLE (Constant, ,                \
     METADATA_COLUMN2 (Type, uint8)                      \
     METADATA_COLUMN2 (Pad, uint8)                       \
     METADATA_COLUMN (Parent)                            \
@@ -2316,7 +2316,7 @@ typedef struct _Unused_t { } *Unused_t;
 
 #undef METADATA_TABLE
 #undef METADATA_COLUMN2
-#define METADATA_TABLE(name, base, columns)  struct name ##  _t : base { columns };
+#define METADATA_TABLE(name, base, columns)  struct name ##  _t base { columns };
 #define METADATA_COLUMN2(name, type) metadata_schema_TYPED_ ## type name;
 METADATA_TABLES
 
