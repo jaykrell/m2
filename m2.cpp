@@ -770,6 +770,7 @@ struct DynamicTableInfoElement_t
     DynamicTableColumn_t* ColumnInfo = 0;
 };
 
+// TODO expand from METADATA_TABLES, i.e. for size and order and names
 union DynamicTableInfo_t
 {
     DynamicTableInfoElement_t array [45];
@@ -824,6 +825,7 @@ union DynamicTableInfo_t
     } name;
 };
 
+// TODO expand from METADATA_TABLES, i.e. for size and order and names
 const char * GetTableName (int a)
 {
 static const char * const table_names [ ] =
@@ -2008,22 +2010,22 @@ struct image_clr_header_t // data_directory [15]
     image_data_directory_t ManagedNativeHeader;
 };
 
-struct MetadataColumnType_t;
+struct MetadataType_t;
 
 struct loaded_image_t;
 
-struct MetadataColumnTypeFunctions_t
+struct MetadataTypeFunctions_t
 {
     // Virtual functions, but allowing for static construction.
-    void (*decode)(const MetadataColumnType_t*, void*);
-    uint (*size)(const MetadataColumnType_t*, loaded_image_t*);
-    void (*to_string)(const MetadataColumnType_t*, void*);
+    void (*decode)(const MetadataType_t*, void*);
+    uint (*size)(const MetadataType_t*, loaded_image_t*);
+    void (*to_string)(const MetadataType_t*, void*);
 };
 
-struct MetadataColumnType_t
+struct MetadataType_t
 {
     const char *name;
-    MetadataColumnTypeFunctions_t const * functions;
+    MetadataTypeFunctions_t const * functions;
     union {
         int8 fixed_size;
         int8 table_index;
@@ -2034,71 +2036,71 @@ struct MetadataColumnType_t
 uint
 loadedimage_metadata_size_codedindex_get (loaded_image_t* image, CodedIndex coded_index);
 
-#define CODED_INDEX(x, ...) uint metadata_size_codedindex_ ## x (MetadataColumnType_t* type, loaded_image_t* image) \
+#define CODED_INDEX(x, ...) uint metadata_size_codedindex_ ## x (MetadataType_t* type, loaded_image_t* image) \
 { return loadedimage_metadata_size_codedindex_get (image, type->coded_index); }
 CODED_INDICES
 #undef CODED_INDEX
 
 void
-metadata_decode_fixed (const MetadataColumnType_t* type, void* output)
+MetadataDecode_fixed (const MetadataType_t* type, void* output)
 {
 }
 
 void
-metadata_decode_blob (const MetadataColumnType_t* type, void* output)
+MetadataDecode_blob (const MetadataType_t* type, void* output)
 {
 }
 
 void
-metadata_decode_string (const MetadataColumnType_t* type, void* output)
+MetadataDecode_string (const MetadataType_t* type, void* output)
 {
 }
 
 void
-metadata_decode_ustring (const MetadataColumnType_t* type, void* output)
+MetadataDecode_ustring (const MetadataType_t* type, void* output)
 {
 }
 
 void
-metadata_decode_codedindex (const MetadataColumnType_t* type, void* output)
+MetadataDecode_codedindex (const MetadataType_t* type, void* output)
 {
 }
 
 void
-metadata_decode_index (const MetadataColumnType_t* type, void* output)
+MetadataDecode_index (const MetadataType_t* type, void* output)
 {
 }
 
 void
-metadata_decode_index_list (const MetadataColumnType_t* type, void* output)
+MetadataDecode_index_list (const MetadataType_t* type, void* output)
 {
 }
 
 void
-metadata_decode_guid (const MetadataColumnType_t* type, void* output)
+MetadataDecode_guid (const MetadataType_t* type, void* output)
 {
 }
 
 uint
-metadata_size_fixed (const MetadataColumnType_t* type, loaded_image_t* image)
+metadata_size_fixed (const MetadataType_t* type, loaded_image_t* image)
 {
     return type->fixed_size;
 }
 
 uint
-metadata_size_blob (const MetadataColumnType_t* type, loaded_image_t* image);
+metadata_size_blob (const MetadataType_t* type, loaded_image_t* image);
 
 uint
-metadata_size_string (const MetadataColumnType_t* type, loaded_image_t* image);
+metadata_size_string (const MetadataType_t* type, loaded_image_t* image);
 
 uint
-metadata_size_ustring (const MetadataColumnType_t* type, loaded_image_t* image)
+metadata_size_ustring (const MetadataType_t* type, loaded_image_t* image)
 {
     return 4;
 }
 
 uint
-metadata_size_codedindex (const MetadataColumnType_t* type, loaded_image_t* image)
+metadata_size_codedindex (const MetadataType_t* type, loaded_image_t* image)
 {
     return 0;
 }
@@ -2107,111 +2109,112 @@ uint
 image_metadata_size_index (loaded_image_t* image, uint8 /* todo enum */ table_index);
 
 uint
-metadata_size_index (const MetadataColumnType_t* type, loaded_image_t* image)
+metadata_size_index (const MetadataType_t* type, loaded_image_t* image)
 {
     return image_metadata_size_index (image, type->table_index);
 }
 
 uint
-metadata_size_index_list (const MetadataColumnType_t* type, loaded_image_t* image)
+metadata_size_index_list (const MetadataType_t* type, loaded_image_t* image)
 {
     return metadata_size_index (type, image);
 }
 
 uint
-metadata_size_guid (const MetadataColumnType_t* type, loaded_image_t* image);
+metadata_size_guid (const MetadataType_t* type, loaded_image_t* image);
 
-const MetadataColumnTypeFunctions_t MetadataColumnType_fixed =
+const MetadataTypeFunctions_t MetadataType_fixed =
 {
-    metadata_decode_fixed,
+    MetadataDecode_fixed,
     metadata_size_fixed,
 };
 
-const MetadataColumnTypeFunctions_t MetadataColumnType_blob_functions =
+const MetadataTypeFunctions_t MetadataType_blob_functions =
 {
-    metadata_decode_blob,
+    MetadataDecode_blob,
     metadata_size_blob,
 };
 
-const MetadataColumnTypeFunctions_t MetadataColumnType_string_functions =
+const MetadataTypeFunctions_t MetadataType_string_functions =
 {
-    metadata_decode_string,
+    MetadataDecode_string,
     metadata_size_string,
 };
 
-const MetadataColumnTypeFunctions_t MetadataColumnType_guid_functions =
+const MetadataTypeFunctions_t MetadataType_guid_functions =
 {
-    metadata_decode_guid,
+    MetadataDecode_guid,
     metadata_size_guid,
 };
 
-const MetadataColumnTypeFunctions_t MetadataColumnType_ustring_functions =
+const MetadataTypeFunctions_t MetadataType_ustring_functions =
 {
-    metadata_decode_ustring,
+    MetadataDecode_ustring,
     metadata_size_ustring,
 };
 
-const MetadataColumnTypeFunctions_t MetadataColumnType_index =
+const MetadataTypeFunctions_t MetadataType_index =
 {
-    metadata_decode_index,
+    MetadataDecode_index,
     metadata_size_index,
 };
 
-const MetadataColumnTypeFunctions_t MetadataColumnType_index_list =
+const MetadataTypeFunctions_t MetadataType_index_list =
 {
-    metadata_decode_index_list,
+    MetadataDecode_index_list,
     metadata_size_index, // TODO?
 };
 
-const MetadataColumnTypeFunctions_t MetadataColumnType_codedindex =
+const MetadataTypeFunctions_t MetadataType_codedindex =
 {
-    metadata_decode_codedindex,
+    MetadataDecode_codedindex,
     metadata_size_codedindex,
 };
 
-const MetadataColumnType_t MetadataColumnType_int8 = { "int8", &MetadataColumnType_fixed, 1 };
-const MetadataColumnType_t MetadataColumnType_int16 = { "int16", &MetadataColumnType_fixed, 2 };
-const MetadataColumnType_t MetadataColumnType_int32 = { "int32", &MetadataColumnType_fixed, 4 };
-const MetadataColumnType_t MetadataColumnType_int64 = { "int64", &MetadataColumnType_fixed, 8 };
-const MetadataColumnType_t MetadataColumnType_uint8 = { "uint8", &MetadataColumnType_fixed, 1 };
-const MetadataColumnType_t MetadataColumnType_uint16 = { "uint16", &MetadataColumnType_fixed, 2 };
-#define MetadataColumnType_TypeFlags MetadataColumnType_uint32 /* TODO? */
-const MetadataColumnType_t MetadataColumnType_uint32 = { "uint32", &MetadataColumnType_fixed, 4 };
-const MetadataColumnType_t MetadataColumnType_uint64 = { "uint64", &MetadataColumnType_fixed, 8 };
-const MetadataColumnType_t MetadataColumnType_ResolutionScope = { "ResolutionScope", &MetadataColumnType_codedindex, (int8)CodedIndex(ResolutionScope) };
+const MetadataType_t MetadataType_int8 = { "int8", &MetadataType_fixed, 1 };
+const MetadataType_t MetadataType_int16 = { "int16", &MetadataType_fixed, 2 };
+const MetadataType_t MetadataType_int32 = { "int32", &MetadataType_fixed, 4 };
+const MetadataType_t MetadataType_int64 = { "int64", &MetadataType_fixed, 8 };
+const MetadataType_t MetadataType_uint8 = { "uint8", &MetadataType_fixed, 1 };
+const MetadataType_t MetadataType_uint16 = { "uint16", &MetadataType_fixed, 2 };
+#define MetadataType_TypeFlags MetadataType_uint32 /* TODO? */
+const MetadataType_t MetadataType_uint32 = { "uint32", &MetadataType_fixed, 4 };
+const MetadataType_t MetadataType_uint64 = { "uint64", &MetadataType_fixed, 8 };
+const MetadataType_t MetadataType_ResolutionScope = { "ResolutionScope", &MetadataType_codedindex, (int8)CodedIndex(ResolutionScope) };
 // heap indices or offsets
-const MetadataColumnType_t MetadataColumnType_string = { "string", &MetadataColumnType_string_functions };
-const MetadataColumnType_t MetadataColumnType_guid = { "guid", &MetadataColumnType_fixed, 16 };
-const MetadataColumnType_t MetadataColumnType_blob = { "blob",  &MetadataColumnType_blob_functions };
+const MetadataType_t MetadataType_string = { "string", &MetadataType_string_functions };
+const MetadataType_t MetadataType_guid = { "guid", &MetadataType_fixed, 16 };
+const MetadataType_t MetadataType_blob = { "blob",  &MetadataType_blob_functions };
 // table indices
-const MetadataColumnType_t MetadataColumnType_TypeDefOrRef = { "TypeDefOrRef", &MetadataColumnType_codedindex, (int8)CodedIndex(TypeDefOrRef) };
-const MetadataColumnType_t MetadataColumnType_Field = { "FieldList", &MetadataColumnType_index, Field };
-const MetadataColumnType_t MetadataColumnType_typeDef = { "TypeDef", &MetadataColumnType_index, TypeDef };
-const MetadataColumnType_t MetadataColumnType_MethodDef = { "MethodDef", &MetadataColumnType_index, MethodDef };
-const MetadataColumnType_t MetadataColumnType_HasSemantics = {" HasSemantics", &MetadataColumnType_codedindex, (int8)CodedIndex(HasSemantics) };
-const MetadataColumnType_t MetadataColumnType_MethodDefOrRef = { "MethodDefOrRef", &MetadataColumnType_codedindex, (int8)CodedIndex(MethodDefOrRef) };
-const MetadataColumnType_t MetadataColumnType_Property = { "Property", &MetadataColumnType_index, Property };
-const MetadataColumnType_t MetadataColumnType_HasCustomAttribute = { "HasCustomAttribute", &MetadataColumnType_codedindex, (int8)CodedIndex(HasCustomAttribute) };
-const MetadataColumnType_t MetadataColumnType_CustomAttributeType = { "CustomAttributeType", &MetadataColumnType_codedindex, (int8)CodedIndex(CustomAttributeType) };
-const MetadataColumnType_t MetadataColumnType_HasDeclSecurity = { "HasDeclSecurity", &MetadataColumnType_codedindex, (int8)CodedIndex(HasDeclSecurity) };
-const MetadataColumnType_t MetadataColumnType_Implementation = { "Implementation", &MetadataColumnType_codedindex, (int8)CodedIndex(Implementation) };
-const MetadataColumnType_t MetadataColumnType_HasFieldMarshal = { "HasFieldMarshal", &MetadataColumnType_codedindex, (int8)CodedIndex(HasFieldMarshal) };
-const MetadataColumnType_t MetadataColumnType_MemberRefParent = { "MemberRefParent", &MetadataColumnType_codedindex, (int8)CodedIndex(MemberRefParent) };
-const MetadataColumnType_t MetadataColumnType_TypeOrMethodDef = { "TypeOrMethodDef", &MetadataColumnType_codedindex, (int8)CodedIndex(TypeOrMethodDef) };
-const MetadataColumnType_t MetadataColumnType_GenericParam = { "GenericParam", &MetadataColumnType_index, GenericParam };
-const MetadataColumnType_t MetadataColumnType_MemberForwarded = { "MemberForwarded", &MetadataColumnType_codedindex, (int8)CodedIndex(MemberForwarded) };
+const MetadataType_t MetadataType_TypeDefOrRef = { "TypeDefOrRef", &MetadataType_codedindex, (int8)CodedIndex(TypeDefOrRef) };
+const MetadataType_t MetadataType_Field = { "FieldList", &MetadataType_index, Field };
+const MetadataType_t MetadataType_typeDef = { "TypeDef", &MetadataType_index, TypeDef };
+const MetadataType_t MetadataType_MethodDef = { "MethodDef", &MetadataType_index, MethodDef };
+const MetadataType_t MetadataType_HasSemantics = {" HasSemantics", &MetadataType_codedindex, (int8)CodedIndex(HasSemantics) };
+const MetadataType_t MetadataType_MethodDefOrRef = { "MethodDefOrRef", &MetadataType_codedindex, (int8)CodedIndex(MethodDefOrRef) };
+const MetadataType_t MetadataType_Property = { "Property", &MetadataType_index, Property };
+const MetadataType_t MetadataType_HasCustomAttribute = { "HasCustomAttribute", &MetadataType_codedindex, (int8)CodedIndex(HasCustomAttribute) };
+const MetadataType_t MetadataType_CustomAttributeType = { "CustomAttributeType", &MetadataType_codedindex, (int8)CodedIndex(CustomAttributeType) };
+const MetadataType_t MetadataType_HasDeclSecurity = { "HasDeclSecurity", &MetadataType_codedindex, (int8)CodedIndex(HasDeclSecurity) };
+const MetadataType_t MetadataType_Implementation = { "Implementation", &MetadataType_codedindex, (int8)CodedIndex(Implementation) };
+const MetadataType_t MetadataType_HasFieldMarshal = { "HasFieldMarshal", &MetadataType_codedindex, (int8)CodedIndex(HasFieldMarshal) };
+const MetadataType_t MetadataType_MemberRefParent = { "MemberRefParent", &MetadataType_codedindex, (int8)CodedIndex(MemberRefParent) };
+const MetadataType_t MetadataType_TypeOrMethodDef = { "TypeOrMethodDef", &MetadataType_codedindex, (int8)CodedIndex(TypeOrMethodDef) };
+const MetadataType_t MetadataType_GenericParam = { "GenericParam", &MetadataType_index, GenericParam };
+const MetadataType_t MetadataType_MemberForwarded = { "MemberForwarded", &MetadataType_codedindex, (int8)CodedIndex(MemberForwarded) };
 
 // Lists go to end of table, or start of next list, referenced from next element of same table
-const MetadataColumnType_t MetadataColumnType_EventList = { "EventList", &MetadataColumnType_index_list, Event };
-const MetadataColumnType_t MetadataColumnType_FieldList = { "FieldList", &MetadataColumnType_index_list, Field };
-const MetadataColumnType_t MetadataColumnType_MethodList = { "MethodList", &MetadataColumnType_index_list, MethodDef };
-const MetadataColumnType_t MetadataColumnType_ParamList = { "ParamList", &MetadataColumnType_index_list, Param };
-const MetadataColumnType_t MetadataColumnType_PropertyList = { "PropertyList", &MetadataColumnType_index_list, Property };
+const MetadataType_t MetadataType_EventList = { "EventList", &MetadataType_index_list, Event };
+const MetadataType_t MetadataType_FieldList = { "FieldList", &MetadataType_index_list, Field };
+const MetadataType_t MetadataType_MethodList = { "MethodList", &MetadataType_index_list, MethodDef };
+const MetadataType_t MetadataType_ParamList = { "ParamList", &MetadataType_index_list, Param };
+const MetadataType_t MetadataType_PropertyList = { "PropertyList", &MetadataType_index_list, Property };
+const MetadataType_t MetadataType_UnusedType = { "UnusedType" /* TODO runtime error */ };
 
 struct metadata_schema_column_t
 {
     const char* name;
-    const MetadataColumnType_t& type;
+    const MetadataType_t& type;
 };
 
 struct metadata_table_schema_t
@@ -2241,8 +2244,11 @@ METADATA_TABLE (TypeDef, METADATA_COLUMN (Flags, TypeFlags)                     
                          METADATA_COLUMN (Extends, TypeDefOrRef)                \
                          METADATA_COLUMN (FieldList, FieldList)                 \
                          METADATA_COLUMN (MethodList, MethodList))              \
+                                                                                \
+METADATA_TABLE (Table3, METADATA_COLUMN (Unused, UnusedType))
 
 typedef void *voidp;
+typedef void *UnusedType;
 
 // Every table has two maybe three maybe four sets of types/data/forms.
 // 1. A very typed form. Convenient to work with. Does the most work to form.
@@ -2253,28 +2259,29 @@ typedef void *voidp;
 //    with form 3. While a row of all fixed size/offset type is possible,
 //    this is simply correctly sized arrays of size/offset and maybe link to form 3.
 
-#define metadata_schema_column_tYPED_string           String_t
-#define metadata_schema_column_tYPED_uint16           uint16
-#define metadata_schema_column_tYPED_guid             Guid_t
-#define metadata_schema_column_tYPED_ResolutionScope  voidp /* TODO union? */
-#define metadata_schema_column_tYPED_TypeDefOrRef     voidp /* TODO union? */
-#define metadata_schema_column_tYPED_FieldList        std::vector<Field_t*>
-#define metadata_schema_column_tYPED_MethodList       std::vector<Method_t*>
-#define metadata_schema_column_tYPED_TypeFlags        Type_t::Flags_t
+#define metadata_schema_TYPED_string           String_t
+#define metadata_schema_TYPED_uint16           uint16
+#define metadata_schema_TYPED_guid             Guid_t
+#define metadata_schema_TYPED_ResolutionScope  voidp /* TODO union? */
+#define metadata_schema_TYPED_TypeDefOrRef     voidp /* TODO union? */
+#define metadata_schema_TYPED_FieldList        std::vector<Field_t*>
+#define metadata_schema_TYPED_MethodList       std::vector<Method_t*>
+#define metadata_schema_TYPED_TypeFlags        Type_t::Flags_t
+#define metadata_schema_TYPED_UnusedType       UnusedType
 
 // needed?
-//#define metadata_schema_column_tOKENED_string           MetadataString_t
-//#define metadata_schema_column_tOKENED_uint16           uint16
-//#define metadata_schema_column_tOKENED_guid             Guid_t
-//#define metadata_schema_column_tOKENED_ResolutionScope  MetadataToken_t /* TODO */
-//#define metadata_schema_column_tOKENED_TypeDefOrRef     MetadataToken_t /* TODO */
-//#define metadata_schema_column_tOKENED_FieldList        MetadataTokenList_t
-//#define metadata_schema_column_tOKENED_MethodList       MetadataTokenList_t
+//#define metadata_schema_TOKENED_string           MetadataString_t
+//#define metadata_schema_TOKENED_uint16           uint16
+//#define metadata_schema_TOKENED_guid             Guid_t
+//#define metadata_schema_TOKENED_ResolutionScope  MetadataToken_t /* TODO */
+//#define metadata_schema_TOKENED_TypeDefOrRef     MetadataToken_t /* TODO */
+//#define metadata_schema_TOKENED_FieldList        MetadataTokenList_t
+//#define metadata_schema_TOKENED_MethodList       MetadataTokenList_t
 
 #undef METADATA_TABLE
 #undef METADATA_COLUMN
 #define METADATA_TABLE(name, columns)  struct name ##  _t { columns };
-#define METADATA_COLUMN(name, type) metadata_schema_column_tYPED_ ## type name;
+#define METADATA_COLUMN(name, type) metadata_schema_TYPED_ ## type name;
 METADATA_TABLES
 
 #undef METADATA_TABLE
@@ -2282,62 +2289,8 @@ METADATA_TABLES
 #define METADATA_TABLE(name, columns) \
 const metadata_schema_column_t metadata_column_ ## name [ ] = { columns }; \
 const metadata_table_schema_t metadata_row_schema_ ## name = { #name, CountOf (metadata_column_ ## name), metadata_column_ ## name };
-#define METADATA_COLUMN(name, type) { # name, MetadataColumnType_  ## type },
+#define METADATA_COLUMN(name, type) { # name, MetadataType_  ## type },
 METADATA_TABLES
-
-#if 0
-struct metadata_Module_t // table0x00
-{
-    uint16 Generation; // reserved, 0
-    MetadataString_t Name;
-    metadata_guid_t Mvid;
-    metadata_guid_t EncId; // reserved, 0
-    metadata_guid_t EncBaseId; // reserved, 0
-};
-const metadata_schema_column_t metadata_columns_Module [ ] = // table0x00
-{
-    { "Generation", MetadataColumnType_uint16 }, // ignore
-    { "Name", MetadataColumnType_string },
-    { "Mvid", MetadataColumnType_guid },
-    { "EncId", MetadataColumnType_guid }, // ignore
-    { "EncBaseId", MetadataColumnType_guid }, // ignore
-};
-metadata_table_schema_t metadata_row_schema_Module = { "Module", CountOf (metadata_columns_Module), metadata_columns_Module };
-
-struct metadata_typeref_t // table0x01
-{
-    MetadataToken_t ResolutionScope; // codedindex
-    MetadataString_t TypeName;
-    MetadataString_t TypeNameSpace;
-};
-const metadata_schema_column_t metadata_columns_TypeRef [ ] = // table0x01
-{
-    { "ResolutionScope", MetadataColumnType_ResolutionScope },
-    { "TypeName", MetadataColumnType_string },
-    { "TypeNamespace", MetadataColumnType_string },
-};
-metadata_table_schema_t metadata_row_schema_TypeRef = { "TypeRef", CountOf (metadata_columns_TypeRef), metadata_columns_TypeRef };
-
-struct metadata_typedef_t // table0x02
-{
-    Type_t::Flags_t Flags;
-    MetadataString_t TypeName; // string
-    MetadataString_t TypeNamespace; // string
-    MetadataToken_t Extends; // TypeDefOrRef
-    uint32 FieldList; // index into Field table, either to last row or next start
-    uint32 MethodList; // similar to previous
-};
-const metadata_schema_column_t metadata_columns_TypeDef [ ] = // table0x02
-{
-    { "Flags", MetadataColumnType_uint32 },
-    { "TypeName", MetadataColumnType_string },
-    { "TypeNamespace", MetadataColumnType_string },
-    { "Extends", MetadataColumnType_TypeDefOrRef },
-    { "FieldList", MetadataColumnType_FieldList },
-    { "MethodList", MetadataColumnType_MethodList },
-};
-const metadata_table_schema_t metadata_row_schema_TypeDef = { "TypeDef", CountOf (metadata_columns_TypeDef), metadata_columns_TypeDef };
-#endif
 
 struct metadata_field_t // table0x04
 {
@@ -2380,9 +2333,9 @@ struct metadata_field_t // table0x04
 };
 const metadata_schema_column_t metadata_columns_Field [ ] = // table0x04
 {
-    { "Flags", MetadataColumnType_uint16 }, // TODO bitfield decoder
-    { "Name", MetadataColumnType_string },
-    { "Signature", MetadataColumnType_blob }
+    { "Flags", MetadataType_uint16 }, // TODO bitfield decoder
+    { "Name", MetadataType_string },
+    { "Signature", MetadataType_blob }
 };
 const metadata_table_schema_t metadata_row_schema_Field = { "Field", CountOf (metadata_columns_Field), metadata_columns_Field };
 
@@ -2467,23 +2420,23 @@ struct metadata_methoddef_t // table0x06
 };
 const metadata_schema_column_t metadata_columns_MethodDef [ ] = // table0x06
 {
-    { "RVA", MetadataColumnType_uint32 },
-    { "ImplFlags", MetadataColumnType_uint16 }, // TODO higher level support
-    { "Flags", MetadataColumnType_uint16 }, // TODO higher level support
-    { "Name", MetadataColumnType_string },
-    { "Signature", MetadataColumnType_blob },
-    { "ParamList", MetadataColumnType_ParamList }, // index into Param table, 2 or 4 bytes
+    { "RVA", MetadataType_uint32 },
+    { "ImplFlags", MetadataType_uint16 }, // TODO higher level support
+    { "Flags", MetadataType_uint16 }, // TODO higher level support
+    { "Name", MetadataType_string },
+    { "Signature", MetadataType_blob },
+    { "ParamList", MetadataType_ParamList }, // index into Param table, 2 or 4 bytes
 };
 const metadata_table_schema_t metadata_row_schema_MethoDef = { "MethodDef", CountOf (metadata_columns_MethodDef), metadata_columns_MethodDef };
 
 const metadata_schema_column_t metadata_columns_MethodImpl [ ] = // table0x19
 {
-    { "Class", MetadataColumnType_typeDef }, // index into TypeDef, 2 or 4 bytes
-    { "ImplFlags", MetadataColumnType_uint16 }, // TODO higher level support
-    { "Flags", MetadataColumnType_uint16 }, // TODO higher level support
-    { "Name", MetadataColumnType_string },
-    { "Signature", MetadataColumnType_blob },
-    { "ParamList", MetadataColumnType_ParamList }, // index into Param table, 2 or 4 bytes
+    { "Class", MetadataType_typeDef }, // index into TypeDef, 2 or 4 bytes
+    { "ImplFlags", MetadataType_uint16 }, // TODO higher level support
+    { "Flags", MetadataType_uint16 }, // TODO higher level support
+    { "Name", MetadataType_string },
+    { "Signature", MetadataType_blob },
+    { "ParamList", MetadataType_ParamList }, // index into Param table, 2 or 4 bytes
 };
 const metadata_table_schema_t metadata_row_schema_MethodImpl = { "MethodImpl", CountOf (metadata_columns_MethodImpl), metadata_columns_MethodImpl };
 
@@ -2511,22 +2464,22 @@ struct MethodSemantics_t // table0x18
 };
 const metadata_schema_column_t metadata_columns_MethodSemantics [ ] = // table0x18
 {
-    { "Semantics", MetadataColumnType_uint16 },
-    { "Method", MetadataColumnType_MethodDef }, // index into MethodDef table, 2 or 4 bytes
-    { "Association", MetadataColumnType_HasSemantics }, // Event or Property, CodedIndex
+    { "Semantics", MetadataType_uint16 },
+    { "Method", MetadataType_MethodDef }, // index into MethodDef table, 2 or 4 bytes
+    { "Association", MetadataType_HasSemantics }, // Event or Property, CodedIndex
 };
 const metadata_table_schema_t metadata_row_schema_MethodSemantics = { "MethodSemantics", CountOf (metadata_columns_MethodSemantics), metadata_columns_MethodSemantics };
 
 const metadata_schema_column_t metadata_columns_MethodSpec [ ] = // table0x2B
 {
-    { "Method", MetadataColumnType_MethodDefOrRef },
-    { "Instantiation", MetadataColumnType_blob },
+    { "Method", MetadataType_MethodDefOrRef },
+    { "Instantiation", MetadataType_blob },
 };
 const metadata_table_schema_t metadata_row_schema_MethodSpec = { "MethodSpec", CountOf (metadata_columns_MethodSpec), metadata_columns_MethodSpec };
 
 const metadata_schema_column_t metadata_columns_ModuleRef [ ] = // table0x1A
 {
-    { "Name", MetadataColumnType_string },
+    { "Name", MetadataType_string },
 };
 const metadata_table_schema_t metadata_row_schema_ModuleRef = { "ModuleRef", CountOf (metadata_columns_ModuleRef), metadata_columns_ModuleRef };
 
@@ -2542,24 +2495,24 @@ struct metadata_NestedClass_t // table0x29
 };
 const metadata_schema_column_t metadata_columns_NestedClass [ ] = // table0x29
 {
-    { "NestedClass", MetadataColumnType_typeDef },
-    { "EnclosingClass", MetadataColumnType_typeDef },
+    { "NestedClass", MetadataType_typeDef },
+    { "EnclosingClass", MetadataType_typeDef },
 };
 const metadata_table_schema_t metadata_row_schema_NestedClass = { "NestedClass", CountOf (metadata_columns_NestedClass), metadata_columns_NestedClass };
 
 const metadata_schema_column_t metadata_columns_Param [ ] = // table0x08
 {
-    { "Flags", MetadataColumnType_uint16 },
-    { "Sequence", MetadataColumnType_uint16 },
-    { "Name", MetadataColumnType_string },
+    { "Flags", MetadataType_uint16 },
+    { "Sequence", MetadataType_uint16 },
+    { "Name", MetadataType_string },
 };
 const metadata_table_schema_t metadata_row_schema_Param = { "Param", CountOf (metadata_columns_Param), metadata_columns_Param };
 
 const metadata_schema_column_t metadata_columns_Property [ ] = // table0x17
 {
-    { "Flags", MetadataColumnType_uint16 },
-    { "Name", MetadataColumnType_string },
-    { "Type", MetadataColumnType_blob },
+    { "Flags", MetadataType_uint16 },
+    { "Name", MetadataType_string },
+    { "Type", MetadataType_blob },
 };
 const metadata_table_schema_t metadata_row_schema_Property = { "Property", CountOf (metadata_columns_Property), metadata_columns_Property };
 
@@ -2570,8 +2523,8 @@ struct PropertyMap_t // table0x15
 };
 const metadata_schema_column_t metadata_columns_PropertyMap [ ] = // table0x15
 {
-    { "Parent", MetadataColumnType_typeDef },
-    { "PropertyList", MetadataColumnType_PropertyList },
+    { "Parent", MetadataType_typeDef },
+    { "PropertyList", MetadataType_PropertyList },
 };
 const metadata_table_schema_t metadata_row_schema_PropertyMap = { "PropertyMap", CountOf (metadata_columns_PropertyMap), metadata_columns_PropertyMap };
 
@@ -2581,7 +2534,7 @@ struct metadata_StandaloneSig_t // table0x11
 };
 const metadata_schema_column_t metadata_columns_StandaloneSig [ ] = // table0x11
 {
-    { "Signature", MetadataColumnType_blob },
+    { "Signature", MetadataType_blob },
 };
 const metadata_table_schema_t metadata_row_schema_StandaloneSig = { "StandaloneSig", CountOf (metadata_columns_StandaloneSig), metadata_columns_StandaloneSig };
 
@@ -2593,9 +2546,9 @@ struct metadata_customattribute_t // table0x0C
 };
 const metadata_schema_column_t metadata_columns_CustomAttribute [ ] = // table0x0C
 {
-    { "Parent", MetadataColumnType_HasCustomAttribute },
-    { "Type", MetadataColumnType_CustomAttributeType },
-    { "Value", MetadataColumnType_blob },
+    { "Parent", MetadataType_HasCustomAttribute },
+    { "Type", MetadataType_CustomAttributeType },
+    { "Value", MetadataType_blob },
 };
 const metadata_table_schema_t metadata_row_schema_CustomAttribute = { "CustomAttribute", CountOf (metadata_columns_CustomAttribute), metadata_columns_CustomAttribute };
 
@@ -2625,9 +2578,9 @@ struct metadata_DeclSecurity_t // table0x0E
 };
 const metadata_schema_column_t metadata_columns_declsecurity [ ] = // table0x0E
 {
-    { "Action", MetadataColumnType_uint16 },
-    { "Type", MetadataColumnType_HasDeclSecurity },
-    { "Value", MetadataColumnType_blob },
+    { "Action", MetadataType_uint16 },
+    { "Type", MetadataType_HasDeclSecurity },
+    { "Value", MetadataType_blob },
 };
 const metadata_table_schema_t metadata_row_schema_declsecurity = { "DeclSecurity", CountOf (metadata_columns_declsecurity), metadata_columns_declsecurity };
 
@@ -2638,8 +2591,8 @@ struct metadata_EventMap_t // table0x12
 };
 const metadata_schema_column_t metadata_columns_EventMap [ ] = // table0x12
 {
-    { "Parent", MetadataColumnType_typeDef },
-    { "EventList", MetadataColumnType_EventList },
+    { "Parent", MetadataType_typeDef },
+    { "EventList", MetadataType_EventList },
 };
 const metadata_table_schema_t metadata_row_schema_EventMap = { "EventMap", CountOf (metadata_columns_EventMap), metadata_columns_EventMap };
 
@@ -2651,9 +2604,9 @@ struct metadata_Event_t // table0x14
 };
 const metadata_schema_column_t metadata_columns_Event [ ] = // table0x14
 {
-    { "Flags", MetadataColumnType_uint16 },
-    { "Name", MetadataColumnType_string },
-    { "EventType", MetadataColumnType_TypeDefOrRef },
+    { "Flags", MetadataType_uint16 },
+    { "Name", MetadataType_string },
+    { "EventType", MetadataType_TypeDefOrRef },
 };
 const metadata_table_schema_t metadata_row_schema_Event = { "Event", CountOf (metadata_columns_Event), metadata_columns_Event };
 
@@ -2670,11 +2623,11 @@ struct metadata_ExportedType_t // table0x27
 };
 const metadata_schema_column_t metadata_columns_ExportedType [ ] = // table0x27
 {
-    { "Flags", MetadataColumnType_uint32 },
-    { "TypeDefId", MetadataColumnType_uint32 },
-    { "TypeName", MetadataColumnType_string },
-    { "TypeNameSpace", MetadataColumnType_string },
-    { "Implementation", MetadataColumnType_Implementation },
+    { "Flags", MetadataType_uint32 },
+    { "TypeDefId", MetadataType_uint32 },
+    { "TypeName", MetadataType_string },
+    { "TypeNameSpace", MetadataType_string },
+    { "Implementation", MetadataType_Implementation },
 };
 const metadata_table_schema_t metadata_row_schema_ExportedType = { "ExportedType", CountOf (metadata_columns_ExportedType), metadata_columns_ExportedType };
 
@@ -2685,8 +2638,8 @@ struct metadata_FieldLayout_t // table0x10
 };
 const struct metadata_schema_column_t metadata_columns_FieldLayout [ ] = // table0x10
 {
-    { "Offset", MetadataColumnType_uint32 },
-    { "Field", MetadataColumnType_Field },
+    { "Offset", MetadataType_uint32 },
+    { "Field", MetadataType_Field },
 };
 const metadata_table_schema_t metadata_row_schema_FieldLayout = { "FieldLayout", CountOf (metadata_columns_FieldLayout), metadata_columns_FieldLayout };
 
@@ -2707,8 +2660,8 @@ struct metadata_FieldMarshal_t // table0x0D
 };
 const metadata_schema_column_t metadata_columns_FieldMarshal [ ] = // table0x0D
 {
-    { "Parent", MetadataColumnType_HasFieldMarshal },
-    { "NativeType", MetadataColumnType_blob },
+    { "Parent", MetadataType_HasFieldMarshal },
+    { "NativeType", MetadataType_blob },
 };
 const metadata_table_schema_t metadata_row_schema_FieldMarshal = { "FieldMarshal", CountOf (metadata_columns_FieldMarshal), metadata_columns_FieldMarshal };
 
@@ -2724,8 +2677,8 @@ struct metadatA_FieldRVA_t // table0x1D
 };
 const metadata_schema_column_t metadata_columns_FieldRVA [ ] = // table0x1D
 {
-    { "RVA", MetadataColumnType_uint32 },
-    { "Field", MetadataColumnType_Field },
+    { "RVA", MetadataType_uint32 },
+    { "Field", MetadataType_Field },
 };
 const metadata_table_schema_t metadata_row_schema_FieldRVA = { "FieldRVA", CountOf (metadata_columns_FieldRVA), metadata_columns_FieldRVA };
 
@@ -2743,9 +2696,9 @@ struct metadata_MemberRef_t // table0x0A
 };
 const metadata_schema_column_t metadata_columns_MemberRef [ ] = // table0x0A
 {
-    { "Class", MetadataColumnType_MemberRefParent },
-    { "Name", MetadataColumnType_string },
-    { "Signature", MetadataColumnType_blob },
+    { "Class", MetadataType_MemberRefParent },
+    { "Name", MetadataType_string },
+    { "Signature", MetadataType_blob },
 };
 const metadata_table_schema_t metadata_row_schema_MemberRef = { "MemberRef", CountOf (metadata_columns_MemberRef), metadata_columns_MemberRef };
 
@@ -2761,8 +2714,8 @@ struct metadata_InterfaceImpl_t // table0x09
 };
 const metadata_schema_column_t metadata_columns_InterfaceImpl [ ] = // table0x09
 {
-    { "Class", MetadataColumnType_typeDef },
-    { "Interface", MetadataColumnType_TypeDefOrRef },
+    { "Class", MetadataType_typeDef },
+    { "Interface", MetadataType_TypeDefOrRef },
 };
 const metadata_table_schema_t metadata_row_schema_InterfaceImpl = { "InterfaceImpl", CountOf (metadata_columns_InterfaceImpl), metadata_columns_InterfaceImpl };
 
@@ -2785,10 +2738,10 @@ struct metadata_GenericParam_t // table0x2A
 };
 const metadata_schema_column_t metadata_columns_GenericParam [ ] = // table0x2A
 {
-    { "Number", MetadataColumnType_uint16 },
-    { "Flags", MetadataColumnType_uint16 },
-    { "Owner", MetadataColumnType_TypeOrMethodDef },
-    { "Name", MetadataColumnType_string },
+    { "Number", MetadataType_uint16 },
+    { "Flags", MetadataType_uint16 },
+    { "Owner", MetadataType_TypeOrMethodDef },
+    { "Name", MetadataType_string },
 };
 const metadata_table_schema_t metadata_row_schema_GenericParam = { "GenericParam", CountOf (metadata_columns_GenericParam), metadata_columns_GenericParam };
 
@@ -2804,8 +2757,8 @@ struct metadata_GenericParamConstraint_t // table0x2C
 };
 const metadata_schema_column_t metadata_columns_GenericParamConstraint [ ] = // table0x2C
 {
-    { "Owner", MetadataColumnType_GenericParam },
-    { "Constraint", MetadataColumnType_TypeDefOrRef },
+    { "Owner", MetadataType_GenericParam },
+    { "Constraint", MetadataType_TypeDefOrRef },
 };
 const metadata_table_schema_t metadata_row_schema_GenericParamConstraint = { "GenericParamConstraint", CountOf (metadata_columns_GenericParamConstraint), metadata_columns_GenericParamConstraint };
 
@@ -2828,10 +2781,10 @@ struct metadata_ImplMap_t // table0x1C
 };
 const metadata_schema_column_t metadata_columns_ImplMap [ ] = // table0x1C
 {
-    { "ImplMapFlags", MetadataColumnType_uint16 },
-    { "Method", MetadataColumnType_MemberForwarded },
-    { "ImportName", MetadataColumnType_string },
-    { "ImportScope", MetadataColumnType_string },
+    { "ImplMapFlags", MetadataType_uint16 },
+    { "Method", MetadataType_MemberForwarded },
+    { "ImportName", MetadataType_string },
+    { "ImportScope", MetadataType_string },
 };
 const metadata_table_schema_t metadata_row_schema_ImplMap = { "ImplMap", CountOf (metadata_columns_ImplMap), metadata_columns_ImplMap };
 
@@ -2857,10 +2810,10 @@ struct metadata_ManifestResource_t // table0x28
 };
 const metadata_schema_column_t metadata_columns_ManifestResource [ ] = // table0x28
 {
-     { "Offset", MetadataColumnType_uint32 },
-     { "Flags", MetadataColumnType_uint32 },
-     { "Name", MetadataColumnType_string },
-     { "Implementation", MetadataColumnType_Implementation },
+     { "Offset", MetadataType_uint32 },
+     { "Flags", MetadataType_uint32 },
+     { "Name", MetadataType_string },
+     { "Implementation", MetadataType_Implementation },
 };
 const metadata_table_schema_t metadata_row_schema_ManifestResource = { "ManifestResource", CountOf (metadata_columns_ManifestResource), metadata_columns_ManifestResource };
 
@@ -2881,9 +2834,9 @@ struct metadata_File_t // table0x26
 };
 const metadata_schema_column_t metadata_columns_File [ ] = // table0x26
 {
-     { "Flags", MetadataColumnType_uint32 },
-     { "Name", MetadataColumnType_string },
-     { "HashValue", MetadataColumnType_blob },
+     { "Flags", MetadataType_uint32 },
+     { "Name", MetadataType_string },
+     { "HashValue", MetadataType_blob },
 };
 const metadata_table_schema_t metadata_row_schema_File = { "File", CountOf (metadata_columns_File), metadata_columns_File };
 
@@ -3169,19 +3122,19 @@ unknown_stream:
 };
 
 uint
-metadata_size_blob (const MetadataColumnType_t* type, loaded_image_t* image)
+metadata_size_blob (const MetadataType_t* type, loaded_image_t* image)
 {
     return image->blob_size;
 }
 
 uint
-metadata_size_string (const MetadataColumnType_t* type, loaded_image_t* image)
+metadata_size_string (const MetadataType_t* type, loaded_image_t* image)
 {
     return image->string_size;
 }
 
 uint
-metadata_size_guid (const MetadataColumnType_t* type, loaded_image_t* image)
+metadata_size_guid (const MetadataType_t* type, loaded_image_t* image)
 {
     return image->blob_size;
 }
