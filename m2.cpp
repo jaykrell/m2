@@ -5,15 +5,14 @@
 // https://www.ecma-international.org/publications/files/ECMA-ST/ECMA-335.pdf.
 
 // Implementation language is C++. At least C+11.
-// The following features of C++ are difficult to pass up:
+// The following features of C++ are desirable or difficult to pass up:
 //   RAII (destructors, C++98)
 //   enum class (C++11)
 //   std::size (C++17)
-//   std::string::data (C++17)
-//   non-static member initialization (C++11, easy to live without)
+//   std::string::data (direct sprintf into std::string) (C++17)
+//   non-static member initialization (C++11)
 //   thread safe static initializers, maybe (C++11)
 //   char16 (C++11, but could use C++98 unsigned short)
-//   direct sprintf into std::string (C++11, but easy slower in C++98)
 //   explicit operator bool (C++11 but easy to emulate in C++98)
 //   variadic template (C++11, really needed?)
 //   variadic macros (really needed?)
@@ -1042,7 +1041,7 @@ struct metadata_tables_header_t // tilde stream
     // uint32 NumberOfRows [];
 };
 
-struct metadata_root_t
+struct MetadataRoot_t
 {
     /* 0 */ uint32 Signature = 0x424A5342;
     /* 4 */ uint16 MajorVersion; // 1, ignore
@@ -1052,10 +1051,10 @@ struct metadata_root_t
     /* 16 */ char Version [1];
     // uint16 Flags; // 0
     // uint16 NumberOfStreams;
-    // metadata_stream_header_t stream_headers [NumberOfStreams];
+    // MetadataStreamHeader_t stream_headers [NumberOfStreams];
 };
 
-struct metadata_stream_header_t // see mono verify_metadata_header
+struct MetadataStreamHeader_t // see mono verify_metadata_header
 {
     uint32 Offset;
     uint32 Size; // multiple of 4
@@ -2897,11 +2896,11 @@ struct loaded_image_t
     uint guid_size = 0; // 2 or 4
     struct
     {
-        metadata_stream_header_t* tables;
-        metadata_stream_header_t* guid;
-        metadata_stream_header_t* string; // utf8
-        metadata_stream_header_t* ustring; // unicode/user strings
-        metadata_stream_header_t* blob;
+        MetadataStreamHeader_t* tables;
+        MetadataStreamHeader_t* guid;
+        MetadataStreamHeader_t* string; // utf8
+        MetadataStreamHeader_t* ustring; // unicode/user strings
+        MetadataStreamHeader_t* blob;
     } streams;
 
     void init (const char *file_name)
@@ -2957,7 +2956,7 @@ struct loaded_image_t
         printf ("clr.MetaData.Size:%X\n", clr->MetaData.Size);
         release_assertf (clr->MetaData.Size, "%X", clr->MetaData.Size);
         release_assertf (clr->cb >= sizeof (image_clr_header_t), "%X %X", clr->cb, (uint)sizeof (image_clr_header_t));
-        auto metadata_root = rva_to_p<metadata_root_t>(clr->MetaData.VirtualAddress);
+        auto metadata_root = rva_to_p<MetadataRoot_t>(clr->MetaData.VirtualAddress);
         printf ("metadata_root.Signature:%X\n", metadata_root->Signature);
         printf ("metadata_root.MajorVersion:%X\n", metadata_root->MajorVersion);
         printf ("metadata_root.MinorVersion:%X\n", metadata_root->MinorVersion);
@@ -2973,7 +2972,7 @@ struct loaded_image_t
         printf ("metadata_root.Version:%s\n", metadata_root->Version);
         printf ("flags:%X\n", *pflags);
         printf ("number_of_streams:%X\n", number_of_streams);
-        auto stream = (metadata_stream_header_t*)(pnumber_of_streams + 1);
+        auto stream = (MetadataStreamHeader_t*)(pnumber_of_streams + 1);
         for (uint i = 0; i < number_of_streams; ++i)
         {
             printf ("stream[%X].Offset:%X\n", i, stream->Offset);
@@ -3005,7 +3004,7 @@ unknown_stream:
                 abort ();
             }
             length = (length + 4) & -4;
-            stream = (metadata_stream_header_t*)(stream->Name + length);
+            stream = (MetadataStreamHeader_t*)(stream->Name + length);
         }
         metadata_tables = (metadata_tables_header_t*)(streams.tables->Offset + (char*)metadata_root);
         printf ("metadata_tables.reserved:%X\n", metadata_tables->reserved);
