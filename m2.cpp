@@ -1026,7 +1026,7 @@ struct MetadataTokenList_t
     uint32 index;
 };
 
-struct metadata_tables_header_t // tilde stream
+struct MetadataTablesHeader_t // tilde stream
 {
     uint32 reserved; // 0
     uint8 MajorVersion;
@@ -2886,7 +2886,7 @@ struct loaded_image_t
     char * guids = 0;
     uint string_index_size = 0;
     uint guid_index_size = 0;
-    metadata_tables_header_t * metadata_tables = 0;
+    MetadataTablesHeader_t * metadata_tables = 0;
     uint32 * number_of_rows = 0; // points into metadata_tables_header
     uint NumberOfRvaAndSizes = 0;
     uint number_of_streams = 0;
@@ -3006,7 +3006,7 @@ unknown_stream:
             length = (length + 4) & -4;
             stream = (MetadataStreamHeader_t*)(stream->Name + length);
         }
-        metadata_tables = (metadata_tables_header_t*)(streams.tables->Offset + (char*)metadata_root);
+        metadata_tables = (MetadataTablesHeader_t*)(streams.tables->Offset + (char*)metadata_root);
         printf ("metadata_tables.reserved:%X\n", metadata_tables->reserved);
         printf ("metadata_tables.MajorVersion:%X\n", metadata_tables->MajorVersion);
         printf ("metadata_tables.MinorVersion:%X\n", metadata_tables->MinorVersion);
