@@ -576,6 +576,23 @@ union Parent_t // Constant table0x0B
     Property_t* Property;
 };
 
+struct MethodRef_t;
+struct MethodDef_t;
+
+union CustomAttributeType_t
+{
+    MethodDef_t* MethoDef;
+    MethodRef_t* MethoRef;
+};
+
+typedef void *voidp;
+typedef struct _Unused_t { } *Unused_t;
+
+union HasCustomAttribute_t
+{
+    voidp TODO;
+};
+
 enum class MethodDefFlags_t : uint16 // table0x06
 {
 //TODO bitfields (need to test little and big endian)
@@ -2258,9 +2275,11 @@ struct EmptyBase_t
     METADATA_COLUMN (Parent)                            \
     METADATA_COLUMN2 (Value, blob)                      \
     METADATA_COLUMN2 (IsNull, NotStored))               \
-
-typedef void *voidp;
-typedef struct _Unused_t { } *Unused_t;
+                                                        \
+/*table0x0C*/METADATA_TABLE (CustomAttribute, ,         \
+    METADATA_COLUMN2 (Parent, HasCustomAttribute)       \
+    METADATA_COLUMN2 (Type, CustomAttributeType)        \
+    METADATA_COLUMN2 (Value, blob))                     \
 
 // Every table has two maybe three maybe four sets of types/data/forms.
 // 1. A very typed form. Convenient to work with. Does the most work to form.
@@ -2301,6 +2320,8 @@ typedef struct _Unused_t { } *Unused_t;
 #define metadata_schema_TYPED_TypeNameSpace     String_t
 #define metadata_schema_TYPED_Unused            Unused_t
 #define metadata_schema_TYPED_NotStored         Unused_t
+#define metadata_schema_TYPED_CustomAttributeType CustomAttributeType_t
+#define metadata_schema_TYPED_HasCustomAttribute HasCustomAttribute_t
 
 // needed?
 //#define metadata_schema_TOKENED_string           MetadataString_t
@@ -2427,21 +2448,6 @@ const metadata_schema_column_t metadata_columns_StandaloneSig [ ] = // table0x11
     { "Signature", MetadataType_blob },
 };
 const metadata_table_schema_t metadata_row_schema_StandaloneSig = { "StandaloneSig", CountOf (metadata_columns_StandaloneSig), metadata_columns_StandaloneSig };
-
-struct metadata_customattribute_t // table0x0C
-{
-    MetadataToken_t Parent; // HasCustomAttribute (5 bits)
-    MetadataToken_t Type; // MethodDef or MethodRef, CustomAttributeType
-    metadata_blob_t Value; // blob
-};
-const metadata_schema_column_t metadata_columns_CustomAttribute [ ] = // table0x0C
-{
-    { "Parent", MetadataType_HasCustomAttribute },
-    { "Type", MetadataType_CustomAttributeType },
-    { "Value", MetadataType_blob },
-};
-const metadata_table_schema_t metadata_row_schema_CustomAttribute = { "CustomAttribute", CountOf (metadata_columns_CustomAttribute), metadata_columns_CustomAttribute };
-
 
 struct metadata_DeclSecurity_t // table0x0E
 {
