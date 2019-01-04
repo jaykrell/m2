@@ -50,8 +50,8 @@ ifdef _NMAKE_VER:
 !endif
 !include config.mk
 
-!message AMD64=$(AMD64)
-!message 386=$(386)
+#!message AMD64=$(AMD64)
+#!message 386=$(386)
 
 !if $(AMD64)
 win=winamd64.exe
@@ -84,7 +84,7 @@ clean:
 #
 
 $(win): m2.cpp
-	cl /MD /Zi /EHsc /std:c++14 $** /link /out:$@
+	cl /MD /Zi /EHsc /std:c++14 $** /link /out:$@ /incremental:no
 
 !else
 else

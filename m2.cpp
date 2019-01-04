@@ -111,12 +111,12 @@ string_vformat (const char *format, va_list va_orig)
 {
     va_list va;
     va_list va2;
-    while (true)
+    while (true) // Loop due to locale race?
     {
         va_copy (va, va_orig);
         va_copy (va2, va_orig);
-        int size = 2 + vsnprintf (0, 0, format, va);
-#if 0 // C++17
+        const int size = 2 + vsnprintf (0, 0, format, va);
+#if 0 // C++17; need to reset length after vsnprintf?
         std::string s;
         s.resize (size);
         if (vsnprintf (s.data (), size, format, va2) < size)
@@ -989,17 +989,13 @@ constexpr uint8 LogBase2 (unsigned a)
            0;
 }
 
-//#define CountOf(x) (std::size(x)) //C++17
+//#define CountOf(x) (std::size(x)) // C++17
 #define CountOf(x) (sizeof (x) / sizeof ((x)[0])) // TODO
 #define CountOfField(x, y) (CountOf(x().y))
-//#define CodedIndex(x) const CodedIndex_t CodedIndex_ ## x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
-//#define CodedIndex(x) CodedIndex_t x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
-//#define CODED_INDEX(x, ...) CodedIndex_t x = {LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
 #define CODED_INDEX(x, ...) CodedIndex_t x;
 
 union CodedIndices_t
 {
-//    CodedIndices_t () { }
     CodedIndex_t array [(uint8)CodedIndex::Count];
     struct {
 CODED_INDICES
@@ -1014,7 +1010,6 @@ CODED_INDICES
 }};
 
 #undef CodedIndex
-//#define CodedIndex(x) (offsetof(CodedIndices_t, x) / sizeof (CodedIndex_t))
 #define CodedIndex(x) CodedIndex::x
 
 struct HeapIndex_t
