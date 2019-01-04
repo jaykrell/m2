@@ -30,6 +30,7 @@
 //#define _LARGEFILE_SOURCE
 //#define _LARGEFILE64_SOURCE
 
+#include <memory.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <assert.h>
@@ -38,7 +39,9 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <limits.h>
+#include <algorithm>
 #ifdef _WIN32
+#define NOMINMAX 1
 #include <io.h>
 #include <windows.h>
 #else
@@ -108,15 +111,22 @@ string_vformat (const char *format, va_list va_orig)
 {
     va_list va;
     va_list va2;
-    std::string s;
     while (true)
     {
         va_copy (va, va_orig);
         va_copy (va2, va_orig);
         int size = 2 + vsnprintf (0, 0, format, va);
+#if 0 // C++17
+        std::string s;
         s.resize (size);
         if (vsnprintf (s.data (), size, format, va2) < size)
                return s;
+#else
+        std::vector<char> s;
+        s.resize (size);
+        if (vsnprintf (s.data (), size, format, va2) < size)
+               return &s [0];
+#endif
     }
 }
 
@@ -426,8 +436,13 @@ struct fd_t
 #ifndef _WIN32
     uint64 get_file_size (const char * file_name = "")
     {
+#ifdef __CYGWIN__
+        struct stat st = { 0 }; // TODO
+        if (fstat (fd, &st))
+#else
         struct stat64 st = { 0 }; // TODO
         if (fstat64 (fd, &st))
+#endif
             throw_errno (string_format ("fstat(%s)", file_name).c_str ());
         return st.st_size;
     }
@@ -974,16 +989,17 @@ constexpr uint8 LogBase2 (unsigned a)
            0;
 }
 
-#define CountOf(x) (std::size(x)) //C++17
-//#define CountOf(x) (sizeof (x) / sizeof ((x)[0])) // TODO
+//#define CountOf(x) (std::size(x)) //C++17
+#define CountOf(x) (sizeof (x) / sizeof ((x)[0])) // TODO
 #define CountOfField(x, y) (CountOf(x().y))
 //#define CodedIndex(x) const CodedIndex_t CodedIndex_ ## x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
 //#define CodedIndex(x) CodedIndex_t x = {#x, LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
-#define CODED_INDEX(x, ...) CodedIndex_t x = {LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
+//#define CODED_INDEX(x, ...) CodedIndex_t x = {LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) };
+#define CODED_INDEX(x, ...) CodedIndex_t x;
 
 union CodedIndices_t
 {
-    CodedIndices_t () { }
+//    CodedIndices_t () { }
     CodedIndex_t array [(uint8)CodedIndex::Count];
     struct {
 CODED_INDICES
@@ -991,7 +1007,11 @@ CODED_INDICES
 };
 };
 
-const CodedIndices_t CodedIndices;
+const CodedIndices_t CodedIndices = {{
+#define CODED_INDEX(x, ...) {LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) },
+CODED_INDICES
+#undef CODED_INDEX
+}};
 
 #undef CodedIndex
 //#define CodedIndex(x) (offsetof(CodedIndices_t, x) / sizeof (CodedIndex_t))
@@ -2820,7 +2840,7 @@ static const char * const table_names [ ] =
 "MethodSpec",
 "GenericParamConstraint",
 };
-    if (a < std::size (table_names))
+    if (a < CountOf (table_names))
         return table_names [a];
     return "unknown";
 }
@@ -3035,7 +3055,7 @@ unknown_stream:
         const uint64 one = 1;
         uint j = 0;
         auto RowCount = (uint32*)(metadata_tables + 1);
-        for (uint i = 0; i < std::size (table_info.array); ++i)
+        for (uint i = 0; i < CountOf (table_info.array); ++i)
         {
             auto const mask = one << i;
             bool Present = (valid & mask) != 0;
