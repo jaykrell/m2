@@ -75,7 +75,7 @@ check:
 #	lldb --  ./mac /s/mono/mcs/class/lib/build-macos/mscorlib.dll
 
 clean:
-	$(RM_F) $(win) m2.obj
+	$(RM_F) $(win) m2.obj *.ilk
 
 # TODO clang cross
 #
@@ -110,7 +110,7 @@ debug: mac
 	lldb -- ./$(NativeTarget) /s/mono/mcs/class/lib/build-macos/mscorlib.dll
 
 clean:
-	$(RM_F) mac win32 win32.exe win64 win64.exe win win.exe cyg cyg.exe
+	$(RM_F) mac win32 win32.exe win64 win64.exe win win.exe cyg cyg.exe *.ilk
 
 mac: m2.cpp
 	g++ -g m2.cpp -o $@
