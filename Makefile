@@ -104,11 +104,19 @@ $(win): m2.cpp
 !else
 else
 
-UNAME_O = $(shell uname -o)
+UNAME_S = $(shell uname -s)
 
-ifeq ($(UNAME_O), Cygwin)
+ifeq ($(UNAME_S), Cygwin)
 Cygwin=1
 NativeTarget=cyg
+else
+Cygwin=0
+Linux=0
+endif
+
+ifeq ($(UNAME_S), Linux)
+Linux=1
+NativeTarget=lin
 else
 Cygwin=0
 endif
@@ -125,12 +133,15 @@ debug: mac
 	lldb -- ./$(NativeTarget) /s/mono/mcs/class/lib/build-macos/mscorlib.dll
 
 clean:
-	$(RM_F) mac win32 win32.exe win64 win64.exe win win.exe cyg cyg.exe *.ilk
+	$(RM_F) mac win32 win32.exe win64 win64.exe win win.exe cyg cyg.exe *.ilk lin
 
 mac: m2.cpp
 	g++ -g m2.cpp -o $@
 
 cyg: m2.cpp
+	g++ -g m2.cpp -o $@
+
+lin: m2.cpp
 	g++ -g m2.cpp -o $@
 
 win32.exe: m2.cpp
