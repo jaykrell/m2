@@ -44,21 +44,32 @@ exe:
 ifdef _NMAKE_VER:
 !ifdef _NMAKE_VER
 
-!if !exist (./config.mk)
-!if [.\config.cmd]
-!endif
-!endif
-!include config.mk
+#!if !exist (./config.mk)
+#!if [.\config.cmd]
+#!endif
+#!endif
+#!if exist (./config.mk)
+#!include ./config.mk
+#!endif
 
 #!message AMD64=$(AMD64)
 #!message 386=$(386)
 
-!if $(AMD64)
-win=winamd64.exe
+!if !defined(AMD64) && !defined(386)
+AMD64=1
+386=0
 !endif
 
-!if $(386)
+!if $(AMD64)
+win=winamd64.exe
+386=0
+!elseif $(386)
 win=winx86.exe
+AMD64=0
+!endif
+
+!ifndef win
+win=win.exe
 !endif
 
 all: $(win)
@@ -68,11 +79,15 @@ config:
 
 check:
 
-#run: $(win)
-#	./mac /s/mono/mcs/class/lib/build-macos/mscorlib.dll
-#
-#debug: $(win)
-#	lldb --  ./mac /s/mono/mcs/class/lib/build-macos/mscorlib.dll
+run: $(win)
+	.\$(win) $(WINDIR)\Microsoft.NET\Framework\v2.0.50727\mscorlib.dll
+
+debug: $(win)
+!if $(AMD64)
+	\bin\amd64\cdb .\$(win) $(WINDIR)\Microsoft.NET\Framework\v2.0.50727\mscorlib.dll
+!elseif $(386)
+	\bin\x86\cdb .\$(win) $(WINDIR)\Microsoft.NET\Framework\v2.0.50727\mscorlib.dll
+!endif
 
 clean:
 	$(RM_F) $(win) m2.obj *.ilk

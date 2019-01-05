@@ -5,7 +5,7 @@
 // https://www.ecma-international.org/publications/files/ECMA-ST/ECMA-335.pdf.
 
 // Implementation language is C++. At least C+11.
-// The following features of C++ are desirable or difficult to pass up:
+// The following features of C++ are desirable:
 //   RAII (destructors, C++98)
 //   enum class (C++11)
 //   std::size (C++17)
@@ -558,6 +558,14 @@ enum class NativeType_t
     // TODO
 };
 
+struct Param_t;
+struct Field_t;
+struct Property_t;
+struct TypeDef_t;
+struct MethodRef_t;
+struct MethodDef_t;
+struct Assembly_t;
+
 struct String_t : std::string
 {
 };
@@ -580,10 +588,6 @@ struct Member_t
     int64 offset;
 };
 
-struct Param_t;
-struct Field_t;
-struct Property_t;
-
 union Parent_t // Constant table0x0B
 {
     Param_t* Param;
@@ -591,17 +595,23 @@ union Parent_t // Constant table0x0B
     Property_t* Property;
 };
 
-struct MethodRef_t;
-struct MethodDef_t;
-
-union CustomAttributeType_t
+struct CustomAttributeType_t
 {
-    MethodDef_t* MethoDef;
-    MethodRef_t* MethoRef;
+	//union
+    MethodDef_t* MethodDef;
+    MethodRef_t* MethodRef;
 };
 
 typedef void *voidp;
 typedef struct _Unused_t { } *Unused_t;
+
+struct HasDeclSecurity_t
+{
+	//union
+	TypeDef_t* TypeDef;
+	MethodDef_t* MethodDef;
+	Assembly_t *Assembly;
+};
 
 union HasCustomAttribute_t
 {
@@ -791,6 +801,22 @@ enum class FieldFlags_t : uint16
     HasFieldMarshal           =   0x1000,     // Field has marshalling information.
     HasDefault                =   0x8000,     // Field has default.
     HasFieldRVA               =   0x0100,     // Field has RVA.
+};
+
+enum class DeclSecurityAction_t : uint16 // TODO get the values
+{
+    Assert,
+    Demand,
+    Deny,
+    InheritanceDemand,
+    LinkDemand,
+    NonCasDemand,
+    NonCasLinkDemand,
+    PrejitGrant,
+    PermitOnlh,
+    RequestMinimum,
+    RequestOptional,
+    RequestRefuse
 };
 
 struct Interface_t
@@ -1113,13 +1139,13 @@ enum class ParamFlags_t : uint16 // ParamAttributes
 
 //I think the best description is given by the SDK: "The CustomAttribute table stores data that can be used to instantiate a
 // Custom Attribute (more precisely, an object of the specified Custom Attribute class) at runtime. The column called Type
-//is slightly misleading – it actually indexes a constructor method – the owner of that constructor method is the Type of the Custom Attribute."
+//is slightly misleading - it actually indexes a constructor method - the owner of that constructor method is the Type of the Custom Attribute."
 
 // Columns:
 
-// • Parent (index into any metadata table, except the CustomAttribute table itself; more precisely, a HasCustomAttribute coded index)
-// • Type (index into the MethodDef or MethodRef table; more precisely, a CustomAttributeType coded index)
-// • Value (index into Blob heap)
+// - Parent (index into any metadata table, except the CustomAttribute table itself; more precisely, a HasCustomAttribute coded index)
+// - Type (index into the MethodDef or MethodRef table; more precisely, a CustomAttributeType coded index)
+// - Value (index into Blob heap)
 
 13 - FieldMarshal Table
 
@@ -1127,8 +1153,8 @@ enum class ParamFlags_t : uint16 // ParamAttributes
 
 // Columns:
 
-// • Parent (index into Field or Param table; more precisely, a HasFieldMarshal coded index)
-// • NativeType (index into the Blob heap)
+// - Parent (index into Field or Param table; more precisely, a HasFieldMarshal coded index)
+// - NativeType (index into the Blob heap)
 
 14 - DeclSecurity Table
 
@@ -1136,9 +1162,9 @@ Security attributes attached to a class, method or assembly.
 
 Columns:
 
-• Action (2-byte value)
-• Parent (index into the TypeDef, MethodDef or Assembly table; more precisely, a HasDeclSecurity coded index)
-• PermissionSet (index into Blob heap)
+- Action (2-byte value)
+- Parent (index into the TypeDef, MethodDef or Assembly table; more precisely, a HasDeclSecurity coded index)
+- PermissionSet (index into Blob heap)
 
 15 - ClassLayout Table
 
@@ -1147,9 +1173,9 @@ Columns:
 
 Columns:
 
-• PackingSize (a 2-byte constant)
-• ClassSize (a 4-byte constant)
-• Parent (index into TypeDef table)
+- PackingSize (a 2-byte constant)
+- ClassSize (a 4-byte constant)
+- Parent (index into TypeDef table)
 
 16 - FieldLayout Table
 
@@ -1157,8 +1183,8 @@ Related with the ClassLayout.
 
 Columns:
 
-• Offset (a 4-byte constant)
-• Field (index into the Field table)
+- Offset (a 4-byte constant)
+- Field (index into the Field table)
 
 18 - EventMap Table
 
@@ -1166,8 +1192,8 @@ List of events for a specific class.
 
 Columns:
 
-• Parent (index into the TypeDef table)
-• EventList (index into Event table). It marks the first of a contiguous run of Events owned by this Type. The run continues to the smaller of:
+- Parent (index into the TypeDef table)
+- EventList (index into Event table). It marks the first of a contiguous run of Events owned by this Type. The run continues to the smaller of:
         o the last row of the Event table
         o the next run of Events, found by inspecting the EventList of the next row in the EventMap table
 
@@ -1177,9 +1203,9 @@ Each row represents an event.
 
 Columns:
 
-• EventFlags (a 2-byte bitmask of type EventAttribute)
-• Name (index into String heap)
-• EventType (index into TypeDef, TypeRef or TypeSpec tables; more precisely, a TypeDefOrRef coded index) [this corresponds to the Type of the Event; it is not the Type that owns this event]
+- EventFlags (a 2-byte bitmask of type EventAttribute)
+- Name (index into String heap)
+- EventType (index into TypeDef, TypeRef or TypeSpec tables; more precisely, a TypeDefOrRef coded index) [this corresponds to the Type of the Event; it is not the Type that owns this event]
 
 Available flags are:
 
@@ -1198,9 +1224,9 @@ Each row represents a property.
 
 Columns:
 
-• Flags (a 2-byte bitmask of type PropertyAttributes)
-• Name (index into String heap)
-• Type (index into Blob heap) [the name of this column is misleading. It does not index a TypeDef or TypeRef table – instead it indexes the signature in the Blob heap of the Property)
+- Flags (a 2-byte bitmask of type PropertyAttributes)
+- Name (index into String heap)
+- Type (index into Blob heap) [the name of this column is misleading. It does not index a TypeDef or TypeRef table – instead it indexes the signature in the Blob heap of the Property)
 
 Available flags are:
 
@@ -1227,9 +1253,9 @@ typedef enum CorPropertyAttr
 
 Columns:
 
-• Class (index into TypeDef table)
-• MethodBody (index into MethodDef or MemberRef table; more precisely, a MethodDefOrRef coded index)
-• MethodDeclaration (index into MethodDef or MemberRef table; more precisely, a MethodDefOrRef coded index)
+- Class (index into TypeDef table)
+- MethodBody (index into MethodDef or MemberRef table; more precisely, a MethodDefOrRef coded index)
+- MethodDeclaration (index into MethodDef or MemberRef table; more precisely, a MethodDefOrRef coded index)
 
 26 - ModuleRef Table
 
@@ -1237,7 +1263,7 @@ Each row represents a reference to an external module.
 
 Columns:
 
-• Name (index into String heap)
+- Name (index into String heap)
 
 27 - TypeSpec Table
 
@@ -1245,7 +1271,7 @@ Each row represents a specification for a TypeDef or TypeRef. The only column in
 
 Columns:
 
-• Signature (index into the Blob heap)
+- Signature (index into the Blob heap)
 
 28 - ImplMap Table
 
@@ -1255,11 +1281,11 @@ Columns:
 
 // Columns:
 
-// • MappingFlags (a 2-byte bitmask of type PInvokeAttributes)
-// • MemberForwarded (index into the Field or MethodDef table; more precisely, a MemberForwarded coded index.
+// - MappingFlags (a 2-byte bitmask of type PInvokeAttributes)
+// - MemberForwarded (index into the Field or MethodDef table; more precisely, a MemberForwarded coded index.
 //  However, it only ever indexes the MethodDef table, since Field export is not supported)
-// • ImportName (index into the String heap)
-// • ImportScope (index into the ModuleRef table)
+// - ImportName (index into the String heap)
+// - ImportScope (index into the ModuleRef table)
 
 Available flags are:
 
@@ -1304,8 +1330,8 @@ Each row is an extension for a Field table. The RVA in this table gives the loca
 
 Columns:
 
-• RVA (a 4-byte constant)
-• Field (index into Field table)
+- RVA (a 4-byte constant)
+- Field (index into Field table)
 
 32 - Assembly Table
 
@@ -1313,12 +1339,12 @@ Columns:
 
 Columns:
 
-• HashAlgId (a 4-byte constant of type AssemblyHashAlgorithm)
-• MajorVersion, MinorVersion, BuildNumber, RevisionNumber (2-byte constants)
-• Flags (a 4-byte bitmask of type AssemblyFlags)
-• PublicKey (index into Blob heap)
-• Name (index into String heap)
-• Culture (index into String heap)
+- HashAlgId (a 4-byte constant of type AssemblyHashAlgorithm)
+- MajorVersion, MinorVersion, BuildNumber, RevisionNumber (2-byte constants)
+- Flags (a 4-byte bitmask of type AssemblyFlags)
+- PublicKey (index into Blob heap)
+- Name (index into String heap)
+- Culture (index into String heap)
 
 Available flags are:
 
@@ -1351,7 +1377,7 @@ The PublicKey is != 0, only if the StrongName Signature is present and the afPub
 
 Columns:
 
-• Processor (a 4-byte constant)
+- Processor (a 4-byte constant)
 
 34 - AssemblyOS Table
 
@@ -1359,9 +1385,9 @@ Columns:
 
 Columns:
 
-• OSPlatformID (a 4-byte constant)
-• OSMajorVersion (a 4-byte constant)
-• OSMinorVersion (a 4-byte constant)
+- OSPlatformID (a 4-byte constant)
+- OSMajorVersion (a 4-byte constant)
+- OSMinorVersion (a 4-byte constant)
 
 35 - AssemblyRef Table
 
@@ -1369,12 +1395,12 @@ Each row references an external assembly.
 
 Columns:
 
-• MajorVersion, MinorVersion, BuildNumber, RevisionNumber (2-byte constants)
-• Flags (a 4-byte bitmask of type AssemblyFlags)
-• PublicKeyOrToken (index into Blob heap – the public key or token that identifies the author of this Assembly)
-• Name (index into String heap)
-• Culture (index into String heap)
-• HashValue (index into Blob heap)
+- MajorVersion, MinorVersion, BuildNumber, RevisionNumber (2-byte constants)
+- Flags (a 4-byte bitmask of type AssemblyFlags)
+- PublicKeyOrToken (index into Blob heap – the public key or token that identifies the author of this Assembly)
+- Name (index into String heap)
+- Culture (index into String heap)
+- HashValue (index into Blob heap)
 
 The flags are the same ones of the Assembly table.
 
@@ -1384,8 +1410,8 @@ The flags are the same ones of the Assembly table.
 
 Columns:
 
-• Processor (4-byte constant)
-• AssemblyRef (index into the AssemblyRef table)
+- Processor (4-byte constant)
+- AssemblyRef (index into the AssemblyRef table)
 
 37 - AssemblyRefOS Table
 
@@ -1393,10 +1419,10 @@ Columns:
 
 Columns:
 
-• OSPlatformId (4-byte constant)
-• OSMajorVersion (4-byte constant)
-• OSMinorVersion (4-byte constant)
-• AssemblyRef (index into the AssemblyRef table)
+- OSPlatformId (4-byte constant)
+- OSMajorVersion (4-byte constant)
+- OSMinorVersion (4-byte constant)
+- AssemblyRef (index into the AssemblyRef table)
 
 38 - File Table
 
@@ -1404,9 +1430,9 @@ Each row references an external file.
 
 Columns:
 
-• Flags (a 4-byte bitmask of type FileAttributes)
-• Name (index into String heap)
-• HashValue (index into Blob heap)
+- Flags (a 4-byte bitmask of type FileAttributes)
+- Name (index into String heap)
+- HashValue (index into Blob heap)
 
 Available flags are:
 
@@ -1425,13 +1451,13 @@ typedef enum CorFileFlags
 
 Columns:
 
-• Flags (a 4-byte bitmask of type TypeAttributes)
-• TypeDefId (4-byte index into a TypeDef table of another module in this Assembly). This field is used as a
+- Flags (a 4-byte bitmask of type TypeAttributes)
+- TypeDefId (4-byte index into a TypeDef table of another module in this Assembly). This field is used as a
 // hint only. If the entry in the target TypeDef table matches the TypeName and TypeNamespace entries in
 //this table, resolution has succeeded. But if there is a mismatch, the CLI shall fall back to a search of the target TypeDef table
-• TypeName (index into the String heap)
-• TypeNamespace (index into the String heap)
-• Implementation. This can be an index (more precisely, an Implementation coded index) into one of 2 tables, as follows:
+- TypeName (index into the String heap)
+- TypeNamespace (index into the String heap)
+- Implementation. This can be an index (more precisely, an Implementation coded index) into one of 2 tables, as follows:
         o File table, where that entry says which module in the current assembly holds the TypeDef
         o ExportedType table, where that entry is the enclosing Type of the current nested Type
 
@@ -1443,10 +1469,10 @@ Each row references an internal or external resource.
 
 Columns:
 
-• Offset (a 4-byte constant)
-• Flags (a 4-byte bitmask of type ManifestResourceAttributes)
-• Name (index into the String heap)
-• Implementation (index into File table, or AssemblyRef table, or null; more precisely, an Implementation coded index)
+- Offset (a 4-byte constant)
+- Flags (a 4-byte bitmask of type ManifestResourceAttributes)
+- Name (index into the String heap)
+- Implementation (index into File table, or AssemblyRef table, or null; more precisely, an Implementation coded index)
 
 Available flags are:
 
@@ -1502,10 +1528,10 @@ shall extend some class and/or implement certain interfaces) or unconstrained..
 
 Columns:
 
-• Number (the 2-byte index of the generic parameter, numbered left-to-right, from zero)
-• Flags (a 2-byte bitmask of type GenericParamAttributes)
-• Owner (an index into the TypeDef or MethodDef table, specifying the Type or Method to which this generic parameter applies; more precisely, a TypeOrMethodDef coded index)
-• Name (a non-null index into the String heap, giving the name for the generic parameter. This is purely descriptive and is used only by source language compilers and by Reflection)
+- Number (the 2-byte index of the generic parameter, numbered left-to-right, from zero)
+- Flags (a 2-byte bitmask of type GenericParamAttributes)
+- Owner (an index into the TypeDef or MethodDef table, specifying the Type or Method to which this generic parameter applies; more precisely, a TypeOrMethodDef coded index)
+- Name (a non-null index into the String heap, giving the name for the generic parameter. This is purely descriptive and is used only by source language compilers and by Reflection)
 
 Available flags are:
 
@@ -1538,8 +1564,8 @@ The columns needed are, of course, only two
 
 Columns:
 
-// • Owner (an index into the GenericParam table, specifying to which generic parameter this row refers)
-// • Constraint (an index into the TypeDef, TypeRef, or TypeSpec tables, specifying from which class this
+// - Owner (an index into the GenericParam table, specifying to which generic parameter this row refers)
+// - Constraint (an index into the TypeDef, TypeRef, or TypeSpec tables, specifying from which class this
 // generic parameter is constrained to derive; or which interface this generic parameter is constrained
 // to implement; more precisely, a TypeDefOrRef coded index)
 
@@ -1688,33 +1714,25 @@ Field
 
 Description
 
-0
-
-1
+0 1
 
 Kind
 
 Flags as described above.
 
-1
-
-1
+1 1
 
 DataSize
 
 Size of the data for the block, including the header, say n*12+4.
 
-2
-
-2
+2 2
 
 Reserved
 
 Padding, always 0.
 
-4
-
-n
+4 n
 
 Clauses
 
@@ -1730,25 +1748,19 @@ Field
 
 Description
 
-0
-
-1
+0 1
 
 Kind
 
 Which type of exception block is being used
 
-1
-
-3
+1 3
 
 DataSize
 
 Size of the data for the block, including the header, say n*24+4.
 
-4
-
-n
+4 n
 
 Clauses
 
@@ -1764,25 +1776,19 @@ Field
 
 Description
 
-0
-
-2
+0 2
 
 Flags
 
 Flags, see below.
 
-2
-
-2
+2 2
 
 TryOffset
 
 Offset in bytes of try block from start of the header.
 
-4
-
-1
+4 1
 
 TryLength
 
@@ -1830,49 +1836,35 @@ Field
 
 Description
 
-0
+0 4
 
-4
+Flags Flags, see below.
 
-Flags
-
-Flags, see below.
-
-4
-
-4
+4 4
 
 TryOffset
 
 Offset in bytes of  try block from start of the header.
 
-8
-
-4
+8 4
 
 TryLength
 
 Length in bytes of the try block
 
-12
-
-4
+12 4
 
 HandlerOffset
 
 Location of the handler for this try block
 
-16
-
-4
+16 4
 
 HandlerLength
 
 Size of the handler code in bytes
 
-20
-
-4
+20 4
 
 ClassToken
 
@@ -2295,6 +2287,30 @@ struct EmptyBase_t
     METADATA_COLUMN2 (Parent, HasCustomAttribute)       \
     METADATA_COLUMN2 (Type, CustomAttributeType)        \
     METADATA_COLUMN2 (Value, blob))                     \
+                                                        \
+/*table0x0D*/METADATA_TABLE (FieldMarshal, ,            \
+    METADATA_COLUMN3 (Parent, HasFieldMarshal, FieldOrParam_t*) \
+    /* TODO METADATA_COLUMN2 (MarshalSpec, MarshalSpec_t)  */ /* TODO */ \
+    /* TODO METADATA_COLUMN2 (NativeType, blob) */ )          /* TODO */ \
+																	\
+/*table0x0E*/METADATA_TABLE (DeclSecurity, ,						\
+    METADATA_COLUMN3 (Action, uint16, DeclSecurityAction_t)			\
+    METADATA_COLUMN3 (Parent_or_Type_TODO, HasDeclSecurity, HasDeclSecurity_t)	\
+    METADATA_COLUMN2 (PermissionSet_or_Value_TODO, blob))							\
+                                                        \
+/*table0x0F*/ METADATA_TABLE (ClassLayout, ,			\
+	METADATA_COLUMN2 (TODO, uint32))					\
+                                                        \
+/*table0x10*/ METADATA_TABLE (FieldLayout, ,			\
+    METADATA_COLUMN2 (Offset, uint32)					\
+    )/* TODO METADATA_COLUMN (Field))*/					\
+                                                        \
+/*table0x11*/ METADATA_TABLE (StandaloneSig, ,			\
+    METADATA_COLUMN2 (Signature, blob))					\
+                                                        \
+/*table0x12*/ METADATA_TABLE (EventMap, ,				\
+    METADATA_COLUMN2 (Parent, TypeDef)					\
+    METADATA_COLUMN (EventList))						\
 
 // Every table has two maybe three maybe four sets of types/data/forms.
 // 1. A very typed form. Convenient to work with. Does the most work to form.
@@ -2304,7 +2320,6 @@ struct EmptyBase_t
 //    This is just, again, column sizes, and offsets. Used in conjunction
 //    with form 3. While a row of all fixed size/offset type is possible,
 //    this is simply correctly sized arrays of size/offset and maybe link to form 3.
-
 #define metadata_schema_TYPED_blob              Blob_t
 #define metadata_schema_TYPED_guid              Guid_t
 #define metadata_schema_TYPED_string            String_t
@@ -2337,6 +2352,7 @@ struct EmptyBase_t
 #define metadata_schema_TYPED_NotStored         Unused_t
 #define metadata_schema_TYPED_CustomAttributeType CustomAttributeType_t
 #define metadata_schema_TYPED_HasCustomAttribute HasCustomAttribute_t
+#define metadata_schema_TYPED_EventList			std::vector<Event_t*>
 
 // needed?
 //#define metadata_schema_TOKENED_string           MetadataString_t
@@ -2351,16 +2367,20 @@ struct EmptyBase_t
 
 #undef METADATA_TABLE
 #undef METADATA_COLUMN2
+#undef METADATA_COLUMN3
 #define METADATA_TABLE(name, base, columns)  struct name ##  _t base { columns };
 #define METADATA_COLUMN2(name, type) metadata_schema_TYPED_ ## type name;
+#define METADATA_COLUMN3(name, persistant_type, pointerful_type) pointerful_type name;
 METADATA_TABLES
 
 #undef METADATA_TABLE
 #undef METADATA_COLUMN2
+#undef METADATA_COLUMN3
 #define METADATA_TABLE(name, base, columns) \
 const metadata_schema_column_t metadata_column_ ## name [ ] = { columns }; \
 const metadata_table_schema_t metadata_row_schema_ ## name = { #name, CountOf (metadata_column_ ## name), metadata_column_ ## name };
 #define METADATA_COLUMN2(name, type) { # name, MetadataType_  ## type },
+#define METADATA_COLUMN3(name, persistant_type, pointerful_type) { # name, MetadataType_  ## persistant_type },
 METADATA_TABLES
 
 const metadata_schema_column_t metadata_columns_MethodImpl [ ] = // table0x19
@@ -2454,59 +2474,6 @@ const metadata_schema_column_t metadata_columns_PropertyMap [ ] = // table0x15
 };
 const metadata_table_schema_t metadata_row_schema_PropertyMap = { "PropertyMap", CountOf (metadata_columns_PropertyMap), metadata_columns_PropertyMap };
 
-struct metadata_StandaloneSig_t // table0x11
-{
-    metadata_blob_t Signature;
-};
-const metadata_schema_column_t metadata_columns_StandaloneSig [ ] = // table0x11
-{
-    { "Signature", MetadataType_blob },
-};
-const metadata_table_schema_t metadata_row_schema_StandaloneSig = { "StandaloneSig", CountOf (metadata_columns_StandaloneSig), metadata_columns_StandaloneSig };
-
-struct metadata_DeclSecurity_t // table0x0E
-{
-    enum class Action_t : uint16 // TODO get the values
-    {
-        Assert,
-        Demand,
-        Deny,
-        InheritanceDemand,
-        LinkDemand,
-        NonCasDemand,
-        NonCasLinkDemand,
-        PrejitGrant,
-        PermitOnlh,
-        RequestMinimum,
-        RequestOptional,
-        RequestRefuse
-    };
-    Action_t Action;
-    // TODO std::vector<uint8>
-    MetadataToken_t Parent; // typedef or methoddef or assembly, codedindex HasDeclSecurityType
-    // TODO std::vector<uint8>
-    metadata_blob_t PermissionSet; // blob
-};
-const metadata_schema_column_t metadata_columns_declsecurity [ ] = // table0x0E
-{
-    { "Action", MetadataType_uint16 },
-    { "Type", MetadataType_HasDeclSecurity },
-    { "Value", MetadataType_blob },
-};
-const metadata_table_schema_t metadata_row_schema_declsecurity = { "DeclSecurity", CountOf (metadata_columns_declsecurity), metadata_columns_declsecurity };
-
-struct metadata_EventMap_t // table0x12
-{
-    MetadataToken_t Parent; // typedef table
-    MetadataToken_t EventList; // event table
-};
-const metadata_schema_column_t metadata_columns_EventMap [ ] = // table0x12
-{
-    { "Parent", MetadataType_TypeDef },
-    { "EventList", MetadataType_EventList },
-};
-const metadata_table_schema_t metadata_row_schema_EventMap = { "EventMap", CountOf (metadata_columns_EventMap), metadata_columns_EventMap };
-
 struct metadata_Event_t // table0x14
 {
     Event_t::Flags_t Flags;
@@ -2542,39 +2509,10 @@ const metadata_schema_column_t metadata_columns_ExportedType [ ] = // table0x27
 };
 const metadata_table_schema_t metadata_row_schema_ExportedType = { "ExportedType", CountOf (metadata_columns_ExportedType), metadata_columns_ExportedType };
 
-struct metadata_FieldLayout_t // table0x10
-{
-    uint32 Offset;
-    MetadataToken_t Field;
-};
-const struct metadata_schema_column_t metadata_columns_FieldLayout [ ] = // table0x10
-{
-    { "Offset", MetadataType_uint32 },
-    { "Field", MetadataType_Field },
-};
-const metadata_table_schema_t metadata_row_schema_FieldLayout = { "FieldLayout", CountOf (metadata_columns_FieldLayout), metadata_columns_FieldLayout };
-
 struct MarshalSpec_t
 {
     // TODO
 };
-
-struct FieldMarshal_t // table0x0D
-{
-    FieldOrParam_t *Parent;
-    MarshalSpec_t MarshalSpec;
-};
-struct metadata_FieldMarshal_t // table0x0D
-{
-    MetadataToken_t Parent; // codedindex HasFieldMarshal
-    metadata_blob_t  NativeType;
-};
-const metadata_schema_column_t metadata_columns_FieldMarshal [ ] = // table0x0D
-{
-    { "Parent", MetadataType_HasFieldMarshal },
-    { "NativeType", MetadataType_blob },
-};
-const metadata_table_schema_t metadata_row_schema_FieldMarshal = { "FieldMarshal", CountOf (metadata_columns_FieldMarshal), metadata_columns_FieldMarshal };
 
 struct FieldRVA_t // table0x1D
 {
