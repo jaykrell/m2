@@ -32,7 +32,7 @@
 
 #include <memory.h>
 #include <stdint.h>
-#include <inttypes.h>
+//#include <inttypes.h>
 #include <assert.h>
 #include <string>
 #include <stdio.h>
@@ -106,28 +106,20 @@ typedef unsigned long long uint64;
 namespace m2
 {
 
-std::string
-string_vformat (const char *format, va_list va_orig)
+bool
+string_vformat_internal (const char *format, std::vector<char>& s, va_list va, va_list va2)
 {
-    va_list va;
-    va_list va2;
-    while (true) // Loop due to locale race?
-    {
-        va_copy (va, va_orig);
-        va_copy (va2, va_orig);
-        const int size = 2 + vsnprintf (0, 0, format, va);
-#if 0 // C++17; need to reset length after vsnprintf?
-        std::string s;
-        s.resize (size);
-        if (vsnprintf (s.data (), size, format, va2) < size)
-               return s;
-#else
-        std::vector<char> s;
-        s.resize (size);
-        if (vsnprintf (s.data (), size, format, va2) < size)
-               return &s [0];
-#endif
-    }
+    const int size = 2 + vsnprintf (0, 0, format, va);
+    s.resize (size);
+    return vsnprintf (s.data (), size, format, va2) < size;
+}
+
+std::string
+string_vformat (const char *format, va_list va)
+{
+    std::vector<char> s;
+    while (!string_vformat_internal (format, s, va, va)) ;
+    return &s [0];
 }
 
 std::string
@@ -143,35 +135,9 @@ string_format (const char *format, ...)
 #define not_implemented_yet() (assertf (0, "not yet implemented %s %d ", __func__, __LINE__))
 
 void
-assertf_failed (const char* condition, const char * format, ...)
-{
-    va_list args;
-    va_start (args, format);
-    fputs (("assertf_failed:" + std::string (condition) + ":" + m2::string_vformat (format, args) + "\n").c_str (), stderr);
-    assert (0);
-    abort ();
-}
-
-void
-assert_failed (const char * expr)
-{
-    fprintf (stderr, "assert_failed:%s\n", expr);
-    assert (0);
-    abort ();
-}
-
-#define release_assert(x)     ((x) || (assert_failed (!#x), (int)0))
-#define release_assertf(x, ...) ((x) || (assertf_failed (#x, __VA_ARGS__), 0))
-#ifdef NDEBUG
-#define assertf(x, y)          /* nothing */
-#else
-#define assertf           release_assertf
-#endif
-
-void
 throw_string (const std::string& a)
 {
-    fprintf (stderr, "%s\n", a.c_str());
+    //fprintf (stderr, "%s\n", a.c_str());
     throw a;
     //abort ();
 }
@@ -195,6 +161,33 @@ throw_LastError (const char* a = "")
     throw_int (GetLastError (), a);
 
 }
+#endif
+
+void
+assertf_failed (const char* condition, const char * format, ...)
+{
+    va_list args;
+    va_start (args, format);
+    //fputs (("assertf_failed:" + std::string (condition) + ":" + m2::string_vformat (format, args) + "\n").c_str (), stderr);
+    //assert (0);
+    //abort ();
+    throw_string ("assert_failed:" + std::string (condition) + ":" + m2::string_vformat (format, args) + "\n");
+}
+
+void
+assert_failed (const char * expr)
+{
+    fprintf (stderr, "assert_failed:%s\n", expr);
+    assert (0);
+    abort ();
+}
+
+#define release_assert(x)     ((x) || (assert_failed (!#x), (int)0))
+#define release_assertf(x, ...) ((x) || (assertf_failed (#x, __VA_ARGS__), 0))
+#ifdef NDEBUG
+#define assertf(x, y)          /* nothing */
+#else
+#define assertf           release_assertf
 #endif
 
 uint16
@@ -371,7 +364,7 @@ struct handle_t
         return a.QuadPart;
     }
 
-    void * h = 0;
+    void * h;
 
     handle_t (void *a) : h (a) { }
     handle_t () : h (0) { }
@@ -506,14 +499,14 @@ struct memory_mapped_file_t
 {
 // TODO allow for redirection to built-in data
 // TODO allow for systems that must read, not mmap
-    void * base = 0;
-    size_t size = 0;
+    void * base;
+    size_t size;
 #ifdef _WIN32
     handle_t file;
 #else
     fd_t file;
 #endif
-    //memory_mapped_file_t () { }
+    memory_mapped_file_t () : base(0), size(0) { }
 
     ~memory_mapped_file_t ()
     {
@@ -965,27 +958,27 @@ struct CodedIndex_t
 // if it fits 16 - n bits, where n = log base of the number of possible tables.
 // If so, the coded index is 16 bits, else 32 bits.
 #define CODED_INDICES                                                                   \
-CODED_INDEX (TypeDefOrRef,      TypeDef, TypeRef, TypeSpec)                             \
-CODED_INDEX (HasConstant,       Field, Param, Property)                                 \
-CODED_INDEX (HasFieldMarshal,   Field, Param)                                           \
-CODED_INDEX (HasDeclSecurity,   TypeDef, MethodDef, Assembly)                           \
-CODED_INDEX (MemberRefParent,   TypeDef, TypeRef, ModuleRef, MethodDef, TypeSpec)       \
-CODED_INDEX (HasSemantics,      Event, Property)                                        \
-CODED_INDEX (MethodDefOrRef,    MethodDef, MethodRef)                                   \
-CODED_INDEX (MemberForwarded,   Field, MethodDef)                                       \
-CODED_INDEX (Implementation,    File, AssemblyRef, ExportedType)                        \
+CODED_INDEX (TypeDefOrRef,      3, TypeDef, TypeRef, TypeSpec)                          \
+CODED_INDEX (HasConstant,       3, Field, Param, Property)                              \
+CODED_INDEX (HasFieldMarshal,   2, Field, Param)                                        \
+CODED_INDEX (HasDeclSecurity,   3, TypeDef, MethodDef, Assembly)                        \
+CODED_INDEX (MemberRefParent,   5, TypeDef, TypeRef, ModuleRef, MethodDef, TypeSpec)    \
+CODED_INDEX (HasSemantics,      2, Event, Property)                                     \
+CODED_INDEX (MethodDefOrRef,    3, MethodDef, MethodRef)                                \
+CODED_INDEX (MemberForwarded,   2, Field, MethodDef)                                    \
+CODED_INDEX (Implementation,    3, File, AssemblyRef, ExportedType)                     \
 /* CodeIndex(CustomAttributeType) has a range of 5 values but only 2 are valid. */      \
-CODED_INDEX (CustomAttributeType, -1, -1, MethodDef, MethodRef, -1)                     \
-CODED_INDEX (ResolutionScope, Module, ModuleRef, AssemblyRef, TypeRef)                  \
-CODED_INDEX (TypeOrMethodDef, TypeDef, MethodDef)                                       \
-CODED_INDEX (HasCustomAttribute,                                                        \
+CODED_INDEX (CustomAttributeType, 5, -1, -1, MethodDef, MethodRef, -1)                  \
+CODED_INDEX (ResolutionScope, 4, Module, ModuleRef, AssemblyRef, TypeRef)               \
+CODED_INDEX (TypeOrMethodDef, 2, TypeDef, MethodDef)                                    \
+CODED_INDEX (HasCustomAttribute, 22,                                                    \
       MethodDef,     Field,         TypeRef,      TypeDef,          Param,          /* HasCustomAttribute */ \
       InterfaceImpl, MemberRef,     Module,       DeclSecurity,     Property,       /* HasCustomAttribute */ \
       Event,         StandAloneSig, ModuleRef,    TypeSpec,         Assembly,       /* HasCustomAttribute */ \
       AssemblyRef,   File,          ExportedType, ManifestResource, GenericParam,   /* HasCustomAttribute */ \
       GenericParamConstraint, MethodSpec                                          ) /* HasCustomAttribute */
 
-#define CODED_INDEX(a, ...) a,
+#define CODED_INDEX(a, n, ...) a,
 enum class CodedIndex : uint8
 {
 CODED_INDICES
@@ -993,36 +986,36 @@ CODED_INDICES
     Count
 };
 
-template <typename ...Args> constexpr size_t va_count (Args&&...) { return sizeof...(Args); }
-
 struct CodedIndexMap_t // TODO array and named
 {
-#define CODED_INDEX(a, ...) int8 a [va_count (__VA_ARGS__)] = { __VA_ARGS__ };
+#define CODED_INDEX(a, n, ...) int8 a [n];
 CODED_INDICES
 #undef CODED_INDEX
 };
 
-const CodedIndexMap_t CodedIndexMap;
+const CodedIndexMap_t CodedIndexMap = {
+#define CODED_INDEX(a, n, ...) { __VA_ARGS__ },
+CODED_INDICES
+#undef CODED_INDEX
+};
 
-constexpr uint8 LogBase2 (unsigned a)
-{
-#define X(x) a > (1 << x) ? (x + 1) :
-    return X(31) X(30)
-           X(29) X(28) X(27) X(28) X(27) X(26) X(25) X(24) X(23) X(22) X(21) X(20)
-           X(19) X(18) X(17) X(18) X(17) X(16) X(15) X(14) X(13) X(12) X(11) X(10)
-           X( 9) X( 8) X( 7) X( 8) X( 7) X( 6) X( 5) X( 4) X( 3) X( 2) X( 1) X( 0)
-#undef X
-           0;
-}
+#define LOG_BASE2_X(a, x) (a) > (1 << x) ? (x + 1) :
+#define LOG_BASE2(a)                                                                                \
+    (LOG_BASE2_X(a, 31) LOG_BASE2_X(a, 30)                                                          \
+     LOG_BASE2_X(a, 29) LOG_BASE2_X(a, 28) LOG_BASE2_X(a, 27) LOG_BASE2_X(a, 26) LOG_BASE2_X(a, 25) \
+     LOG_BASE2_X(a, 24) LOG_BASE2_X(a, 23) LOG_BASE2_X(a, 22) LOG_BASE2_X(a, 21) LOG_BASE2_X(a, 20) \
+     LOG_BASE2_X(a, 19) LOG_BASE2_X(a, 18) LOG_BASE2_X(a, 17) LOG_BASE2_X(a, 16) LOG_BASE2_X(a, 15) \
+     LOG_BASE2_X(a, 14) LOG_BASE2_X(a, 13) LOG_BASE2_X(a, 12) LOG_BASE2_X(a, 11) LOG_BASE2_X(a, 10) \
+     LOG_BASE2_X(a,  9) LOG_BASE2_X(a,  8) LOG_BASE2_X(a,  7) LOG_BASE2_X(a,  6) LOG_BASE2_X(a,  5) \
+     LOG_BASE2_X(a,  4) LOG_BASE2_X(a,  3) LOG_BASE2_X(a,  2) LOG_BASE2_X(a,  1) LOG_BASE2_X(a,  0) 0)
 
-//#define CountOf(x) (std::size(x)) // C++17
 #define CountOf(x) (sizeof (x) / sizeof ((x)[0])) // TODO
 #define CountOfField(x, y) (CountOf(x().y))
 #define CODED_INDEX(x, ...) CodedIndex_t x;
 
 union CodedIndices_t
 {
-    CodedIndex_t array [(uint8)CodedIndex::Count];
+    CodedIndex_t array [(uint)CodedIndex::Count];
     struct {
 CODED_INDICES
 #undef CODED_INDEX
@@ -1030,7 +1023,7 @@ CODED_INDICES
 };
 
 const CodedIndices_t CodedIndices = {{
-#define CODED_INDEX(x, ...) {LogBase2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) },
+#define CODED_INDEX(x, n, ...) {LOG_BASE2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) },
 CODED_INDICES
 #undef CODED_INDEX
 }};
@@ -1101,7 +1094,8 @@ struct MetadataTablesHeader_t // tilde stream
 
 struct MetadataRoot_t
 {
-    /* 0 */ uint32 Signature = 0x424A5342;
+    enum { SIGNATURE = 0x424A5342 };
+    /* 0 */ uint32 Signature;
     /* 4 */ uint16 MajorVersion; // 1, ignore
     /* 6 */ uint16 MinorVersion; // 1, ignore
     /* 8 */ uint32 Reserved;     // 0
@@ -2078,7 +2072,7 @@ metadata_size_codedindex (const MetadataType_t* type, loaded_image_t* image)
 }
 
 uint
-image_metadata_size_index (loaded_image_t* image, uint8 /* todo enum */ table_index);
+image_metadata_size_index (loaded_image_t* image, uint /* todo enum */ table_index);
 
 uint
 metadata_size_index (const MetadataType_t* type, loaded_image_t* image)
@@ -2693,22 +2687,31 @@ struct DynamicTableColumnFunctions_t
 
 struct DynamicTableColumn_t
 {
-    uint8 size = 0;
-    uint8 offset = 0;
+    DynamicTableColumn_t()
+    {
+        memset (this, 0, sizeof (*this));
+    }
+
+    uint8 size;
+    uint8 offset;
 };
 
 struct DynamicTableInfoElement_t
 {
-    uint32 RowCount = 0;
-    uint32 RowSize = 0;
-    void* Base = 0;
-    bool Present = false;
-    uint32 ColumnCount = 0;
-    DynamicTableColumn_t* ColumnInfo = 0;
+    //DynamicTableInfoElement_t() { memset (this, 0, sizeof (*this)); }
+
+    uint32 RowCount;
+    uint32 RowSize;
+    void* Base;
+    bool Present;
+    uint32 ColumnCount;
+    DynamicTableColumn_t* ColumnInfo;
 };
 
 union DynamicTableInfo_t
 {
+    DynamicTableInfo_t() { memset (this, 0, sizeof (*this)); }
+
     DynamicTableInfoElement_t array [
 #undef METADATA_TABLE
 #define METADATA_TABLE(name, base, columns) 1+
@@ -2780,9 +2783,11 @@ static const char * const table_names [ ] =
 
 struct metadata_table_t
 {
-    void * base = 0;
-    uint index = 0;
-    uint row_size = 0;
+    metadata_table_t() { memset (this, 0, sizeof (*this)); }
+
+    void * base;
+    uint index;
+    uint row_size;
 };
 
 static const metadata_table_schema_t *  const metadata_int_to_table_schema [ ] =
@@ -2793,7 +2798,48 @@ static const metadata_table_schema_t *  const metadata_int_to_table_schema [ ] =
     &metadata_row_schema_TypeDef,
 };
 
-struct loaded_image_t
+struct loaded_image_t_z // zeroed loaded_image_t
+{
+    loaded_image_t_z() { memset (this, 0, sizeof (*this)); }
+
+    DynamicTableInfo_t table_info;
+    bool table_present [64]; // index by metadata table, values are 0/false and 1/true
+    uint8 row_size [64]; // index by metadata table
+    uint8 coded_index_size [64]; // 2 or 4
+    uint8 index_size [64]; // 2 or 4
+    uint64 file_size;
+    void * base;
+    image_dos_header_t* dos;
+    uint32 pe_offset;
+    uchar* pe;
+    image_nt_headers_t *nt;
+    image_optional_header32_t *opt32;
+    image_optional_header64_t *opt64;
+    uint32 opt_magic;
+    uint number_of_sections;
+    char * strings;
+    char * guids;
+    uint string_index_size;
+    uint guid_index_size;
+    MetadataTablesHeader_t * metadata_tables;
+    uint32 * number_of_rows; // points into metadata_tables_header
+    uint NumberOfRvaAndSizes;
+    uint number_of_streams;
+    uint blob_size; // 2 or 4
+    uint string_size; // 2 or 4
+    uint ustring_size; // 2 or 4
+    uint guid_size; // 2 or 4
+    struct
+    {
+        MetadataStreamHeader_t* tables;
+        MetadataStreamHeader_t* guid;
+        MetadataStreamHeader_t* string; // utf8
+        MetadataStreamHeader_t* ustring; // unicode/user strings
+        MetadataStreamHeader_t* blob;
+    } streams;
+};
+
+struct loaded_image_t : loaded_image_t_z
 {
     uint compute_row_size (const metadata_table_schema_t* schema)
     {
@@ -2807,7 +2853,7 @@ struct loaded_image_t
         }
         return size;
     }
-    uint get_row_size (uint8 a)
+    uint get_row_size (uint a)
     {
         uint b = row_size [a];
         if (b)
@@ -2824,43 +2870,8 @@ struct loaded_image_t
         printf ("%s present:%u\n", prefix.c_str (), table_present [a]);
         printf ("%s row_size:%u\n", prefix.c_str (), get_row_size (a));
     }
-    DynamicTableInfo_t table_info = { };
-    bool table_present [64] = { }; // index by metadata table, values are 0/false and 1/true
-    uint8 row_size [64] = { }; // index by metadata table
-    uint8 coded_index_size [64] = { }; // 2 or 4
-    uint8 index_size [64] = { }; // 2 or 4
-    uint64 file_size = 0;
     memory_mapped_file_t mmf;
-    void * base = 0;
-    image_dos_header_t* dos = 0;
-    uint32 pe_offset = 0;
-    uchar* pe = 0;
-    image_nt_headers_t *nt = 0;
-    image_optional_header32_t *opt32 = 0;
-    image_optional_header64_t *opt64 = 0;
-    uint32 opt_magic = 0;
-    uint number_of_sections = 0;
     std::vector<image_section_header_t*> section_headers;
-    char * strings = 0;
-    char * guids = 0;
-    uint string_index_size = 0;
-    uint guid_index_size = 0;
-    MetadataTablesHeader_t * metadata_tables = 0;
-    uint32 * number_of_rows = 0; // points into metadata_tables_header
-    uint NumberOfRvaAndSizes = 0;
-    uint number_of_streams = 0;
-    uint blob_size = 0; // 2 or 4
-    uint string_size = 0; // 2 or 4
-    uint ustring_size = 0; // 2 or 4
-    uint guid_size = 0; // 2 or 4
-    struct
-    {
-        MetadataStreamHeader_t* tables;
-        MetadataStreamHeader_t* guid;
-        MetadataStreamHeader_t* string; // utf8
-        MetadataStreamHeader_t* ustring; // unicode/user strings
-        MetadataStreamHeader_t* blob;
-    } streams;
 
     void init (const char *file_name)
     {
@@ -2902,8 +2913,8 @@ struct loaded_image_t
         image_data_directory_t* DataDirectory = opt32 ? opt32->DataDirectory : opt64->DataDirectory;
         for (uint i = 0; i < NumberOfRvaAndSizes; ++i)
         {
-            printf ("DataDirectory [%02X].Offset: %#06X\n", i, DataDirectory[i].VirtualAddress);
-            printf ("DataDirectory [%02X].Size: %#06X\n", i, DataDirectory[i].Size);
+            printf ("DataDirectory [%02X].Offset: 0x%06X\n", i, DataDirectory[i].VirtualAddress);
+            printf ("DataDirectory [%02X].Size: 0x%06X\n", i, DataDirectory[i].Size);
         }
         release_assertf (DataDirectory [14].VirtualAddress, "Not a .NET image? %x", DataDirectory [14].VirtualAddress);
         release_assertf (DataDirectory [14].Size, "Not a .NET image? %x", DataDirectory [14].Size);
@@ -3061,23 +3072,23 @@ metadata_size_codedindex_compute (loaded_image_t* image, CodedIndex coded_index)
 uint
 loadedimage_metadata_size_codedindex_get (loaded_image_t* image, CodedIndex coded_index)
 {
-    const uint a = image->coded_index_size [(uint8)coded_index];
+    const uint a = image->coded_index_size [(uint)coded_index];
     if (a)
         return a;
     return metadata_size_codedindex_compute (image, coded_index);
 }
 
 uint
-metadata_size_index_compute (loaded_image_t* image, uint8 /* todo enum */ table_index)
+metadata_size_index_compute (loaded_image_t* image, uint /* todo enum */ table_index)
 {
     uint row_count = image->table_info.array [table_index].RowCount;
     return (row_count <= 0xFFFF) ? 2 : 4;
 }
 
 uint
-image_metadata_size_index (loaded_image_t* image, uint8 /* todo enum */ table_index)
+image_metadata_size_index (loaded_image_t* image, uint /* todo enum */ table_index)
 {
-    const uint a = image->row_size [(uint8)table_index];
+    const uint a = image->row_size [(uint)table_index];
     if (a)
         return a;
     return metadata_size_index_compute (image, table_index);
@@ -3096,12 +3107,12 @@ X (sizeof (image_dos_header_t));
 X (sizeof (image_file_header_t));
 X (sizeof (image_nt_headers_t));
 X (sizeof (image_section_header_t));
-//X (CodedIndex_TypeDefOrRef.tag_size);
-//X (CodedIndex_ResolutionScope.tag_size);
-//X (CodedIndex_HasConstant.tag_size);
-//X (CodedIndex_HasCustomAttribute.tag_size);
-//X (CodedIndex_HasFieldMarshal.tag_size);
-//X (CodedIndex_HasDeclSecurity.tag_size);
+X (CodedIndices.array[(uint)CodedIndex(TypeDefOrRef)].tag_size);
+X (CodedIndices.array[(uint)CodedIndex(ResolutionScope)].tag_size);
+X (CodedIndices.array[(uint)CodedIndex(HasConstant)].tag_size);
+X (CodedIndices.array[(uint)CodedIndex(HasCustomAttribute)].tag_size);
+X (CodedIndices.array[(uint)CodedIndex(HasFieldMarshal)].tag_size);
+X (CodedIndices.array[(uint)CodedIndex(HasDeclSecurity)].tag_size);
 #undef X
     try
     {
@@ -3113,7 +3124,7 @@ X (sizeof (image_section_header_t));
     }
     catch (const std::string& er)
     {
-        fprintf (stderr, "error %s\n", er.c_str());
+        fprintf (stderr, "%s", er.c_str());
     }
     return 0;
 }

@@ -99,7 +99,7 @@ clean:
 #
 
 $(win): m2.cpp
-	cl /MD /Zi /EHsc /std:c++14 $** /link /out:$@ /incremental:no
+	cl /MD /Zi /EHsc $** /link /out:$@ /incremental:no
 
 !else
 else
