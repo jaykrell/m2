@@ -745,15 +745,16 @@ struct Type_t // class, valuetype, delegate, inteface, not char, short, int, lon
 {
 };
 
+enum class EventFlags_t : uint16
+{
+    SpecialName           =   0x0200,     // event is special. Name describes how.
+    // Reserved flags for Runtime use only.
+    RTSpecialName         =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
+};
+
 struct Event_t : Member_t // table0x14
 {
-    enum class Flags_t : uint16
-    {
-        SpecialName           =   0x0200,     // event is special. Name describes how.
-        // Reserved flags for Runtime use only.
-        RTSpecialName         =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
-    };
-    Flags_t Flags;
+    EventFlags_t Flags;
     String_t Name;
     Type_t* EventType;
 };
@@ -827,13 +828,29 @@ struct Signature_t
 
 struct Class_t
 {
-        Class_t* base;
-        std::string name;
-        std::vector<Interface_t> interfaces;
-        std::vector<Method_t> methods;
-        std::vector<Field_t> fields;
-        std::vector<Event_t> events;
-        std::vector<Property_t> properties;
+    Class_t* base;
+    std::string name;
+    std::vector<Interface_t> interfaces;
+    std::vector<Method_t> methods;
+    std::vector<Field_t> fields;
+    std::vector<Event_t> events;
+    std::vector<Property_t> properties;
+};
+
+enum class MethodSemanticsFlags_t : uint16 // CorMethodSemanticsAttr
+{
+    Setter = 1, // msSetter
+    Getter = 2,
+    Other = 4,
+    AddOn = 8,
+    RemoveOn = 0x10,
+    Fire = 0x20,
+};
+
+union MethodSemanticsAssociation_t // table0x18
+{
+    Event_t* Event;
+    Property_t* Property;
 };
 
 // TODO enum or bitfield
@@ -856,59 +873,59 @@ struct Guid_t
 };
 
 // TODO enum
-const uint8 Module = 0;
-const uint8 TypeRef = 1;
-const uint8 TypeDef = 2;
-const uint8 FiedPtr = 3; // nonstandard
-const uint8 Field = 4;
-const uint8 MethodPtr = 5; // nonstandard
-const uint8 MethodDef = 6;
-const uint8 ParamPtr = 7; // nonstandard
-const uint8 Param = 8;
-const uint8 InterfaceImpl = 9;
-const uint8 MemberRef = 10;
-const uint8 MethodRef = MemberRef;
-const uint8 FierldRef = MemberRef;
-const uint8 Constant = 11;
-const uint8 CustomAttribute = 12;
-const uint8 FieldMarshal = 13;
-const uint8 DeclSecurity = 14;
-const uint8 ClassLayout = 15;
-const uint8 FieldLayout = 16;
-const uint8 StandAloneSig = 17;
-const uint8 EventMap = 18;
-const uint8 EventPtr = 19; // nonstandard
-const uint8 Event = 20;
-const uint8 PropertyMap = 21;
-const uint8 ProperyPtr = 22; // nonstandard
-const uint8 Property = 23;
-const uint8 MethodSemantics = 24; // 0x18
-const uint8 MethodImpl = 25; // 0x19
-const uint8 ModuleRef = 26;
-const uint8 TypeSpec = 27;
-const uint8 ImplMap = 28;
-const uint8 FieldRVA = 29;
-const uint8 ENCLog = 30; // nonstandard
-const uint8 ENCMap = 31; // nonstandard
-const uint8 Assembly = 32;
-const uint8 AssemblyProcessor = 33;
-const uint8 AssemblyOS = 34;
-const uint8 AssemblyRef = 35;
-const uint8 AssemblyRefProcessor = 36;
-const uint8 AssemblyRefOS = 37;
-const uint8 File = 38;
-const uint8 ExportedType = 39;
-const uint8 ManifestResource = 40; // 0x28
-const uint8 NestedClass = 41;
-const uint8 GenericParam = 42; // 0x2A
-const uint8 MethodSpec = 0x2B;
-const uint8 GenericParamConstraint = 44; // 0x2C
+const uint Module = 0;
+const uint TypeRef = 1;
+const uint TypeDef = 2;
+const uint FiedPtr = 3; // nonstandard
+const uint Field = 4;
+const uint MethodPtr = 5; // nonstandard
+const uint MethodDef = 6;
+const uint ParamPtr = 7; // nonstandard
+const uint Param = 8;
+const uint InterfaceImpl = 9;
+const uint MemberRef = 10;
+const uint MethodRef = MemberRef;
+const uint FierldRef = MemberRef;
+const uint Constant = 11;
+const uint CustomAttribute = 12;
+const uint FieldMarshal = 13;
+const uint DeclSecurity = 14;
+const uint ClassLayout = 15;
+const uint FieldLayout = 16;
+const uint StandAloneSig = 17;
+const uint EventMap = 18;
+const uint EventPtr = 19; // nonstandard
+const uint Event = 20;
+const uint PropertyMap = 21;
+const uint ProperyPtr = 22; // nonstandard
+const uint Property = 23;
+const uint MethodSemantics = 24; // 0x18
+const uint MethodImpl = 25; // 0x19
+const uint ModuleRef = 26;
+const uint TypeSpec = 27;
+const uint ImplMap = 28;
+const uint FieldRVA = 29;
+const uint ENCLog = 30; // nonstandard
+const uint ENCMap = 31; // nonstandard
+const uint Assembly = 32;
+const uint AssemblyProcessor = 33;
+const uint AssemblyOS = 34;
+const uint AssemblyRef = 35;
+const uint AssemblyRefProcessor = 36;
+const uint AssemblyRefOS = 37;
+const uint File = 38;
+const uint ExportedType = 39;
+const uint ManifestResource = 40; // 0x28
+const uint NestedClass = 41;
+const uint GenericParam = 42; // 0x2A
+const uint MethodSpec = 0x2B;
+const uint GenericParamConstraint = 44; // 0x2C
 
 // TODO enum/bitfield
-const uint8 CorILMethod_TinyFormat = 2;
-const uint8 CorILMethod_FatFormat = 3;
-const uint8 CorILMethod_MoreSects = 8;
-const uint8 CorILMethod_InitLocals = 0x10;
+const uint CorILMethod_TinyFormat = 2;
+const uint CorILMethod_FatFormat = 3;
+const uint CorILMethod_MoreSects = 8;
+const uint CorILMethod_InitLocals = 0x10;
 
 struct method_header_tiny_t
 // no locals
@@ -2305,6 +2322,45 @@ struct EmptyBase_t
 /*table0x12*/ METADATA_TABLE (EventMap, ,				\
     METADATA_COLUMN2 (Parent, TypeDef)					\
     METADATA_COLUMN (EventList))						\
+                                                        \
+/*table0x13*/ METADATA_TABLE (Table13, , METADATA_COLUMN (Unused)) \
+                                                        \
+/*table0x14*/ METADATA_TABLE (metadata_Event, ,		    \
+    METADATA_COLUMN3 (Flags, uint16, EventFlags_t)		\
+    METADATA_COLUMN2 (Name, string)		                \
+    METADATA_COLUMN2 (EventType, TypeDefOrRef))		    \
+                                                        \
+/*table0x15*/ METADATA_TABLE (PropertyMap, ,		    \
+    METADATA_COLUMN2 (Parent, TypeDef)		            \
+    METADATA_COLUMN (PropertyList))		                \
+                                                        \
+/*table0x16*/ METADATA_TABLE (Table16, , METADATA_COLUMN (Unused))  \
+                                                                    \
+/*table0x17*/ METADATA_TABLE (metadata_Property, ,		            \
+    METADATA_COLUMN2 (Flags, uint16)		                        \
+    METADATA_COLUMN2 (Name, string)		                            \
+    METADATA_COLUMN2 (Type, blob))		                            \
+                                                                    \
+/* .property and .event                                             \
+   Links Events and Properties to specific methods.                 \
+   For example one Event can be associated to more methods.         \
+   A property uses this table to associate get/set methods. */      \
+/*table0x18*/ METADATA_TABLE (metadata_MethodSemantics, ,	        \
+    METADATA_COLUMN3 (Semantics, uint16, MethodSemanticsFlags_t)    \
+    METADATA_COLUMN3 (Method, MethodDef, MethodDef_t*) /* index into MethodDef table, 2 or 4 bytes */ \
+    METADATA_COLUMN3 (Association, HasSemantics, MethodSemanticsAssociation_t)) /* Event or Property, CodedIndex */ \
+                                                        \
+
+const metadata_schema_column_t metadata_columns_MethodImpl [ ] = // table0x19
+{
+    { "Class", MetadataType_TypeDef }, // index into TypeDef, 2 or 4 bytes
+    { "ImplFlags", MetadataType_uint16 }, // TODO higher level support
+    { "Flags", MetadataType_uint16 }, // TODO higher level support
+    { "Name", MetadataType_string },
+    { "Signature", MetadataType_blob },
+    { "ParamList", MetadataType_ParamList }, // index into Param table, 2 or 4 bytes
+};
+const metadata_table_schema_t metadata_row_schema_MethodImpl = { "MethodImpl", CountOf (metadata_columns_MethodImpl), metadata_columns_MethodImpl };
 
 // Every table has two maybe three maybe four sets of types/data/forms.
 // 1. A very typed form. Convenient to work with. Does the most work to form.
@@ -2332,6 +2388,7 @@ struct EmptyBase_t
 #define metadata_schema_TYPED_Mvid              Guid_t
 #define metadata_schema_TYPED_Name              String_t
 #define metadata_schema_TYPED_ParamList         std::vector<Param_t*>
+#define metadata_schema_TYPED_PropertyList      std::vector<Property_t*>
 #define metadata_schema_TYPED_Parent            Parent_t
 #define metadata_schema_TYPED_RVA               uint32
 #define metadata_schema_TYPED_ResolutionScope   voidp /* TODO union? */
@@ -2377,47 +2434,6 @@ const metadata_table_schema_t metadata_row_schema_ ## name = { #name, CountOf (m
 #define METADATA_COLUMN3(name, persistant_type, pointerful_type) { # name, MetadataType_  ## persistant_type },
 METADATA_TABLES
 
-const metadata_schema_column_t metadata_columns_MethodImpl [ ] = // table0x19
-{
-    { "Class", MetadataType_TypeDef }, // index into TypeDef, 2 or 4 bytes
-    { "ImplFlags", MetadataType_uint16 }, // TODO higher level support
-    { "Flags", MetadataType_uint16 }, // TODO higher level support
-    { "Name", MetadataType_string },
-    { "Signature", MetadataType_blob },
-    { "ParamList", MetadataType_ParamList }, // index into Param table, 2 or 4 bytes
-};
-const metadata_table_schema_t metadata_row_schema_MethodImpl = { "MethodImpl", CountOf (metadata_columns_MethodImpl), metadata_columns_MethodImpl };
-
-// .property and .event
-// Links Events and Properties to specific methods.
-// For example one Event can be associated to more methods.
-// A property uses this table to associate get/set methods.
-struct MethodSemantics_t // table0x18
-{
-    enum class Attributes_t : uint16 // CorMethodSemanticsAttr
-    {
-        Setter = 1, // msSetter
-        Getter = 2,
-        Other = 4,
-        AddOn = 8,
-        RemoveOn = 0x10,
-        Fire = 0x20,
-    };
-    Attributes_t Semantics;
-    Method_t* Method;
-    union {
-        Event_t* Event;
-        Property_t* Property;
-    } Association;
-};
-const metadata_schema_column_t metadata_columns_MethodSemantics [ ] = // table0x18
-{
-    { "Semantics", MetadataType_uint16 },
-    { "Method", MetadataType_MethodDef }, // index into MethodDef table, 2 or 4 bytes
-    { "Association", MetadataType_HasSemantics }, // Event or Property, CodedIndex
-};
-const metadata_table_schema_t metadata_row_schema_MethodSemantics = { "MethodSemantics", CountOf (metadata_columns_MethodSemantics), metadata_columns_MethodSemantics };
-
 const metadata_schema_column_t metadata_columns_MethodSpec [ ] = // table0x2B
 {
     { "Method", MetadataType_MethodDefOrRef },
@@ -2447,40 +2463,6 @@ const metadata_schema_column_t metadata_columns_NestedClass [ ] = // table0x29
     { "EnclosingClass", MetadataType_TypeDef },
 };
 const metadata_table_schema_t metadata_row_schema_NestedClass = { "NestedClass", CountOf (metadata_columns_NestedClass), metadata_columns_NestedClass };
-
-const metadata_schema_column_t metadata_columns_Property [ ] = // table0x17
-{
-    { "Flags", MetadataType_uint16 },
-    { "Name", MetadataType_string },
-    { "Type", MetadataType_blob },
-};
-const metadata_table_schema_t metadata_row_schema_Property = { "Property", CountOf (metadata_columns_Property), metadata_columns_Property };
-
-struct PropertyMap_t // table0x15
-{
-    Type_t* Parent;
-    std::vector<Property_t*> PropertyList;
-};
-const metadata_schema_column_t metadata_columns_PropertyMap [ ] = // table0x15
-{
-    { "Parent", MetadataType_TypeDef },
-    { "PropertyList", MetadataType_PropertyList },
-};
-const metadata_table_schema_t metadata_row_schema_PropertyMap = { "PropertyMap", CountOf (metadata_columns_PropertyMap), metadata_columns_PropertyMap };
-
-struct metadata_Event_t // table0x14
-{
-    Event_t::Flags_t Flags;
-    MetadataString_t Name;
-    MetadataToken_t EventType;
-};
-const metadata_schema_column_t metadata_columns_Event [ ] = // table0x14
-{
-    { "Flags", MetadataType_uint16 },
-    { "Name", MetadataType_string },
-    { "EventType", MetadataType_TypeDefOrRef },
-};
-const metadata_table_schema_t metadata_row_schema_Event = { "Event", CountOf (metadata_columns_Event), metadata_columns_Event };
 
 struct ExportedType_t // table0x27
 {
