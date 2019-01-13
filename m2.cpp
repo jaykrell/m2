@@ -30,9 +30,14 @@
 //#define _LARGEFILE_SOURCE
 //#define _LARGEFILE64_SOURCE
 
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wunused-const-variable"
+#endif
 #include <memory.h>
+#ifndef _WIN32
 #include <stdint.h>
-//#include <inttypes.h>
+#include <inttypes.h>
+#endif
 #include <assert.h>
 #include <string>
 #include <stdio.h>
@@ -53,8 +58,13 @@
 #include <vector>
 #include <string>
 
-#if !defined(PRIX64) && defined(_WIN32)
+#if !defined(PRIX64)
+#if defined(_WIN32)
 #define PRIX64 "I64X"
+#elif defined(_ILP64)
+#else
+#define PRIX64 "llX"
+#endif
 #endif
 
 typedef unsigned char uchar;
@@ -216,12 +226,12 @@ struct image_dos_header_t
             uint16 mz;
             uint8 pad [64-6];
             uint32 pe;
-        };
+        } b;
         char a [64];
-    };
+    } u;
 
-    bool check_sig () { return a [0] == 'M' && a [1] == 'Z'; }
-    unsigned get_pe () { return unpack4le (&a [60]); }
+    bool check_sig () { return u.a [0] == 'M' && u.a [1] == 'Z'; }
+    unsigned get_pe () { return unpack4le (&u.a [60]); }
 };
 
 struct image_file_header_t
@@ -739,10 +749,17 @@ enum class TypeFlags_t : uint32
     ReservedMask          =   0x00040800,
     RTSpecialName         =   0x00000800,     // Runtime should check name encoding.
     HasSecurity           =   0x00040000,     // Class has security associate with it.
-    };
+};
 
 struct Type_t // class, valuetype, delegate, inteface, not char, short, int, long, float
 {
+};
+
+enum class EventFlags_t : uint16
+{
+    SpecialName           =   0x0200,     // event is special. Name describes how.
+    // Reserved flags for Runtime use only.
+    RTSpecialName         =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
 };
 
 enum class EventFlags_t : uint16
@@ -854,12 +871,12 @@ union MethodSemanticsAssociation_t // table0x18
 };
 
 // TODO enum or bitfield
-const uint COMIMAGE_FLAGS_ILONLY = 1;
-const uint COMIMAGE_FLAGS_32BITREQUIRED = 2;
-const uint COMIMAGE_FLAGS_IL_LIBRARY = 4;
-const uint COMIMAGE_FLAGS_STRONGNAMESIGNED = 8;
-const uint COMIMAGE_FLAGS_NATIVE_ENTRYPOINT = 0x10;
-const uint COMIMAGE_FLAGS_TRACKDEBUGDATA = 0x10000;
+//const uint COMIMAGE_FLAGS_ILONLY = 1;
+//const uint COMIMAGE_FLAGS_32BITREQUIRED = 2;
+//const uint COMIMAGE_FLAGS_IL_LIBRARY = 4;
+//const uint COMIMAGE_FLAGS_STRONGNAMESIGNED = 8;
+//const uint COMIMAGE_FLAGS_NATIVE_ENTRYPOINT = 0x10;
+//const uint COMIMAGE_FLAGS_TRACKDEBUGDATA = 0x10000;
 
 // TODO enum or bitfield
 // Bit clear: 16 bit; bit set: 32 bit
@@ -876,16 +893,16 @@ struct Guid_t
 const uint Module = 0;
 const uint TypeRef = 1;
 const uint TypeDef = 2;
-const uint FiedPtr = 3; // nonstandard
+//const uint FieldPtr = 3; // nonstandard
 const uint Field = 4;
-const uint MethodPtr = 5; // nonstandard
+//const uint MethodPtr = 5; // nonstandard
 const uint MethodDef = 6;
-const uint ParamPtr = 7; // nonstandard
+//const uint ParamPtr = 7; // nonstandard
 const uint Param = 8;
 const uint InterfaceImpl = 9;
 const uint MemberRef = 10;
 const uint MethodRef = MemberRef;
-const uint FierldRef = MemberRef;
+const uint FieldRef = MemberRef;
 const uint Constant = 11;
 const uint CustomAttribute = 12;
 const uint FieldMarshal = 13;
@@ -894,10 +911,10 @@ const uint ClassLayout = 15;
 const uint FieldLayout = 16;
 const uint StandAloneSig = 17;
 const uint EventMap = 18;
-const uint EventPtr = 19; // nonstandard
+//const uint EventPtr = 19; // nonstandard
 const uint Event = 20;
 const uint PropertyMap = 21;
-const uint ProperyPtr = 22; // nonstandard
+//const uint ProperyPtr = 22; // nonstandard
 const uint Property = 23;
 const uint MethodSemantics = 24; // 0x18
 const uint MethodImpl = 25; // 0x19
@@ -905,8 +922,8 @@ const uint ModuleRef = 26;
 const uint TypeSpec = 27;
 const uint ImplMap = 28;
 const uint FieldRVA = 29;
-const uint ENCLog = 30; // nonstandard
-const uint ENCMap = 31; // nonstandard
+//const uint ENCLog = 30; // nonstandard
+//const uint ENCMap = 31; // nonstandard
 const uint Assembly = 32;
 const uint AssemblyProcessor = 33;
 const uint AssemblyOS = 34;
@@ -1026,6 +1043,9 @@ CODED_INDICES
      LOG_BASE2_X(a,  9) LOG_BASE2_X(a,  8) LOG_BASE2_X(a,  7) LOG_BASE2_X(a,  6) LOG_BASE2_X(a,  5) \
      LOG_BASE2_X(a,  4) LOG_BASE2_X(a,  3) LOG_BASE2_X(a,  2) LOG_BASE2_X(a,  1) LOG_BASE2_X(a,  0) 0)
 
+const CodedIndexMap_t CodedIndexMap;
+
+//#define CountOf(x) (std::size(x)) // C++17
 #define CountOf(x) (sizeof (x) / sizeof ((x)[0])) // TODO
 #define CountOfField(x, y) (CountOf(x().y))
 #define CODED_INDEX(x, ...) CodedIndex_t x;
@@ -1036,7 +1056,7 @@ union CodedIndices_t
     struct {
 CODED_INDICES
 #undef CODED_INDEX
-};
+	} name;
 };
 
 const CodedIndices_t CodedIndices = {{
@@ -1608,60 +1628,18 @@ Field
 
 Description
 
-0
+0 12 (bits) Flags Flags (CorILMethod_FatFormat shall be set in bits 0:1).
+12 (bits) 4 (bits) Size Size of this header expressed as the count of 4-byte integers occupied (currently 3).
 
-12 (bits)
-
-Flags
-
-Flags (CorILMethod_FatFormat shall be set in bits 0:1).
-
-12 (bits)
-
-4 (bits)
-
-Size
-
-Size of this header expressed as the count of 4-byte integers occupied (currently 3).
-
-2
-
-2
-
-MaxStack
-
-Maximum number of items on the operand stack.
-
-4
-
-4
-
-CodeSize
-
-Size in bytes of the actual method body
-
-8
-
-4
-
-LocalVarSigTok
-
-Meta Data token for a signature describing the layout of the local variables for the method.  0 means there are no local variables present. This field references a stand-alone signature in the MetaData tables, which references an entry in the #Blob stream.
+2 2 MaxStack Maximum number of items on the operand stack.
+4 4 CodeSize Size in bytes of the actual method body
+8 4 LocalVarSigTok Meta Data token for a signature describing the layout of the local variables for the method.  0 means there are no local variables present. This field references a stand-alone signature in the MetaData tables, which references an entry in the #Blob stream.
 
 The available flags are:
 
-Flag
+Flag Value Description CorILMethod_FatFormat
 
-Value
-
-Description
-
-CorILMethod_FatFormat
-
-0x3
-
-Method header is fat.
-
+0x3 Method header is fat.
 CorILMethod_TinyFormat
 
 0x2
@@ -1717,185 +1695,48 @@ Another data section occurs after this current section
 // No other types than the exception handling sections are declared (this doesn't mean
 // you shouldn't check the CorILMethod_Sect_EHTable flag). So if the section is small it will be:
 
-Offset
+Offset Size Field Description
+0 1 Kind Flags as described above.
 
-Size
+1 1 DataSize Size of the data for the block, including the header, say n*12+4.
 
-Field
+2 2 Reserved Padding, always 0.
 
-Description
-
-0 1
-
-Kind
-
-Flags as described above.
-
-1 1
-
-DataSize
-
-Size of the data for the block, including the header, say n*12+4.
-
-2 2
-
-Reserved
-
-Padding, always 0.
-
-4 n
-
-Clauses
-
-n small exception clauses.
+4 n Clauses n small exception clauses.
 
 Otherwise:
 
-Offset
+Offset Size Field Description
 
-Size
-
-Field
-
-Description
-
-0 1
-
-Kind
-
-Which type of exception block is being used
-
-1 3
-
-DataSize
-
-Size of the data for the block, including the header, say n*24+4.
-
-4 n
-
-Clauses
-
-n fat exception clauses.
+0 1 Kind Which type of exception block is being used
+1 3 DataSize Size of the data for the block, including the header, say n*24+4.
+4 n Clauses n fat exception clauses.
 
 The number of the clauses is given byte the DataSize. I mean you have to subtract the size of the header and then divide by the size of a Fat/Small exception clause (this, of course, depends on the kind of header). The small one:
 
-Offset
+Offset Size Field Description
 
-Size
-
-Field
-
-Description
-
-0 2
-
-Flags
-
-Flags, see below.
-
-2 2
-
-TryOffset
-
-Offset in bytes of try block from start of the header.
-
-4 1
-
-TryLength
-
-Length in bytes of the try block
-
-5
-
-2
-
-HandlerOffset
-
-Location of the handler for this try block
-
-7
-
-1
-
-HandlerLength
-
-Size of the handler code in bytes
-
-8
-
-4
-
-ClassToken
-
-Meta data token for a type-based exception handler
-
-8
-
-4
-
-FilterOffset
-
-Offset in method body for filter-based exception handler
-
+0 2 Flags Flags, see below.
+2 2 TryOffset Offset in bytes of try block from start of the header.
+4 1 TryLength Length in bytes of the try block
+5 2 HandlerOffset Location of the handler for this try block
+7 1 HandlerLength Size of the handler code in bytes
+8 4 ClassToken Meta data token for a type-based exception handler
+8 4 FilterOffset Offset in method body for filter-based exception handler
 And the fat one:
 
-Offset
-
-Size
-
-Field
-
-Description
-
-0 4
-
-Flags Flags, see below.
-
-4 4
-
-TryOffset
-
-Offset in bytes of  try block from start of the header.
-
-8 4
-
-TryLength
-
-Length in bytes of the try block
-
-12 4
-
-HandlerOffset
-
-Location of the handler for this try block
-
-16 4
-
-HandlerLength
-
-Size of the handler code in bytes
-
-20 4
-
-ClassToken
-
-Meta data token for a type-based exception handler
-
-20
-
-4
-
-FilterOffset
-
-Offset in method body for filter-based exception handler
+Offset Size Field Description
+0 4 Flags Flags, see below.
+4 4 TryOffset Offset in bytes of  try block from start of the header.
+8 4 TryLength Length in bytes of the try block
+12 4 HandlerOffset Location of the handler for this try block
+16 4 HandlerLength Size of the handler code in bytes
+20 4 ClassToken Meta data token for a type-based exception handler
+20 4 FilterOffset Offset in method body for filter-based exception handler
 
 Available flags are:
 
-Flag
-
-Value
-
-Description
+Flag Value Description
 
 const uint8 COR_ILEXCEPTION_CLAUSE_EXCEPTION = 0; // A typed exception clause
 const uint8 COR_ILEXCEPTION_CLAUSE_FILTER = 1; // An exception filter and handler clause
@@ -2154,45 +1995,45 @@ const MetadataTypeFunctions_t MetadataType_CodedIndex =
     metadata_size_codedindex,
 };
 
-const MetadataType_t MetadataType_int8 = { "int8", &MetadataType_Fixed, 1 };
-const MetadataType_t MetadataType_int16 = { "int16", &MetadataType_Fixed, 2 };
-const MetadataType_t MetadataType_int32 = { "int32", &MetadataType_Fixed, 4 };
-const MetadataType_t MetadataType_int64 = { "int64", &MetadataType_Fixed, 8 };
-const MetadataType_t MetadataType_uint8 = { "uint8", &MetadataType_Fixed, 1 };
-const MetadataType_t MetadataType_uint16 = { "uint16", &MetadataType_Fixed, 2 };
-const MetadataType_t MetadataType_uint32 = { "uint32", &MetadataType_Fixed, 4 };
-const MetadataType_t MetadataType_uint64 = { "uint64", &MetadataType_Fixed, 8 };
-const MetadataType_t MetadataType_ResolutionScope = { "ResolutionScope", &MetadataType_CodedIndex, (int8)CodedIndex(ResolutionScope) };
+const MetadataType_t MetadataType_int8 = { "int8", &MetadataType_Fixed, {1} };
+const MetadataType_t MetadataType_int16 = { "int16", &MetadataType_Fixed, {2} };
+const MetadataType_t MetadataType_int32 = { "int32", &MetadataType_Fixed, {4} };
+const MetadataType_t MetadataType_int64 = { "int64", &MetadataType_Fixed, {8} };
+const MetadataType_t MetadataType_uint8 = { "uint8", &MetadataType_Fixed, {1} };
+const MetadataType_t MetadataType_uint16 = { "uint16", &MetadataType_Fixed, {2} };
+const MetadataType_t MetadataType_uint32 = { "uint32", &MetadataType_Fixed, {4} };
+const MetadataType_t MetadataType_uint64 = { "uint64", &MetadataType_Fixed, {8} };
+const MetadataType_t MetadataType_ResolutionScope = { "ResolutionScope", &MetadataType_CodedIndex, {(int8)CodedIndex(ResolutionScope)} };
 // heap indices or offsets
 const MetadataType_t MetadataType_string = { "string", &MetadataType_string_functions };
-const MetadataType_t MetadataType_guid = { "guid", &MetadataType_Fixed, 16 };
+const MetadataType_t MetadataType_guid = { "guid", &MetadataType_Fixed, {16} };
 const MetadataType_t MetadataType_blob = { "blob",  &MetadataType_blob_functions };
 // table indices
-const MetadataType_t MetadataType_Field = { "FieldList", &MetadataType_Index, Field };
-const MetadataType_t MetadataType_HasCustomAttribute = { "HasCustomAttribute", &MetadataType_CodedIndex, (int8)CodedIndex(HasCustomAttribute) };
-const MetadataType_t MetadataType_HasFieldMarshal = { "HasFieldMarshal", &MetadataType_CodedIndex, (int8)CodedIndex(HasFieldMarshal) };
-const MetadataType_t MetadataType_HasSemantics = {" HasSemantics", &MetadataType_CodedIndex, (int8)CodedIndex(HasSemantics) };
-const MetadataType_t MetadataType_HasDeclSecurity = { "HasDeclSecurity", &MetadataType_CodedIndex, (int8)CodedIndex(HasDeclSecurity) };
-const MetadataType_t MetadataType_GenericParam = { "GenericParam", &MetadataType_Index, GenericParam };
-const MetadataType_t MetadataType_MemberForwarded = { "MemberForwarded", &MetadataType_CodedIndex, (int8)CodedIndex(MemberForwarded) };
-const MetadataType_t MetadataType_MemberRefParent = { "MemberRefParent", &MetadataType_CodedIndex, (int8)CodedIndex(MemberRefParent) };
-const MetadataType_t MetadataType_MethodDef = { "MethodDef", &MetadataType_Index, MethodDef };
-const MetadataType_t MetadataType_MethodDefOrRef = { "MethodDefOrRef", &MetadataType_CodedIndex, (int8)CodedIndex(MethodDefOrRef) };
-const MetadataType_t MetadataType_Property = { "Property", &MetadataType_Index, Property };
-const MetadataType_t MetadataType_TypeDefOrRef = { "TypeDefOrRef", &MetadataType_CodedIndex, (int8)CodedIndex(TypeDefOrRef) };
-const MetadataType_t MetadataType_TypeDef = { "TypeDef", &MetadataType_Index, TypeDef };
-const MetadataType_t MetadataType_CustomAttributeType = { "CustomAttributeType", &MetadataType_CodedIndex, (int8)CodedIndex(CustomAttributeType) };
-const MetadataType_t MetadataType_Implementation = { "Implementation", &MetadataType_CodedIndex, (int8)CodedIndex(Implementation) };
-const MetadataType_t MetadataType_TypeOrMethodDef = { "TypeOrMethodDef", &MetadataType_CodedIndex, (int8)CodedIndex(TypeOrMethodDef) };
+const MetadataType_t MetadataType_Field = { "FieldList", &MetadataType_Index, {Field} };
+const MetadataType_t MetadataType_HasCustomAttribute = { "HasCustomAttribute", &MetadataType_CodedIndex, {(int8)CodedIndex(HasCustomAttribute)} };
+const MetadataType_t MetadataType_HasFieldMarshal = { "HasFieldMarshal", &MetadataType_CodedIndex, {(int8)CodedIndex(HasFieldMarshal)} };
+const MetadataType_t MetadataType_HasSemantics = {" HasSemantics", &MetadataType_CodedIndex, {(int8)CodedIndex(HasSemantics)} };
+const MetadataType_t MetadataType_HasDeclSecurity = { "HasDeclSecurity", &MetadataType_CodedIndex, {(int8)CodedIndex(HasDeclSecurity)} };
+const MetadataType_t MetadataType_GenericParam = { "GenericParam", &MetadataType_Index, {GenericParam} };
+const MetadataType_t MetadataType_MemberForwarded = { "MemberForwarded", &MetadataType_CodedIndex, {(int8)CodedIndex(MemberForwarded)} };
+const MetadataType_t MetadataType_MemberRefParent = { "MemberRefParent", &MetadataType_CodedIndex, {(int8)CodedIndex(MemberRefParent)} };
+const MetadataType_t MetadataType_MethodDef = { "MethodDef", &MetadataType_Index, {MethodDef} };
+const MetadataType_t MetadataType_MethodDefOrRef = { "MethodDefOrRef", &MetadataType_CodedIndex, {(int8)CodedIndex(MethodDefOrRef)} };
+const MetadataType_t MetadataType_Property = { "Property", &MetadataType_Index, {Property} };
+const MetadataType_t MetadataType_TypeDefOrRef = { "TypeDefOrRef", &MetadataType_CodedIndex, {(int8)CodedIndex(TypeDefOrRef)} };
+const MetadataType_t MetadataType_TypeDef = { "TypeDef", &MetadataType_Index, {TypeDef} };
+const MetadataType_t MetadataType_CustomAttributeType = { "CustomAttributeType", &MetadataType_CodedIndex, {(int8)CodedIndex(CustomAttributeType)} };
+const MetadataType_t MetadataType_Implementation = { "Implementation", &MetadataType_CodedIndex, {(int8)CodedIndex(Implementation)} };
+const MetadataType_t MetadataType_TypeOrMethodDef = { "TypeOrMethodDef", &MetadataType_CodedIndex, {(int8)CodedIndex(TypeOrMethodDef)} };
 
 // Lists go to end of table, or start of next list, referenced from next element of same table
-const MetadataType_t MetadataType_EventList = { "EventList", &MetadataType_IndexList, Event };
-const MetadataType_t MetadataType_FieldList = { "FieldList", &MetadataType_IndexList, Field };
-const MetadataType_t MetadataType_MethodList = { "MethodList", &MetadataType_IndexList, MethodDef };
-const MetadataType_t MetadataType_ParamList = { "ParamList", &MetadataType_IndexList, Param };
-const MetadataType_t MetadataType_PropertyList = { "PropertyList", &MetadataType_IndexList, Property };
+const MetadataType_t MetadataType_EventList = { "EventList", &MetadataType_IndexList, {Event} };
+const MetadataType_t MetadataType_FieldList = { "FieldList", &MetadataType_IndexList, {Field} };
+const MetadataType_t MetadataType_MethodList = { "MethodList", &MetadataType_IndexList, {MethodDef} };
+const MetadataType_t MetadataType_ParamList = { "ParamList", &MetadataType_IndexList, {Param} };
+const MetadataType_t MetadataType_PropertyList = { "PropertyList", &MetadataType_IndexList, {Property} };
 const MetadataType_t MetadataType_Unused = { "Unused" /* TODO runtime error */ };
-const MetadataType_t MetadataType_NotStored = { "NotStored", &MetadataType_Fixed, 0 };
+const MetadataType_t MetadataType_NotStored = { "NotStored", &MetadataType_Fixed };
 
 // enums/flags
 #define MetadataType_TypeFlags          MetadataType_uint32 /* TODO? */
@@ -2230,23 +2071,25 @@ struct EmptyBase_t
 {
 };
 
+#define NOTHING /* nothing */
+
 // The ordering of the tables here is important -- it assigns their enums.
 // The ordering of the columns within the tables is also important.
 // The second parameter to METADATA_COLUMN can go away.
 #define METADATA_TABLES                                 \
-/* table0x00*/ METADATA_TABLE (Module, ,                \
+/* table0x00*/ METADATA_TABLE (Module, NOTHING,         \
     METADATA_COLUMN2 (Generation, uint16) /* ignore */  \
     METADATA_COLUMN (Name)                              \
     METADATA_COLUMN (Mvid)                              \
     METADATA_COLUMN2 (EncId, guid) /* ignore */         \
     METADATA_COLUMN2 (EncBaseId, guid)) /* ignore */    \
                                                         \
-/*table0x00*/ METADATA_TABLE (TypeRef, ,                \
+/*table0x00*/ METADATA_TABLE (TypeRef, NOTHING,         \
     METADATA_COLUMN (ResolutionScope)                   \
     METADATA_COLUMN (TypeName)                          \
     METADATA_COLUMN (TypeNameSpace))                    \
                                                         \
-/*table0x01*/ METADATA_TABLE (TypeDef, ,                \
+/*table0x01*/ METADATA_TABLE (TypeDef, NOTHING,         \
     METADATA_COLUMN2 (Flags, TypeFlags)                 \
     METADATA_COLUMN (TypeName)                          \
     METADATA_COLUMN (TypeNameSpace)                     \
@@ -2254,16 +2097,18 @@ struct EmptyBase_t
     METADATA_COLUMN (FieldList)                         \
     METADATA_COLUMN (MethodList))                       \
                                                         \
-/*table0x03*/ METADATA_TABLE (Table3, , METADATA_COLUMN (Unused)) \
+/*table0x03*/ METADATA_TABLE (Table3, NOTHING,			\
+	METADATA_COLUMN (Unused)) \
                                                             \
 /*table0x04*/ METADATA_TABLE (Field, : Member_t,            \
     METADATA_COLUMN2 (Flags, FieldFlags)                    \
     METADATA_COLUMN (Name)                                  \
     METADATA_COLUMN (Signature))                            \
                                                             \
-/*table0x05*/METADATA_TABLE (Table5 /*MethodPtr nonstandard*/, , METADATA_COLUMN (Unused))  \
+/*table0x05*/METADATA_TABLE (Table5 /*MethodPtr nonstandard*/, NOTHING, \
+	METADATA_COLUMN (Unused))  \
                                                             \
-/*table0x06*/METADATA_TABLE (MethodDef, ,           \
+/*table0x06*/METADATA_TABLE (MethodDef, NOTHING,    \
     METADATA_COLUMN (RVA)                           \
     METADATA_COLUMN2 (ImplFlags, MethodDefImplFlags) /* TODO higher level support */     \
     METADATA_COLUMN2 (Flags, MethodDefFlags) /* TODO higher level support */             \
@@ -2271,55 +2116,55 @@ struct EmptyBase_t
     METADATA_COLUMN (Signature)      /* Blob heap, 7 bit encode/decode */         \
     METADATA_COLUMN (ParamList)) /* Param table, start, until table end, or start of next MethodDef; index into Param table, 2 or 4 bytes */ \
                                                                                 \
-/*table0x07*/METADATA_TABLE (Table7 /*ParamPtr nonstandard*/, , METADATA_COLUMN (Unused))      \
+/*table0x07*/METADATA_TABLE (Table7 /*ParamPtr nonstandard*/, NOTHING,	\
+	METADATA_COLUMN (Unused))      \
                                                                         \
-/*table0x08*/METADATA_TABLE (Param, ,                                   \
+/*table0x08*/METADATA_TABLE (Param, NOTHING,	                        \
     METADATA_COLUMN2 (Flags, uint16)                                    \
     METADATA_COLUMN (Sequence)                                          \
     METADATA_COLUMN (Name))                                             \
                                                                         \
-/*table0x09*/METADATA_TABLE (InterfaceImpl, ,                           \
+/*table0x09*/METADATA_TABLE (InterfaceImpl, NOTHING,                    \
     METADATA_COLUMN2 (Class, TypeDef)                                   \
     METADATA_COLUMN (Interface)) /* TypeDefOrRef or Spec */             \
                                                                         \
-/*table0x0A*/METADATA_TABLE (MemberRef, ,                               \
-    METADATA_COLUMN2 (Class, MemberRefParent)                           \
-    METADATA_COLUMN (Name)       /*string*/                             \
-    METADATA_COLUMN (Signature)) /*blob*/                               \
-                                                                        \
-/*table0x0B*/METADATA_TABLE (Constant, ,                \
+/*table0x0A*/METADATA_TABLE (MemberRef, NOTHING,		\
+    METADATA_COLUMN2 (Class, MemberRefParent)           \
+    METADATA_COLUMN (Name)       /*string*/             \
+    METADATA_COLUMN (Signature)) /*blob*/               \
+                                                        \
+/*table0x0B*/METADATA_TABLE (Constant, NOTHING,         \
     METADATA_COLUMN2 (Type, uint8)                      \
     METADATA_COLUMN2 (Pad, uint8)                       \
     METADATA_COLUMN (Parent)                            \
     METADATA_COLUMN2 (Value, blob)                      \
     METADATA_COLUMN2 (IsNull, NotStored))               \
                                                         \
-/*table0x0C*/METADATA_TABLE (CustomAttribute, ,         \
+/*table0x0C*/METADATA_TABLE (CustomAttribute, NOTHING,  \
     METADATA_COLUMN2 (Parent, HasCustomAttribute)       \
     METADATA_COLUMN2 (Type, CustomAttributeType)        \
     METADATA_COLUMN2 (Value, blob))                     \
                                                         \
-/*table0x0D*/METADATA_TABLE (FieldMarshal, ,            \
+/*table0x0D*/METADATA_TABLE (FieldMarshal, NOTHING,     \
     METADATA_COLUMN3 (Parent, HasFieldMarshal, FieldOrParam_t*) \
-    /* TODO METADATA_COLUMN2 (MarshalSpec, MarshalSpec_t)  */ /* TODO */ \
-    /* TODO METADATA_COLUMN2 (NativeType, blob) */ )          /* TODO */ \
+    METADATA_COLUMN2 (NativeType, blob))    \
 																	\
 /*table0x0E*/METADATA_TABLE (DeclSecurity, ,						\
     METADATA_COLUMN3 (Action, uint16, DeclSecurityAction_t)			\
     METADATA_COLUMN3 (Parent_or_Type_TODO, HasDeclSecurity, HasDeclSecurity_t)	\
     METADATA_COLUMN2 (PermissionSet_or_Value_TODO, blob))							\
                                                         \
-/*table0x0F*/ METADATA_TABLE (ClassLayout, ,			\
+/*table0x0F*/ METADATA_TABLE (ClassLayout, NOTHING,		\
 	METADATA_COLUMN2 (TODO, uint32))					\
                                                         \
-/*table0x10*/ METADATA_TABLE (FieldLayout, ,			\
+/*table0x10*/ METADATA_TABLE (FieldLayout, NOTHING,		\
     METADATA_COLUMN2 (Offset, uint32)					\
     )/* TODO METADATA_COLUMN (Field))*/					\
                                                         \
-/*table0x11*/ METADATA_TABLE (StandaloneSig, ,			\
+/*table0x11*/ METADATA_TABLE (StandaloneSig, NOTHING,	\
     METADATA_COLUMN2 (Signature, blob))					\
                                                         \
-/*table0x12*/ METADATA_TABLE (EventMap, ,				\
+/*table0x12*/ METADATA_TABLE (EventMap, NOTHING,		\
     METADATA_COLUMN2 (Parent, TypeDef)					\
     METADATA_COLUMN (EventList))						\
                                                         \
@@ -2634,7 +2479,7 @@ const int8 ClassLayout = 15;
 
 const int8 MemberRef = 10;
 const int8 MethodRef = MemberRef;
-const int8 FierldRef = MemberRef;
+const int8 FieldRef = MemberRef;
 const int8 Constant = 11;
 const int8 CustomAttribute = 12;
 const int8 FieldMarshal = 13;
@@ -2758,7 +2603,7 @@ static const char * const table_names [ ] =
 "MethodSpec",
 "GenericParamConstraint",
 };
-    if (a < CountOf (table_names))
+    if (a >= 0 && a < (int)CountOf (table_names))
         return table_names [a];
     return "unknown";
 }
@@ -2846,7 +2691,6 @@ struct loaded_image_t : loaded_image_t_z
     }
     void dump_table (uint a)
     {
-        uint64 one = 1;
         auto prefix = string_format ("table %X (%s)", a, GetTableName (a));
         printf ("%s\n", prefix.c_str ());
         printf ("%s present:%u\n", prefix.c_str (), table_present [a]);
@@ -2884,7 +2728,7 @@ struct loaded_image_t : loaded_image_t_z
         opt64 = (image_optional_header64_t*)(&nt->OptionalHeader);
         opt_magic = opt32->Magic;
         release_assertf ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), "file:%s opt_magic:%x", file_name, opt_magic);
-        printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, opt32, opt64);
+        printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, (void*)opt32, (void*)opt64);
         NumberOfRvaAndSizes = opt32 ? opt32->NumberOfRvaAndSizes : opt64->NumberOfRvaAndSizes;
         printf ("opt.rvas:%X\n", NumberOfRvaAndSizes);
         number_of_sections = nt->FileHeader.NumberOfSections;
@@ -2964,9 +2808,9 @@ unknown_stream:
         printf ("metadata_tables.MinorVersion:%X\n", metadata_tables->MinorVersion);
         printf ("metadata_tables.HeapSizes:%X\n", metadata_tables->HeapSizes);
         auto const HeapSize = metadata_tables->HeapSizes;
-        string_size = (HeapSize & 1) ? 4 : 2;
-        guid_size = (HeapSize & 2) ? 4 : 2;
-        blob_size = (HeapSize & 4) ? 4 : 2;
+        string_size = (HeapSize & HeapOffsetSize_String) ? 4 : 2;
+        guid_size = (HeapSize & HeapOffsetSize_Guid) ? 4 : 2;
+        blob_size = (HeapSize & HeapOffsetSize_Blob) ? 4 : 2;
         printf ("metadata_tables.reserved2:%X\n", metadata_tables->reserved2);
         uint64 valid = metadata_tables->Valid;
         uint64 sorted = metadata_tables->Sorted;
