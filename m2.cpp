@@ -899,6 +899,14 @@ struct Class_t
     std::vector<Property_t> properties;
 };
 
+class MethodBody_t
+{
+};
+
+class MethodDeclaration_t
+{
+};
+
 enum _MethodSemanticsFlags_t // CorMethodSemanticsAttr
 {
     MethodSemanticsFlags_Setter = 1, // msSetter
@@ -2177,84 +2185,110 @@ struct EmptyBase_t
     METADATA_COLUMN2 (Class, TypeDef)                                   \
     METADATA_COLUMN (Interface)) /* TypeDefOrRef or Spec */             \
                                                                         \
-/*table0x0A*/METADATA_TABLE (MemberRef, NOTHING,                    \
-    METADATA_COLUMN2 (Class, MemberRefParent)                       \
-    METADATA_COLUMN (Name)       /*string*/                         \
-    METADATA_COLUMN (Signature)) /*blob*/                           \
-                                                                    \
-/*table0x0B*/METADATA_TABLE (Constant, NOTHING,                     \
-    METADATA_COLUMN2 (Type, uint8)                                  \
-    METADATA_COLUMN2 (Pad, uint8)                                   \
-    METADATA_COLUMN (Parent)                                        \
-    METADATA_COLUMN2 (Value, blob)                                  \
-    METADATA_COLUMN2 (IsNull, NotStored))                           \
-                                                                    \
-/*table0x0C*/METADATA_TABLE (CustomAttribute, NOTHING,              \
-    METADATA_COLUMN2 (Parent, HasCustomAttribute)                   \
-    METADATA_COLUMN2 (Type, CustomAttributeType)                    \
-    METADATA_COLUMN2 (Value, blob))                                 \
-                                                                    \
-/*table0x0D*/METADATA_TABLE (FieldMarshal, NOTHING,                 \
-    METADATA_COLUMN3 (Parent, HasFieldMarshal, FieldOrParam_t*)     \
-    METADATA_COLUMN2 (NativeType, blob))                            \
-                                                                    \
-/*table0x0E*/METADATA_TABLE (DeclSecurity, NOTHING,                 \
-    METADATA_COLUMN3 (Action, uint16, DeclSecurityAction_t)         \
+/*table0x0A*/METADATA_TABLE (MemberRef, NOTHING,                        \
+    METADATA_COLUMN2 (Class, MemberRefParent)                           \
+    METADATA_COLUMN (Name)       /*string*/                             \
+    METADATA_COLUMN (Signature)) /*blob*/                               \
+                                                                        \
+/*table0x0B*/METADATA_TABLE (Constant, NOTHING,                         \
+    METADATA_COLUMN2 (Type, uint8)                                      \
+    METADATA_COLUMN2 (Pad, uint8)                                       \
+    METADATA_COLUMN (Parent)                                            \
+    METADATA_COLUMN2 (Value, blob)                                      \
+    METADATA_COLUMN2 (IsNull, NotStored))                               \
+                                                                        \
+/*table0x0C*/METADATA_TABLE (CustomAttribute, NOTHING,                  \
+    METADATA_COLUMN2 (Parent, HasCustomAttribute)                       \
+    METADATA_COLUMN2 (Type, CustomAttributeType)                        \
+    METADATA_COLUMN2 (Value, blob))                                     \
+                                                                        \
+/*table0x0D*/METADATA_TABLE (FieldMarshal, NOTHING,                     \
+    METADATA_COLUMN3 (Parent, HasFieldMarshal, FieldOrParam_t*)         \
+    METADATA_COLUMN2 (NativeType, blob))                                \
+                                                                        \
+/*table0x0E*/METADATA_TABLE (DeclSecurity, NOTHING,                     \
+    METADATA_COLUMN3 (Action, uint16, DeclSecurityAction_t)             \
     METADATA_COLUMN3 (Parent_or_Type_TODO, HasDeclSecurity, HasDeclSecurity_t)  \
     METADATA_COLUMN2 (PermissionSet_or_Value_TODO, blob))                       \
-                                                                    \
-/*table0x0F*/ METADATA_TABLE (ClassLayout, NOTHING,                 \
-    METADATA_COLUMN2 (TODO, uint32))                                \
-                                                                    \
-/*table0x10*/ METADATA_TABLE (FieldLayout, NOTHING,                 \
-    METADATA_COLUMN2 (Offset, uint32)                               \
-    )/* TODO METADATA_COLUMN (Field))*/                             \
-                                                                    \
-/*table0x11*/ METADATA_TABLE (StandaloneSig, NOTHING,               \
-    METADATA_COLUMN2 (Signature, blob))                             \
-                                                                    \
-/*table0x12*/ METADATA_TABLE (EventMap, NOTHING,                    \
-    METADATA_COLUMN2 (Parent, TypeDef)                              \
-    METADATA_COLUMN (EventList))                                    \
-                                                                    \
+                                                                        \
+/*table0x0F*/ METADATA_TABLE (ClassLayout, NOTHING,                     \
+    METADATA_COLUMN2 (TODO, uint32))                                    \
+                                                                        \
+/*table0x10*/ METADATA_TABLE (FieldLayout, NOTHING,                     \
+    METADATA_COLUMN2 (Offset, uint32)                                   \
+    )/* TODO METADATA_COLUMN (Field))*/                                 \
+                                                                        \
+/*table0x11*/ METADATA_TABLE (StandaloneSig, NOTHING,                   \
+    METADATA_COLUMN2 (Signature, blob))                                 \
+                                                                        \
+/*table0x12*/ METADATA_TABLE (EventMap, NOTHING,                        \
+    METADATA_COLUMN2 (Parent, TypeDef)                                  \
+    METADATA_COLUMN (EventList))                                        \
+                                                                        \
 /*table0x13*/ METADATA_TABLE (Table13, NOTHING, METADATA_COLUMN (Unused)) \
-                                                                    \
-/*table0x14*/ METADATA_TABLE (metadata_Event, NOTHING,              \
-    METADATA_COLUMN3 (Flags, uint16, EventFlags_t)                  \
-    METADATA_COLUMN2 (Name, string)                                 \
-    METADATA_COLUMN2 (EventType, TypeDefOrRef))                     \
-                                                                    \
-/*table0x15*/ METADATA_TABLE (PropertyMap, NOTHING,                 \
-    METADATA_COLUMN2 (Parent, TypeDef)                              \
-    METADATA_COLUMN (PropertyList))                                 \
-                                                                    \
+                                                                        \
+/*table0x14*/ METADATA_TABLE (metadata_Event, NOTHING,                  \
+    METADATA_COLUMN3 (Flags, uint16, EventFlags_t)                      \
+    METADATA_COLUMN2 (Name, string)                                     \
+    METADATA_COLUMN2 (EventType, TypeDefOrRef))                         \
+                                                                        \
+/*table0x15*/ METADATA_TABLE (PropertyMap, NOTHING,                     \
+    METADATA_COLUMN2 (Parent, TypeDef)                                  \
+    METADATA_COLUMN (PropertyList))                                     \
+                                                                        \
 /*table0x16*/ METADATA_TABLE (Table16, NOTHING, METADATA_COLUMN (Unused))  \
-                                                                    \
-/*table0x17*/ METADATA_TABLE (metadata_Property, NOTHING,           \
-    METADATA_COLUMN2 (Flags, uint16)                                \
-    METADATA_COLUMN2 (Name, string)                                 \
-    METADATA_COLUMN2 (Type, blob))                                  \
-                                                                    \
-/* .property and .event                                             \
-   Links Events and Properties to specific methods.                 \
-   For example one Event can be associated to more methods.         \
-   A property uses this table to associate get/set methods. */      \
-/*table0x18*/ METADATA_TABLE (metadata_MethodSemantics, NOTHING,    \
-    METADATA_COLUMN3 (Semantics, uint16, MethodSemanticsFlags_t)    \
+                                                                        \
+/*table0x17*/ METADATA_TABLE (metadata_Property, NOTHING,               \
+    METADATA_COLUMN2 (Flags, uint16)                                    \
+    METADATA_COLUMN2 (Name, string)                                     \
+    METADATA_COLUMN2 (Type, blob))                                      \
+                                                                        \
+/* .property and .event                                                 \
+   Links Events and Properties to specific methods.                     \
+   For example one Event can be associated to more methods.             \
+   A property uses this table to associate get/set methods. */          \
+/*table0x18*/ METADATA_TABLE (metadata_MethodSemantics, NOTHING,        \
+    METADATA_COLUMN3 (Semantics, uint16, MethodSemanticsFlags_t)        \
     METADATA_COLUMN3 (Method, MethodDef, MethodDef_t*) /* index into MethodDef table, 2 or 4 bytes */ \
     METADATA_COLUMN3 (Association, HasSemantics, MethodSemanticsAssociation_t)) /* Event or Property, CodedIndex */ \
-                                                        \
+                                                                                \
+/*table0x19*/ METADATA_TABLE (MethodImpl, NOTHING,                              \
+    METADATA_COLUMN3 (Class, TypeDef, Class_t*)                                 \
+    METADATA_COLUMN3 (MethodBody, MethodDefOrRef, MethodBody_t*)                \
+    METADATA_COLUMN3 (MethodDeclaration, MethodDefOrRef, MethodDeclaration_t*)) \
+                                                                                \
+/*table0x1A*/ METADATA_TABLE (ModuleRef, NOTHING,                               \
+    METADATA_COLUMN2 (Name, string))                                            \
+                                                                                \
+/*table0x1B*/ METADATA_TABLE (TypeSpec, NOTHING,                                \
+    METADATA_COLUMN2 (Signature, blob))                                         \
 
-const metadata_schema_column_t metadata_columns_MethodImpl [ ] = // table0x19
+// TODO enum
+typedef uint16 PInvokeAttributes;
+
+struct ImplMap_t // table0x1C
 {
-    { "Class", MetadataType_TypeDef }, // index into TypeDef, 2 or 4 bytes
-    { "ImplFlags", MetadataType_uint16 }, // TODO higher level support
-    { "Flags", MetadataType_uint16 }, // TODO higher level support
-    { "Name", MetadataType_string },
-    { "Signature", MetadataType_blob },
-    { "ParamList", MetadataType_ParamList }, // index into Param table, 2 or 4 bytes
+    PInvokeAttributes ImplMapFlags;
+    Method_t* Method;
+    String_t ImportName;
+    //TODO //Module_t* ImportScope;
 };
-const metadata_table_schema_t metadata_row_schema_MethodImpl = { "MethodImpl", CountOf (metadata_columns_MethodImpl), metadata_columns_MethodImpl };
+struct metadata_ImplMap_t // table0x1C
+{
+    uint16 ImplMapFlags;
+    MetadataToken_t Method;
+    MetadataString_t ImportName;
+    MetadataToken_t ImportScope;
+};
+const metadata_schema_column_t metadata_columns_ImplMap [ ] = // table0x1C
+{
+    { "ImplMapFlags", MetadataType_uint16 },
+    { "Method", MetadataType_MemberForwarded },
+    { "ImportName", MetadataType_string },
+    { "ImportScope", MetadataType_string },
+};
+const metadata_table_schema_t metadata_row_schema_ImplMap = { "ImplMap", CountOf (metadata_columns_ImplMap), metadata_columns_ImplMap };
+
 
 // Every table has two maybe three maybe four sets of types/data/forms.
 // 1. A very typed form. Convenient to work with. Does the most work to form.
@@ -2334,12 +2368,6 @@ const metadata_schema_column_t metadata_columns_MethodSpec [ ] = // table0x2B
     { "Instantiation", MetadataType_blob },
 };
 const metadata_table_schema_t metadata_row_schema_MethodSpec = { "MethodSpec", CountOf (metadata_columns_MethodSpec), metadata_columns_MethodSpec };
-
-const metadata_schema_column_t metadata_columns_ModuleRef [ ] = // table0x1A
-{
-    { "Name", MetadataType_string },
-};
-const metadata_table_schema_t metadata_row_schema_ModuleRef = { "ModuleRef", CountOf (metadata_columns_ModuleRef), metadata_columns_ModuleRef };
 
 struct NestedClass_t // table0x29
 {
@@ -2443,32 +2471,6 @@ const metadata_schema_column_t metadata_columns_GenericParamConstraint [ ] = // 
     { "Constraint", MetadataType_TypeDefOrRef },
 };
 const metadata_table_schema_t metadata_row_schema_GenericParamConstraint = { "GenericParamConstraint", CountOf (metadata_columns_GenericParamConstraint), metadata_columns_GenericParamConstraint };
-
-// TODO enum
-typedef uint16 PInvokeAttributes;
-
-struct ImplMap_t // table0x1C
-{
-    PInvokeAttributes ImplMapFlags;
-    Method_t* Method;
-    String_t ImportName;
-    //TODO //Module_t* ImportScope;
-};
-struct metadata_ImplMap_t // table0x1C
-{
-    uint16 ImplMapFlags;
-    MetadataToken_t Method;
-    MetadataString_t ImportName;
-    MetadataToken_t ImportScope;
-};
-const metadata_schema_column_t metadata_columns_ImplMap [ ] = // table0x1C
-{
-    { "ImplMapFlags", MetadataType_uint16 },
-    { "Method", MetadataType_MemberForwarded },
-    { "ImportName", MetadataType_string },
-    { "ImportScope", MetadataType_string },
-};
-const metadata_table_schema_t metadata_row_schema_ImplMap = { "ImplMap", CountOf (metadata_columns_ImplMap), metadata_columns_ImplMap };
 
 // TODO enum
 typedef uint32 ManifestResourceFlags_t;
