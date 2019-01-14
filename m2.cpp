@@ -33,15 +33,28 @@
 //#define _LARGEFILE64_SOURCE
 
 #ifdef _MSC_VER
+
 #pragma warning(disable:4100) // unused parameter
-#pragma warning(disable:4480) // specifying enum type
 #pragma warning(disable:4510) // function could not be generated
 #pragma warning(disable:4512) // function could not be generated
+#pragma warning(disable:4514) // unused function
 #pragma warning(disable:4610) // cannot be instantiated
-#pragma warning(disable:4668) // #if not_defined is #if 0
+#pragma warning(disable:4616) // not a valid warning
+#pragma warning(disable:4619) // not a valid warning
+#pragma warning(disable:4623) // default constructor deleted
+#pragma warning(disable:4626) // assignment implicitly deleted
 #pragma warning(disable:4706) // assignment within conditional
 #pragma warning(disable:4710) // function not inlined
 #pragma warning(disable:4820) // padding
+#pragma warning(disable:5027) // move assignment implicitly deleted
+#pragma warning(push)
+#pragma warning(disable:4480) // specifying enum type
+#pragma warning(disable:4571) // catch(...)
+#pragma warning(disable:4625) // copy constructor implicitly deleted
+#pragma warning(disable:4668) // #if not_defined is #if 0
+#pragma warning(disable:4774) // printf used without constant format
+#pragma warning(disable:5026) // move constructor implicitly deleted
+#pragma warning(disable:5039) // exception handling and function pointers
 #endif
 
 #ifdef __clang__
@@ -70,6 +83,10 @@
 #endif
 #include <vector>
 #include <string>
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #if !defined(PRIX64)
 #if defined(_WIN32)
@@ -106,6 +123,12 @@ typedef unsigned long      uint32;
 #else
 #error unable to find 32bit integer
 #endif
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4668) // #if not_defined is #if 0
+#endif
+
 #if defined(_ILP64) || __BITS_PER_LONG == 64 || __WORDSIZE == 64
 typedef          long  int64;
 typedef unsigned long uint64;
@@ -129,6 +152,10 @@ typedef unsigned long long uint64;
 #else
 //typedef ptrdiff_t intptr;
 //typedef size_t uintptr;
+#endif
+
+#ifdef _MSC_VER
+#pragma warning(pop)
 #endif
 
 namespace m2

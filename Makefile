@@ -98,6 +98,8 @@ clean:
 #	g++ -std=c++17 -g m2.cpp -o $@
 #
 
+# TODO /Qspectre
+
 $(win): m2.cpp
 	cl /Wall /W4 /MD /Zi /EHsc $** /link /out:$@ /incremental:no
 
