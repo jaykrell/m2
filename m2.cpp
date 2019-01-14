@@ -924,6 +924,9 @@ union MethodSemanticsAssociation_t // table0x18
     Property_t* Property;
 };
 
+// TODO enum
+typedef uint16 PInvokeAttributes;
+
 // TODO enum or bitfield
 //const uint COMIMAGE_FLAGS_ILONLY = 1;
 //const uint COMIMAGE_FLAGS_32BITREQUIRED = 2;
@@ -2082,6 +2085,7 @@ const MetadataType_t MetadataType_TypeDef = { "TypeDef", &MetadataType_Index, {T
 const MetadataType_t MetadataType_CustomAttributeType = { "CustomAttributeType", &MetadataType_CodedIndex, {(int8)CodedIndex(CustomAttributeType)} };
 const MetadataType_t MetadataType_Implementation = { "Implementation", &MetadataType_CodedIndex, {(int8)CodedIndex(Implementation)} };
 const MetadataType_t MetadataType_TypeOrMethodDef = { "TypeOrMethodDef", &MetadataType_CodedIndex, {(int8)CodedIndex(TypeOrMethodDef)} };
+const MetadataType_t MetadataType_ModuleRef = { "TypeDef", &MetadataType_Index, {ModuleRef} };
 
 // Lists go to end of table, or start of next list, referenced from next element of same table
 const MetadataType_t MetadataType_EventList = { "EventList", &MetadataType_IndexList, {Event} };
@@ -2262,33 +2266,12 @@ struct EmptyBase_t
                                                                                 \
 /*table0x1B*/ METADATA_TABLE (TypeSpec, NOTHING,                                \
     METADATA_COLUMN2 (Signature, blob))                                         \
-
-// TODO enum
-typedef uint16 PInvokeAttributes;
-
-struct ImplMap_t // table0x1C
-{
-    PInvokeAttributes ImplMapFlags;
-    Method_t* Method;
-    String_t ImportName;
-    //TODO //Module_t* ImportScope;
-};
-struct metadata_ImplMap_t // table0x1C
-{
-    uint16 ImplMapFlags;
-    MetadataToken_t Method;
-    MetadataString_t ImportName;
-    MetadataToken_t ImportScope;
-};
-const metadata_schema_column_t metadata_columns_ImplMap [ ] = // table0x1C
-{
-    { "ImplMapFlags", MetadataType_uint16 },
-    { "Method", MetadataType_MemberForwarded },
-    { "ImportName", MetadataType_string },
-    { "ImportScope", MetadataType_string },
-};
-const metadata_table_schema_t metadata_row_schema_ImplMap = { "ImplMap", CountOf (metadata_columns_ImplMap), metadata_columns_ImplMap };
-
+                                                                                \
+/*table0x1C*/ METADATA_TABLE (ImplMap, NOTHING,                                 \
+    METADATA_COLUMN3 (MappingFlags, uint16, PInvokeAttributes)                  \
+    METADATA_COLUMN3 (MemberForwarded, MemberForwarded, MethodDef_t)            \
+    METADATA_COLUMN2 (ImportName, string)                                       \
+    METADATA_COLUMN3 (ImportScope, ModuleRef, ModuleRef_t*))                    \
 
 // Every table has two maybe three maybe four sets of types/data/forms.
 // 1. A very typed form. Convenient to work with. Does the most work to form.
