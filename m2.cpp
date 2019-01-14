@@ -41,6 +41,7 @@
 #pragma warning(disable:4706) // assignment within conditional
 #endif
 
+#include <stddef.h>
 #include <memory.h>
 #include <assert.h>
 #include <string>
@@ -584,7 +585,7 @@ struct String_t : std::string
 #ifdef _WIN32
 typedef wchar_t char16;
 #else
-typedef char16_t char16;
+typedef unsigned short char16;
 #endif
 
 typedef std::basic_string<char16> ustring;
@@ -635,7 +636,7 @@ union HasCustomAttribute_t
     voidp TODO;
 };
 
-enum MethodDefFlags_t : uint16 // table0x06
+enum _MethodDefFlags_t // table0x06
 {
 //TODO bitfields (need to test little and big endian)
 //TODO or bitfield decoder
@@ -677,8 +678,9 @@ enum MethodDefFlags_t : uint16 // table0x06
     MethodDefFlags_HasSecurity               =   0x4000,     // Method has security associate with it.
     MethodDefFlags_RequireSecObject          =   0x8000,     // Method calls another method containing security code.
 };
+typedef uint16 MethodDefFlags_t; // table0x06
 
-enum MethodDefImplFlags_t : uint16 // table0x06
+enum _MethodDefImplFlags_t // table0x06
 {
     // code impl mask
     MethodDefImplFlags_CodeTypeMask      =   0x0003,   // Flags about code type.
@@ -704,12 +706,13 @@ enum MethodDefImplFlags_t : uint16 // table0x06
     MethodDefImplFlags_NoInlining        =   0x0008,   // Method may not be inlined.
     MethodDefImplFlags_MaxMethodImplVal  =   0xffff,   // Range check value
 };
+typedef uint16 MethodDefImplFlags_t; // table0x06
 
 struct Method_t : Member_t
 {
 };
 
-enum TypeFlags_t : uint32
+enum _TypeFlags_t
 {
     //TODO bitfields (need to test little and big endian)
     //TODO or bitfield decoder
@@ -764,17 +767,19 @@ enum TypeFlags_t : uint32
     TypeFlags_RTSpecialName         =   0x00000800,     // Runtime should check name encoding.
     TypeFlags_HasSecurity           =   0x00040000,     // Class has security associate with it.
 };
+typedef uint32 TypeFlags_t;
 
 struct Type_t // class, valuetype, delegate, inteface, not char, short, int, long, float
 {
 };
 
-enum EventFlags_t : uint16
+enum _EventFlags_t
 {
     EventFlags_SpecialName           =   0x0200,     // event is special. Name describes how.
     // Reserved flags for Runtime use only.
     EventFlags_RTSpecialName         =   0x0400,     // Runtime(metadata internal APIs) should check name encoding.
 };
+typedef uint16 EventFlags_t;
 
 struct Event_t : Member_t // table0x14
 {
@@ -787,7 +792,7 @@ struct Property_t : Member_t
 {
 };
 
-enum FieldFlags_t : uint16
+enum _FieldFlags_t
 {
 //TODO bitfields (need to test little and big endian)
 //TODO or bitfield decoder
@@ -820,8 +825,9 @@ enum FieldFlags_t : uint16
     FieldFlags_HasDefault                =   0x8000,     // Field has default.
     FieldFlags_HasFieldRVA               =   0x0100,     // Field has RVA.
 };
+typedef uint16 FieldFlags_t;
 
-enum DeclSecurityAction_t : uint16 // TODO get the values
+enum _DeclSecurityAction_t
 {
     DeclSecurityAction_Assert,
     DeclSecurityAction_Demand,
@@ -836,6 +842,8 @@ enum DeclSecurityAction_t : uint16 // TODO get the values
     DeclSecurityAction_RequestOptional,
     DeclSecurityAction_RequestRefuse
 };
+typedef uint16 DeclSecurityAction_t; // TODO get the values
+
 
 struct Interface_t
 {
@@ -861,7 +869,7 @@ struct Class_t
     std::vector<Property_t> properties;
 };
 
-enum MethodSemanticsFlags_t : uint16 // CorMethodSemanticsAttr
+enum _MethodSemanticsFlags_t // CorMethodSemanticsAttr
 {
     MethodSemanticsFlags_Setter = 1, // msSetter
     MethodSemanticsFlags_Getter = 2,
@@ -870,6 +878,7 @@ enum MethodSemanticsFlags_t : uint16 // CorMethodSemanticsAttr
     MethodSemanticsFlags_RemoveOn = 0x10,
     MethodSemanticsFlags_Fire = 0x20,
 };
+typedef uint16 MethodSemanticsFlags_t;
 
 union MethodSemanticsAssociation_t // table0x18
 {
@@ -1020,12 +1029,14 @@ CODED_INDEX (HasCustomAttribute, 22,                                            
       GenericParamConstraint, MethodSpec                                          ) /* HasCustomAttribute */
 
 #define CODED_INDEX(a, n, ...) CodedIndex_ ## a,
-enum CodedIndex : uint8
+enum _CodedIndex
 {
 CODED_INDICES
 #undef CODED_INDEX
     CodedIndex_Count
 };
+typedef uint8 CodedIndex;
+
 
 struct CodedIndexMap_t // TODO array and named
 {
@@ -1040,7 +1051,7 @@ CODED_INDICES
 #undef CODED_INDEX
 };
 
-#define LOG_BASE2_X(a, x) (a) > (1 << x) ? (x + 1) :
+#define LOG_BASE2_X(a, x) (a) > (1u << x) ? (x + 1) :
 #define LOG_BASE2(a)                                                                                \
     (LOG_BASE2_X(a, 31) LOG_BASE2_X(a, 30)                                                          \
      LOG_BASE2_X(a, 29) LOG_BASE2_X(a, 28) LOG_BASE2_X(a, 27) LOG_BASE2_X(a, 26) LOG_BASE2_X(a, 25) \
@@ -1155,7 +1166,7 @@ struct MetadataStreamHeader_t // see mono verify_metadata_header
     char   Name [32]; // multiple of 4, null terminated, max 32
 };
 
-enum ParamFlags_t : uint16 // ParamAttributes
+enum _ParamFlags_t // ParamAttributes
 {
     ParamFlags_In                        =   0x0001,     // Param is [In]
     ParamFlags_Out                       =   0x0002,     // Param is [out]
@@ -1168,6 +1179,7 @@ enum ParamFlags_t : uint16 // ParamAttributes
 
     ParamFlags_Unused                    =   0xcfe0,
 };
+typedef uint16 ParamFlags_t; // ParamAttributes
 
 #if 0 // todo
 
