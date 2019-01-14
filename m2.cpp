@@ -22,6 +22,8 @@
 // Goals: clarity, simplicity, portability, size, interpreter, compile to C++, and maybe
 // later some JIT
 
+#define _CRT_SECURE_NO_WARNINGS 1
+
 //#include "config.h"
 #define _DARWIN_USE_64_BIT_INODE 1
 //#define __DARWIN_ONLY_64_BIT_INO_T 1
@@ -30,14 +32,16 @@
 //#define _LARGEFILE_SOURCE
 //#define _LARGEFILE64_SOURCE
 
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wunused-const-variable"
+#ifdef _MSC_VER
+#pragma warning(disable:4100) // unused parameter
+#pragma warning(disable:4480) // specifying enum type
+#pragma warning(disable:4510) // function could not be generated
+#pragma warning(disable:4512) // function could not be generated
+#pragma warning(disable:4610) // cannot be instantiated
+#pragma warning(disable:4706) // assignment within conditional
 #endif
+
 #include <memory.h>
-#ifndef _WIN32
-//#include <stdint.h>
-//#include <inttypes.h>
-#endif
 #include <assert.h>
 #include <string>
 #include <stdio.h>
@@ -119,7 +123,11 @@ namespace m2
 bool
 string_vformat_internal (const char *format, std::vector<char>& s, va_list va, va_list va2)
 {
+#ifdef _MSC_VER
+    const int size = 2 + _vscprintf (format, va);
+#else
     const int size = 2 + vsnprintf (0, 0, format, va);
+#endif
     s.resize (size);
     return vsnprintf (&s[0], size, format, va2) < size;
 }
@@ -2628,7 +2636,7 @@ struct loaded_image_t_z // zeroed loaded_image_t
 
     DynamicTableInfo_t table_info;
     bool table_present [64]; // index by metadata table, values are 0/false and 1/true
-    uint8 row_size [64]; // index by metadata table
+    uint row_size [64]; // index by metadata table
     uint8 coded_index_size [64]; // 2 or 4
     uint8 index_size [64]; // 2 or 4
     uint64 file_size;
