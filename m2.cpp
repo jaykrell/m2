@@ -1251,6 +1251,35 @@ enum _ParamFlags_t // ParamAttributes
 };
 typedef uint16 ParamFlags_t; // ParamAttributes
 
+enum _AssemblyFlags
+{
+    AssemblyFlags_PublicKey             =   0x0001,     // The assembly ref holds the full (unhashed) public key.
+
+    AssemblyFlags_PA_None               =   0x0000,     // Processor Architecture unspecified
+    AssemblyFlags_PA_MSIL               =   0x0010,     // Processor Architecture: neutral (PE32)
+    AssemblyFlags_PA_x86                =   0x0020,     // Processor Architecture: x86 (PE32)
+    AssemblyFlags_PA_IA64               =   0x0030,     // Processor Architecture: Itanium (PE32+)
+    AssemblyFlags_PA_AMD64              =   0x0040,     // Processor Architecture: AMD X64 (PE32+)
+    AssemblyFlags_PA_Specified          =   0x0080,     // Propagate PA flags to AssemblyRef record
+    AssemblyFlags_PA_Mask               =   0x0070,     // Bits describing the processor architecture
+    AssemblyFlags_PA_FullMask           =   0x00F0,     // Bits describing the PA incl. Specified
+    AssemblyFlags_PA_Shift              =   0x0004,     // NOT A FLAG, shift count in PA flags <--> index conversion
+
+    AssemblyFlags_EnableJITcompileTracking  =   0x8000, // From "DebuggableAttribute".
+    AssemblyFlags_DisableJITcompileOptimizer=   0x4000, // From "DebuggableAttribute".
+
+    AssemblyFlags_Retargetable          =   0x0100,     // The assembly can be retargeted (at runtime) to an
+                                            // assembly from a different publisher.
+};
+typedef uint32 AssemblyFlags;
+
+enum _FileFlags
+{
+    FileFlags_ContainsMetaData      =   0x0000,     // This is not a resource file
+    FileFlags_ContainsNoMetaData    =   0x0001,     // This is a resource file or other non-metadata-containing file
+};
+typedef uint32 FileFlags;
+
 #if 0 // todo
 
 12 - CustomAttribute Table
@@ -1466,46 +1495,7 @@ Columns:
 
 Available flags are:
 
-typedef enum CorAssemblyFlags
-{
-    afPublicKey             =   0x0001,     // The assembly ref holds the full (unhashed) public key.
-
-    afPA_None               =   0x0000,     // Processor Architecture unspecified
-    afPA_MSIL               =   0x0010,     // Processor Architecture: neutral (PE32)
-    afPA_x86                =   0x0020,     // Processor Architecture: x86 (PE32)
-    afPA_IA64               =   0x0030,     // Processor Architecture: Itanium (PE32+)
-    afPA_AMD64              =   0x0040,     // Processor Architecture: AMD X64 (PE32+)
-    afPA_Specified          =   0x0080,     // Propagate PA flags to AssemblyRef record
-    afPA_Mask               =   0x0070,     // Bits describing the processor architecture
-    afPA_FullMask           =   0x00F0,     // Bits describing the PA incl. Specified
-    afPA_Shift              =   0x0004,     // NOT A FLAG, shift count in PA flags <--> index conversion
-
-    afEnableJITcompileTracking  =   0x8000, // From "DebuggableAttribute".
-    afDisableJITcompileOptimizer=   0x4000, // From "DebuggableAttribute".
-
-    afRetargetable          =   0x0100,     // The assembly can be retargeted (at runtime) to an
-                                            // assembly from a different publisher.
-} CorAssemblyFlags;
-
 The PublicKey is != 0, only if the StrongName Signature is present and the afPublicKey flag is set.
-
-33 - AssemblyProcessor Table
-
-//This table is ignored by the CLI and shouldn't be present in an assembly.
-
-Columns:
-
-- Processor (a 4-byte constant)
-
-34 - AssemblyOS Table
-
-//This table is ignored by the CLI and shouldn't be present in an assembly.
-
-Columns:
-
-- OSPlatformID (a 4-byte constant)
-- OSMajorVersion (a 4-byte constant)
-- OSMinorVersion (a 4-byte constant)
 
 35 - AssemblyRef Table
 
@@ -1554,11 +1544,6 @@ Columns:
 
 Available flags are:
 
-typedef enum CorFileFlags
-{
-    ffContainsMetaData      =   0x0000,     // This is not a resource file
-    ffContainsNoMetaData    =   0x0001,     // This is a resource file or other non-metadata-containing file
-} CorFileFlags;
 
 39 - ExportedType Table
 
@@ -2299,6 +2284,56 @@ struct EmptyBase_t
     METADATA_COLUMN3 (MemberForwarded, MemberForwarded, MethodDef_t)            \
     METADATA_COLUMN2 (ImportName, string)                                       \
     METADATA_COLUMN3 (ImportScope, ModuleRef, ModuleRef_t*))                    \
+                                                                                \
+/*table0x1D*/ METADATA_TABLE (FieldRVA, NOTHING,                                \
+    METADATA_COLUMN2 (RVA, uint32)                                              \
+    METADATA_COLUMN3 (Field, Field, Field_t*))                                  \
+                                                                                \
+/*table0x1E*/ METADATA_TABLE (Table1E, NOTHING, METADATA_COLUMN (Unused))       \
+                                                                                \
+/*table0x1F*/ METADATA_TABLE (Table1F, NOTHING, METADATA_COLUMN (Unused))       \
+                                                                                \
+/*table0x20*/ METADATA_TABLE (Assembly, NOTHING,                                \
+    METADATA_COLUMN2 (HashAlgId, uint32)                                        \
+    METADATA_COLUMN2 (MajorVersion, uint16)                                     \
+    METADATA_COLUMN2 (MinorVersion, uint16)                                     \
+    METADATA_COLUMN2 (BuildNumber, uint16)                                      \
+    METADATA_COLUMN2 (RevisionNumber, uint16)                                   \
+    METADATA_COLUMN3 (Flags, uint32, AssemblyFlags)                             \
+    METADATA_COLUMN2 (PublicKey, blob)                                          \
+    METADATA_COLUMN2 (Name, string)                                             \
+    METADATA_COLUMN2 (Culture, string))                                         \
+                                                                                \
+/*table0x21*/ METADATA_TABLE (AssemblyProcessor, NOTHING,                       \
+    METADATA_COLUMN2 (Processor , uint32))                                      \
+                                                                                \
+/*table0x22*/ METADATA_TABLE (AssemblyOS, NOTHING,                              \
+    METADATA_COLUMN2 (OSPlatformID, uint32)                                     \
+    METADATA_COLUMN2 (OSMajorVersion, uint32)                                   \
+    METADATA_COLUMN2 (OSMinorVersion, uint32))                                  \
+                                                                                \
+/*table0x23*/ METADATA_TABLE (AssemblyRef, NOTHING,                             \
+    METADATA_COLUMN2 (MajorVersion, uint16)                                     \
+    METADATA_COLUMN2 (MinorVersion, uint16)                                     \
+    METADATA_COLUMN2 (BuildNumber, uint16)                                      \
+    METADATA_COLUMN2 (RevisionNumber, uint16)                                   \
+    METADATA_COLUMN3 (Flags, uint32, AssemblyFlags))                            \
+                                                                                \
+/*table0x24*/ METADATA_TABLE (AssemblyRefProcessor, NOTHING,                    \
+    METADATA_COLUMN2 (Processor , uint32)                                       \
+    METADATA_COLUMN2 (AssemblyRef, uint32 /* index into AssemblyRef table but ignored */)) \
+                                                                                \
+/*table0x25*/ METADATA_TABLE (AssemblyRefOS, NOTHING,                           \
+    METADATA_COLUMN2 (OSPlatformID, uint32)                                     \
+    METADATA_COLUMN2 (MajorVersion, uint16)                                     \
+    METADATA_COLUMN2 (MinorVersion, uint16)                                     \
+    METADATA_COLUMN2 (RevisionNumber, uint16)                                   \
+    METADATA_COLUMN2 (AssemblyRef, uint32 /* index into AssemblyRef table but ignored */)) \
+                                                                                \
+/*table0x26*/ METADATA_TABLE (File, NOTHING,                                    \
+    METADATA_COLUMN3 (Flags, uint32, FileFlags)                                 \
+    METADATA_COLUMN2 (Name, string)                                             \
+    METADATA_COLUMN2 (HashValue, blob))                                         \
 
 // Every table has two maybe three maybe four sets of types/data/forms.
 // 1. A very typed form. Convenient to work with. Does the most work to form.
@@ -2422,23 +2457,6 @@ struct MarshalSpec_t
     // TODO
 };
 
-struct FieldRVA_t // table0x1D
-{
-    uint32 RVA;
-    Field_t *Field;
-};
-struct metadatA_FieldRVA_t // table0x1D
-{
-    uint32 RVA;
-    MetadataToken_t Field;
-};
-const metadata_schema_column_t metadata_columns_FieldRVA [ ] = // table0x1D
-{
-    { "RVA", MetadataType_uint32 },
-    { "Field", MetadataType_Field },
-};
-const metadata_table_schema_t metadata_row_schema_FieldRVA = { "FieldRVA", CountOf (metadata_columns_FieldRVA), metadata_columns_FieldRVA };
-
 struct GenericParam_t // table0x2A
 {
     uint16 Number;
@@ -2511,33 +2529,8 @@ const metadata_schema_column_t metadata_columns_ManifestResource [ ] = // table0
 };
 const metadata_table_schema_t metadata_row_schema_ManifestResource = { "ManifestResource", CountOf (metadata_columns_ManifestResource), metadata_columns_ManifestResource };
 
-// TODO enum
-typedef uint32 FileAttributes;
-
-struct File_t // table0x26
-{
-    FileAttributes Flags;
-    String_t Name;
-    std::vector<uint8> HashValue;
-};
-struct metadata_File_t // table0x26
-{
-    FileAttributes Flags; // TODO enum
-    MetadataString_t Name;
-    metadata_blob_t HashValue;
-};
-const metadata_schema_column_t metadata_columns_File [ ] = // table0x26
-{
-     { "Flags", MetadataType_uint32 },
-     { "Name", MetadataType_string },
-     { "HashValue", MetadataType_blob },
-};
-const metadata_table_schema_t metadata_row_schema_File = { "File", CountOf (metadata_columns_File), metadata_columns_File };
-
-
 /*
 const int8 ClassLayout = 15;
-
 const int8 MemberRef = 10;
 const int8 MethodRef = MemberRef;
 const int8 FieldRef = MemberRef;
@@ -2554,11 +2547,6 @@ const int8 MethodSemantics = 24; // 0x18
 const int8 MethodImpl = 25; // 0x19
 const int8 ModuleRef = 26;
 const int8 TypeSpec = 27;
-const int8 ImplMap = 28;
-const int8 FieldRVA = 29;
-const int8 Assembly = 32;
-const int8 AssemblyProcessor = 33;
-const int8 AssemblyOS = 34;
 const int8 AssemblyRef = 35;
 const int8 AssemblyRefProcessor = 36;
 const int8 AssemblyRefOS = 37;
