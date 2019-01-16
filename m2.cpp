@@ -1278,7 +1278,7 @@ enum _FileFlags
     FileFlags_ContainsMetaData      =   0x0000,     // This is not a resource file
     FileFlags_ContainsNoMetaData    =   0x0001,     // This is a resource file or other non-metadata-containing file
 };
-typedef uint32 FileFlags;
+typedef uint32 FileFlags_t;
 
 #if 0 // todo
 
@@ -2163,7 +2163,7 @@ struct EmptyBase_t
     METADATA_COLUMN (TypeNameSpace))                                    \
                                                                         \
 /*table0x01*/ METADATA_TABLE (TypeDef, NOTHING,                         \
-    METADATA_COLUMN2 (Flags, TypeFlags)                                 \
+    METADATA_COLUMN3 (Flags, uint32, TypeFlags_t)                       \
     METADATA_COLUMN (TypeName)                                          \
     METADATA_COLUMN (TypeNameSpace)                                     \
     METADATA_COLUMN (Extends)                                           \
@@ -2305,7 +2305,7 @@ struct EmptyBase_t
     METADATA_COLUMN2 (Culture, string))                                         \
                                                                                 \
 /*table0x21*/ METADATA_TABLE (AssemblyProcessor, NOTHING,                       \
-    METADATA_COLUMN2 (Processor , uint32))                                      \
+    METADATA_COLUMN2 (Processor, uint32))                                       \
                                                                                 \
 /*table0x22*/ METADATA_TABLE (AssemblyOS, NOTHING,                              \
     METADATA_COLUMN2 (OSPlatformID, uint32)                                     \
@@ -2320,7 +2320,7 @@ struct EmptyBase_t
     METADATA_COLUMN3 (Flags, uint32, AssemblyFlags))                            \
                                                                                 \
 /*table0x24*/ METADATA_TABLE (AssemblyRefProcessor, NOTHING,                    \
-    METADATA_COLUMN2 (Processor , uint32)                                       \
+    METADATA_COLUMN2 (Processor, uint32)                                        \
     METADATA_COLUMN2 (AssemblyRef, uint32 /* index into AssemblyRef table but ignored */)) \
                                                                                 \
 /*table0x25*/ METADATA_TABLE (AssemblyRefOS, NOTHING,                           \
@@ -2331,9 +2331,17 @@ struct EmptyBase_t
     METADATA_COLUMN2 (AssemblyRef, uint32 /* index into AssemblyRef table but ignored */)) \
                                                                                 \
 /*table0x26*/ METADATA_TABLE (File, NOTHING,                                    \
-    METADATA_COLUMN3 (Flags, uint32, FileFlags)                                 \
+    METADATA_COLUMN3 (Flags, uint32, FileFlags_t)                               \
     METADATA_COLUMN2 (Name, string)                                             \
     METADATA_COLUMN2 (HashValue, blob))                                         \
+                                                                                \
+/*table0x27*/ METADATA_TABLE (ExportedType, NOTHING,                            \
+    METADATA_COLUMN3 (Flags, uint32, TypeFlags_t)                               \
+    METADATA_COLUMN3 (TypeDefId, uint32, uint32)                                \
+    METADATA_COLUMN2 (TypeName, string)                                         \
+    METADATA_COLUMN2 (TypeNameSpace, string)                                    \
+    METADATA_COLUMN3 (Implementation, Implementation, MetadataToken_t))         \
+
 
 // Every table has two maybe three maybe four sets of types/data/forms.
 // 1. A very typed form. Convenient to work with. Does the most work to form.
@@ -2430,27 +2438,6 @@ const metadata_schema_column_t metadata_columns_NestedClass [ ] = // table0x29
     { "EnclosingClass", MetadataType_TypeDef },
 };
 const metadata_table_schema_t metadata_row_schema_NestedClass = { "NestedClass", CountOf (metadata_columns_NestedClass), metadata_columns_NestedClass };
-
-struct ExportedType_t // table0x27
-{
-};
-struct metadata_ExportedType_t // table0x27
-{
-    TypeFlags_t Flags;
-    uint32 TypeDefId; // index into TypeDef table of another module in this assembly; hint only
-    MetadataString_t TypeName;
-    MetadataString_t TypeNameSpace;
-    MetadataToken_t Implementation; // coded index Implementation
-};
-const metadata_schema_column_t metadata_columns_ExportedType [ ] = // table0x27
-{
-    { "Flags", MetadataType_uint32 },
-    { "TypeDefId", MetadataType_uint32 },
-    { "TypeName", MetadataType_string },
-    { "TypeNameSpace", MetadataType_string },
-    { "Implementation", MetadataType_Implementation },
-};
-const metadata_table_schema_t metadata_row_schema_ExportedType = { "ExportedType", CountOf (metadata_columns_ExportedType), metadata_columns_ExportedType };
 
 struct MarshalSpec_t
 {
