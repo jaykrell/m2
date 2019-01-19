@@ -2,6 +2,8 @@
 
 SetLocal
 
+echo int config; > config.c
+
 set wall=/Wall
 cl %wall% /c config.c
 if errorlevel 1 set wall=
