@@ -42,8 +42,10 @@
 #include <yvals.h>
 #endif
 #pragma warning(disable:4018) // unsigned/signed mismatch
+#pragma warning(disable:4365) // unsigned/signed mismatch
 #pragma warning(disable:4244) // integer conversion
 #pragma warning(disable:4615) // not a valid warning (depends on compiler version)
+#pragma warning(disable:4619) // not a valid warning (depends on compiler version)
 #pragma warning(disable:4663) // c:\msdev\50\VC\INCLUDE\iosfwd(132) : warning C4663: C++ language change: to explicitly specialize class template 'char_traits' use the following syntax:
                               // template<> struct char_traits<unsigned short>
 #pragma warning(disable:4100) // unused parameter
@@ -200,7 +202,11 @@ There are two problems.
 Workaround either by not using namespaces or having local vector without that default construction.
 Adding a constructor from int, and then a default constructor helps, but does not fix the entire problem.
 */
+#if _MSC_VER == 1100
 template <typename T> struct vector : std::vector { };
+#else
+template <typename T> struct vector : std::vector<T> { };
+#endif
 
 // Portable to old (and new) Visual C++ runtime.
 int
