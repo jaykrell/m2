@@ -53,6 +53,7 @@
 #pragma warning(disable:4510) // function could not be generated
 #pragma warning(disable:4511) // function could not be generated
 #pragma warning(disable:4512) // function could not be generated
+#pragma warning(disable:4513) // function could not be generated
 #pragma warning(disable:4514) // unused function
 #pragma warning(disable:4610) // cannot be instantiated
 #pragma warning(disable:4616) // not a valid warning
@@ -174,12 +175,29 @@ typedef unsigned long long uint64;
 #pragma warning(pop)
 #endif
 
-#if 0
-#if _MSC_VER <= 1100 // TODO old compiler compat; VC5 has namespaces but they do not work well, i.e. with std::vector<n::m>
 namespace m2
 {
-#endif
-#endif
+
+/* This does not compile with Visual C++ 5.0 compiler/library.
+#include <vector>
+
+namespace a
+{
+struct b { };
+struct c { vector<a::b> d; };
+}
+
+c:\msdev\50\VC\INCLUDE\vector(103) : error C2065: 'b' : undeclared identifier
+c:\msdev\50\VC\INCLUDE\vector(103) : error C2440: 'default argument' : cannot convert from 'int' to 'const struct a::b &'
+                                                  Reason: cannot convert from 'int' to 'const struct a::b'
+                                                  No constructor could take the source type, or constructor overload resolution was ambiguous
+	void resize(size_type _N, const _Ty& _X = _Ty()) // 103
+
+There are two problems.
+Workaround either by not using namespaces or having local vector without that default construction.
+Adding a constructor from int, and then a default constructor helps, but does not fix the entire problem.
+*/
+template <typename T> struct vector : std::vector { };
 
 bool
 string_vformat_internal (const char *format, std::vector<char>& s, va_list va)
@@ -969,11 +987,11 @@ struct Class_t
 {
     Class_t* base;
     std::string name;
-    std::vector<Interface_t> interfaces;
-    std::vector<Method_t> methods;
-    //TODO std::vector<Field_t> fields;
-    std::vector<Event_t> events;
-    std::vector<Property_t> properties;
+    vector<Interface_t> interfaces;
+    vector<Method_t> methods;
+    vector<Field_t> fields;
+    vector<Event_t> events;
+    vector<Property_t> properties;
 };
 
 class MethodBody_t
@@ -3007,12 +3025,9 @@ image_metadata_size_index (loaded_image_t* image, uint /* todo enum */ table_ind
     return metadata_size_index_compute (image, table_index);
 }
 
-#if 0
-#if _MSC_VER <= 1100 // TODO old compiler compat; VC5 has namespaces but they do not work well, i.e. with std::vector<n::m>
 }
+
 using namespace m2;
-#endif
-#endif
 
 int
 main (int argc, char** argv)
