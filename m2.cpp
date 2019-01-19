@@ -2057,7 +2057,7 @@ loadedimage_metadata_size_codedindex_get (loaded_image_t* image, CodedIndex code
 
 #define CODED_INDEX(x, n, values) uint metadata_size_codedindex_ ## x (MetadataType_t* type, loaded_image_t* image) \
 { return loadedimage_metadata_size_codedindex_get (image, type->coded_index); }
-CODED_INDICES
+//CODED_INDICES
 #undef CODED_INDEX
 
 void
@@ -2121,7 +2121,7 @@ metadata_size_ustring (const MetadataType_t* type, loaded_image_t* image)
 uint
 metadata_size_codedindex (const MetadataType_t* type, loaded_image_t* image)
 {
-    return 0;
+    return loadedimage_metadata_size_codedindex_get(image, type->coded_index);
 }
 
 uint
@@ -2201,7 +2201,7 @@ const MetadataType_t MetadataType_uint64 = { "uint64", &MetadataType_Fixed, {8} 
 const MetadataType_t MetadataType_ResolutionScope = { "ResolutionScope", &MetadataType_CodedIndex, {(int8)CodedIndex(ResolutionScope)} };
 // heap indices or offsets
 const MetadataType_t MetadataType_string = { "string", &MetadataType_string_functions };
-const MetadataType_t MetadataType_guid = { "guid", &MetadataType_Fixed, {16} };
+const MetadataType_t MetadataType_guid = { "guid", &MetadataType_guid_functions };
 const MetadataType_t MetadataType_blob = { "blob",  &MetadataType_blob_functions };
 // table indices
 const MetadataType_t MetadataType_Field = { "FieldList", &MetadataType_Index, {Field} };
@@ -2260,7 +2260,7 @@ struct metadata_table_schema_t
     const char *name;
     uint8 count;
     const metadata_schema_column_t* fields;
-    void (*unpack)();
+    //void (*unpack)();
 };
 
 struct EmptyBase_t
@@ -2610,57 +2610,80 @@ struct DynamicTableColumn_t
         memset (this, 0, sizeof (*this));
     }
 
-    uint8 size;
-    uint8 offset;
+    uint size;
+    uint offset;
 };
 
 struct DynamicTableInfoElement_t
 {
     //DynamicTableInfoElement_t() { memset (this, 0, sizeof (*this)); }
 
-    uint32 RowCount;
-    uint32 RowSize;
-    void* Base;
-    bool Present;
-    uint32 ColumnCount;
     DynamicTableColumn_t* ColumnInfo;
+    uint RowCount;
+    uint RowSize;
+    uint IndexSize; // 2 or 4
+    uint ColumnCount;
+    //void* Base;
+    bool Present;
 };
 
-union DynamicTableInfo_t
+struct DynamicTableInfo_t
 {
-    DynamicTableInfo_t() { memset (this, 0, sizeof (*this)); }
-
     DynamicTableInfoElement_t array [
 #undef METADATA_TABLE
 #define METADATA_TABLE(name, base, columns) 1+
 METADATA_TABLES
         0];
-    struct
-    {
+//    struct
+//    {
 #undef METADATA_TABLE
-#define METADATA_TABLE(name, base, columns) DynamicTableInfoElement_t name;
+//#define METADATA_TABLE(name, base, columns) DynamicTableInfoElement_t name;
+//METADATA_TABLES
+//    } name;
+
+    DynamicTableColumn_t columns [
+#undef METADATA_TABLE
+#undef METADATA_COLUMN2
+#undef METADATA_COLUMN3
+#define METADATA_COLUMN2(name, type)                                1+
+#define METADATA_COLUMN3(name, persistant_type, pointerful_type)    1+
+#define METADATA_TABLE(name, base, columns) columns
 METADATA_TABLES
-    } name;
+#undef METADATA_TABLE
+#undef METADATA_COLUMN2
+#undef METADATA_COLUMN3
+    0];
+    DynamicTableInfo_t()
+    {
+        memset (this, 0, sizeof (*this));
+        DynamicTableColumn_t* c = columns;
+        DynamicTableInfoElement_t* t = array;
+#undef METADATA_TABLE
+#undef METADATA_COLUMN2
+#undef METADATA_COLUMN3
+#define METADATA_COLUMN2(name, type)                                1+
+#define METADATA_COLUMN3(name, persistant_type, pointerful_type)    1+
+#define METADATA_TABLE(name, base, columns) t->ColumnInfo = c; t->ColumnCount = columns 0; c += columns 0; ++t;
+METADATA_TABLES
+#undef METADATA_TABLE
+#undef METADATA_COLUMN2
+#undef METADATA_COLUMN3
+    }
 };
 #undef METADATA_TABLE
-
-// TODO expand from METADATA_TABLES, i.e. for size and order and names
-const char * GetTableName (uint a)
-{
 
 static const char * const table_names [ ] =
 {
 #undef METADATA_TABLE
 #undef METADATA_COLUMN2
 #undef METADATA_COLUMN3
-#define METADATA_COLUMN2(name, type)                                /* nothing */
-#define METADATA_COLUMN3(name, persistant_type, pointerful_type)    /* nothing */
 #define METADATA_TABLE(name, base, columns) #name,
 METADATA_TABLES
 #undef METADATA_TABLE
-#undef METADATA_COLUMN2
-#undef METADATA_COLUMN3
 };
+
+const char * GetTableName (uint a)
+{
     if (a < CountOf (table_names))
         return table_names [a];
     return "unknown";
@@ -2690,11 +2713,7 @@ struct loaded_image_t_z // zeroed loaded_image_t
 {
     loaded_image_t_z() { memset (this, 0, sizeof (*this)); }
 
-    DynamicTableInfo_t table_info;
-    bool table_present [64]; // index by metadata table, values are 0/false and 1/true
-    uint row_size [64]; // index by metadata table
-    uint8 coded_index_size [64]; // 2 or 4
-    uint8 index_size [64]; // 2 or 4
+    uint8 coded_index_size [CodedIndex_Count]; // 2 or 4
     uint64 file_size;
     void * base;
     image_dos_header_t* dos;
@@ -2715,7 +2734,7 @@ struct loaded_image_t_z // zeroed loaded_image_t
     uint number_of_streams;
     uint blob_size; // 2 or 4
     uint string_size; // 2 or 4
-    uint ustring_size; // 2 or 4
+    //uint ustring_size; // 2 or 4
     uint guid_size; // 2 or 4
     struct
     {
@@ -2729,31 +2748,47 @@ struct loaded_image_t_z // zeroed loaded_image_t
 
 struct loaded_image_t : loaded_image_t_z
 {
-    uint compute_row_size (const metadata_table_schema_t* schema)
+    DynamicTableInfo_t table_info;
+
+    uint compute_row_layout (uint a, const metadata_table_schema_t* schema)
     {
+        DynamicTableInfoElement_t& row_info = table_info.array[a];
         uint count = schema->count;
         uint size = 0;
         for (uint i = 0; i < count; ++i)
-                size += schema->fields [i].type->functions->size (schema->fields [i].type, this);
+        {
+            int field_size = schema->fields [i].type->functions->size (schema->fields [i].type, this);
+            row_info.ColumnInfo[i].offset = size;
+            row_info.ColumnInfo[i].size = field_size;
+            size += field_size;
+        }
+        row_info.RowSize = size;
         return size;
     }
 
     uint get_row_size (uint a)
     {
-        uint b = row_size [a];
+        uint b = table_info.array [a].RowSize;
         if (b)
                 return b;
-        b = compute_row_size (metadata_int_to_table_schema [a]);
-        row_size [a] = b;
-        return b;
+        return compute_row_layout (a, metadata_int_to_table_schema [a]);
     }
 
     void dump_table (uint a)
     {
         std::string prefix = string_format ("table %X (%s)", a, GetTableName (a));
         printf ("%s\n", prefix.c_str ());
-        printf ("%s present:%u\n", prefix.c_str (), table_present [a]);
+        printf ("%s present:%u\n", prefix.c_str (), table_info.array [a].Present);
         printf ("%s row_size:%u\n", prefix.c_str (), get_row_size (a));
+
+        const metadata_table_schema_t* schema = metadata_int_to_table_schema [a];
+        const metadata_schema_column_t *fields = schema->fields;
+        uint i;
+        for (i = 0; i < schema->count; ++i)
+        {
+            const metadata_schema_column_t *field = &fields[i];
+            printf("type:%s name:%s offset:%d size:%d\n", field->type->name, field->name, table_info.array[a].ColumnInfo[i].offset, table_info.array[a].ColumnInfo[i].size);
+        }
     }
 
     memory_mapped_file_t mmf;
@@ -2941,7 +2976,7 @@ metadata_size_string (const MetadataType_t* type, loaded_image_t* image)
 uint
 metadata_size_guid (const MetadataType_t* type, loaded_image_t* image)
 {
-    return image->blob_size;
+    return image->guid_size;
 }
 
 uint
@@ -2975,10 +3010,10 @@ metadata_size_index_compute (loaded_image_t* image, uint /* todo enum */ table_i
 uint
 image_metadata_size_index (loaded_image_t* image, uint /* todo enum */ table_index)
 {
-    const uint a = image->row_size [(uint)table_index];
+    uint& a = image->table_info.array [(uint)table_index].IndexSize;
     if (a)
         return a;
-    return metadata_size_index_compute (image, table_index);
+    return a = metadata_size_index_compute (image, table_index);
 }
 
 }
