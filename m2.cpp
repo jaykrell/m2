@@ -965,6 +965,7 @@ typedef uint16 FieldFlags_t;
 
 enum _DeclSecurityAction_t
 {
+    // TODO values?
     DeclSecurityAction_Assert,
     DeclSecurityAction_Demand,
     DeclSecurityAction_Deny,
@@ -999,6 +1000,16 @@ struct Signature_t
 {
 };
 
+struct AssemblyRef_t;
+struct File_t;
+
+struct Implementation_t
+{
+    //union
+        AssemblyRef_t* AssemblyRef;
+        File_t* File;
+};
+
 struct Class_t
 {
     Class_t* base;
@@ -1018,7 +1029,14 @@ class MethodDeclaration_t
 {
 };
 
-enum _MethodSemanticsFlags_t // CorMethodSemanticsAttr
+struct TypeOrMethodDef_t
+{
+    //union
+    Type_t* Type;
+    Method_t* Method;
+};
+
+enum _MethodSemanticsFlags_t
 {
     MethodSemanticsFlags_Setter = 1, // msSetter
     MethodSemanticsFlags_Getter = 2,
@@ -1274,7 +1292,7 @@ struct metadata_blob_t
 struct MetadataToken_t
 {
     uint8 table;
-    uint32 index;
+    uint32 index; // uint24
 };
 
 struct MetadataTokenList_t
@@ -1286,16 +1304,16 @@ struct MetadataTokenList_t
 
 struct MetadataTablesHeader_t // tilde stream
 {
-    uint32 reserved; // 0
+    uint32 reserved;    // 0
     uint8 MajorVersion;
     uint8 MinorVersion;
     union {
         uint8 HeapOffsetSizes;
         uint8 HeapSizes;
     };
-    uint8 reserved2; // 1
-    uint64 Valid; // metadata_typedef etc.
-    uint64 Sorted; // metadata_typedef etc.
+    uint8 reserved2;    // 1
+    uint64 Valid;       // metadata_typedef etc.
+    uint64 Sorted;      // metadata_typedef etc.
     // uint32 NumberOfRows [];
 };
 
@@ -1320,7 +1338,7 @@ struct MetadataStreamHeader_t // see mono verify_metadata_header
     char   Name [32]; // multiple of 4, null terminated, max 32
 };
 
-enum _ParamFlags_t // ParamAttributes
+enum _ParamFlags_t
 {
     ParamFlags_In                        =   0x0001,     // Param is [In]
     ParamFlags_Out                       =   0x0002,     // Param is [out]
@@ -1333,7 +1351,7 @@ enum _ParamFlags_t // ParamAttributes
 
     ParamFlags_Unused                    =   0xcfe0
 };
-typedef uint16 ParamFlags_t; // ParamAttributes
+typedef uint16 ParamFlags_t;
 
 enum _AssemblyFlags
 {
@@ -1353,7 +1371,7 @@ enum _AssemblyFlags
     AssemblyFlags_DisableJITcompileOptimizer=   0x4000, // From "DebuggableAttribute".
 
     AssemblyFlags_Retargetable          =   0x0100,     // The assembly can be retargeted (at runtime) to an
-                                            // assembly from a different publisher.
+                                                        // assembly from a different publisher.
 };
 typedef uint32 AssemblyFlags;
 
@@ -1364,7 +1382,34 @@ enum _FileFlags
 };
 typedef uint32 FileFlags_t;
 
-#if 0 // todo
+enum _ManifestResourceFlags
+{
+    ManifestResourceFlags_VisibilityMask        =   0x0007,
+    ManifestResourceFlags_Public                =   0x0001,     // The Resource is exported from the Assembly.
+    ManifestResourceFlags_Private               =   0x0002,     // The Resource is private to the Assembly.
+};
+typedef uint32 ManifestResourceFlags_t;
+
+enum _GenericParamFlags
+{
+    // Variance of type parameters, only applicable to generic parameters
+    // for generic interfaces and delegates
+    GenericParamFlags_VarianceMask          =   0x0003,
+    GenericParamFlags_NonVariant            =   0x0000,
+    GenericParamFlags_Covariant             =   0x0001,
+    GenericParamFlags_Contravariant         =   0x0002,
+
+    // Special constraints, applicable to any type parameters
+    GenericParamFlags_SpecialConstraintMask =  0x001C,
+    GenericParamFlags_NoSpecialConstraint   =   0x0000,
+    GenericParamFlags_ReferenceTypeConstraint = 0x0004,      // type argument must be a reference type
+    GenericParamFlags_NotNullableValueTypeConstraint   =   0x0008, // type argument must be a value type but not Nullable
+    GenericParamFlags_DefaultConstructorConstraint = 0x0010, // type argument must have a public default constructor
+};
+typedef uint16 GenericParamFlags_t;
+
+#if 0 // TODO This is copy/pasted from the web and should be gradually
+      // worked into types/defines/enums, or deleted because it already was. And cross check with ECMA .pdf.
 
 12 - CustomAttribute Table
 
@@ -1663,12 +1708,6 @@ Columns:
 
 Available flags are:
 
-typedef enum CorManifestResourceFlags
-{
-    mrVisibilityMask        =   0x0007,
-    mrPublic                =   0x0001,     // The Resource is exported from the Assembly.
-    mrPrivate               =   0x0002,     // The Resource is private to the Assembly.
-} CorManifestResourceFlags;
 
 //If the Implementation index is 0, then the referenced resource is internal. We obtain the File Offset of
 // the resource by adding the converted Resources RVA (the one in the CLI Header) to the offset present in
@@ -2425,37 +2464,30 @@ struct EmptyBase_t
     METADATA_COLUMN2 (TypeName, string)                                         \
     METADATA_COLUMN2 (TypeNameSpace, string)                                    \
     METADATA_COLUMN3 (Implementation, Implementation, MetadataToken_t))         \
-
-
-// TODO enum
-typedef uint32 ManifestResourceFlags_t;
-
-struct ManifestResource_t // table0x28
-{
-    uint32 Offset;
-    ManifestResourceFlags_t Flags;
-    String_t Name;
-    union {
-        //File_t* File;
-        //Assembly_t* Assembly;
-    } Implementation;
-};
-struct metadata_ManifestResource_t // table0x28
-{
-    uint32 Offset;
-    ManifestResourceFlags_t Flags; // TODO enum
-    MetadataString_t Name;
-    MetadataToken_t Implementation;
-};
-const metadata_schema_column_t metadata_columns_ManifestResource [ ] = // table0x28
-{
-     { "Offset", &MetadataType_uint32 },
-     { "Flags", &MetadataType_uint32 },
-     { "Name", &MetadataType_string },
-     { "Implementation", &MetadataType_Implementation },
-};
-const metadata_table_schema_t metadata_row_schema_ManifestResource = { "ManifestResource", CountOf (metadata_columns_ManifestResource), metadata_columns_ManifestResource };
-
+                                                                                \
+/*table0x28*/ METADATA_TABLE (ManifestResource, NOTHING,                        \
+    METADATA_COLUMN2 (Offset, uint32)                                           \
+    METADATA_COLUMN3 (Flags, uint32, ManifestResourceFlags_t)                   \
+    METADATA_COLUMN2 (Name, string)                                             \
+    METADATA_COLUMN3 (Implementation, Implementation, Implementation_t))        \
+                                                                                \
+/*table0x29*/ METADATA_TABLE (NestedClass, NOTHING,                             \
+    METADATA_COLUMN2 (NestedClass, TypeDef)                                     \
+    METADATA_COLUMN2 (EnclosingClass, TypeDef))                                 \
+                                                                                \
+/*table0x2A*/ METADATA_TABLE (GenericParam, NOTHING,                            \
+    METADATA_COLUMN2 (Number, uint16)                                           \
+    METADATA_COLUMN3 (Flags, uint16, GenericParamFlags_t)                       \
+    METADATA_COLUMN3 (Owner, TypeOrMethodDef, TypeOrMethodDef_t)                \
+    METADATA_COLUMN2 (Name, string))                                            \
+                                                                                \
+/*table0x2B*/ METADATA_TABLE (MethodSpec, NOTHING,                              \
+    METADATA_COLUMN3 (Method, MethodDefOrRef, Method_t)                         \
+    METADATA_COLUMN2 (Instantiation, blob))                                     \
+                                                                                \
+/*table0x2C*/ METADATA_TABLE (GenericParamConstraint, NOTHING,                  \
+    METADATA_COLUMN3 (Owner, GenericParam, GenericParam_t)                      \
+    METADATA_COLUMN2 (Constraint, TypeDefOrRef))                                \
 
 // Every table has two maybe three maybe four sets of types/data/forms.
 // 1. A very typed form. Convenient to work with. Does the most work to form.
@@ -2528,78 +2560,6 @@ const metadata_table_schema_t metadata_row_schema_ ## name = { #name, CountOf (m
 #define METADATA_COLUMN2(name, type) { # name, &MetadataType_  ## type },
 #define METADATA_COLUMN3(name, persistant_type, pointerful_type) { # name, &MetadataType_  ## persistant_type },
 METADATA_TABLES
-
-const metadata_schema_column_t metadata_columns_MethodSpec [ ] = // table0x2B
-{
-    { "Method", &MetadataType_MethodDefOrRef },
-    { "Instantiation", &MetadataType_blob },
-};
-const metadata_table_schema_t metadata_row_schema_MethodSpec = { "MethodSpec", CountOf (metadata_columns_MethodSpec), metadata_columns_MethodSpec };
-
-struct NestedClass_t // table0x29
-{
-    Type_t* NestedClass;
-    Type_t* EnclosingClass;
-};
-struct metadata_NestedClass_t // table0x29
-{
-    MetadataToken_t NestedClass;
-    MetadataToken_t EnclosingClass;
-};
-const metadata_schema_column_t metadata_columns_NestedClass [ ] = // table0x29
-{
-    { "NestedClass", &MetadataType_TypeDef },
-    { "EnclosingClass", &MetadataType_TypeDef },
-};
-const metadata_table_schema_t metadata_row_schema_NestedClass = { "NestedClass", CountOf (metadata_columns_NestedClass), metadata_columns_NestedClass };
-
-struct MarshalSpec_t
-{
-    // TODO
-};
-
-struct GenericParam_t // table0x2A
-{
-    uint16 Number;
-    uint16 Flags; // TODO enum
-    union {
-        //Type_t* Type;
-        Method_t* Method;
-    } Owner;
-    String_t Name;
-};
-struct metadata_GenericParam_t // table0x2A
-{
-    uint16 Number;
-    uint16 Flags; // TODO enum
-    MetadataToken_t Owner;
-    MetadataString_t Name;
-};
-const metadata_schema_column_t metadata_columns_GenericParam [ ] = // table0x2A
-{
-    { "Number", &MetadataType_uint16 },
-    { "Flags", &MetadataType_uint16 },
-    { "Owner", &MetadataType_TypeOrMethodDef },
-    { "Name", &MetadataType_string },
-};
-const metadata_table_schema_t metadata_row_schema_GenericParam = { "GenericParam", CountOf (metadata_columns_GenericParam), metadata_columns_GenericParam };
-
-struct GenericParamConstraint_t // table0x2C
-{
-    GenericParam_t* Owner;
-    //TODO Type_t* Constraint;
-};
-struct metadata_GenericParamConstraint_t // table0x2C
-{
-    MetadataToken_t Owner;
-    MetadataToken_t Constraint;
-};
-const metadata_schema_column_t metadata_columns_GenericParamConstraint [ ] = // table0x2C
-{
-    { "Owner", &MetadataType_GenericParam },
-    { "Constraint", &MetadataType_TypeDefOrRef },
-};
-const metadata_table_schema_t metadata_row_schema_GenericParamConstraint = { "GenericParamConstraint", CountOf (metadata_columns_GenericParamConstraint), metadata_columns_GenericParamConstraint };
 
 /*
 const int8 ClassLayout = 15;
