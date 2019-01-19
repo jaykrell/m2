@@ -100,6 +100,9 @@
 #endif
 #include <vector>
 #include <string>
+#if _MSC_VER
+#include <malloc.h>
+#endif
 
 #if _MSC_VER > 1100 // TODO
 #pragma warning(pop)
@@ -199,6 +202,25 @@ Adding a constructor from int, and then a default constructor helps, but does no
 */
 template <typename T> struct vector : std::vector { };
 
+// Portable to old (and new) Visual C++ runtime.
+int
+string_vformat_length (const char *format, va_list va)
+{
+#if !_MSC_VER
+    return 2 + vsnprintf (0, 0, format, va);
+#else
+    // newer runtime: _vscprintf (format, va);
+    // else loop until it fits, getting -1 while it does not.
+    int n = 0;
+    for (;;)
+    {
+        int inc = n ? n : 64;
+        if (_vsnprintf((char*)_alloca(inc), n += inc, format, va) != -1)
+            return n + 2;
+    }
+#endif
+}
+
 bool
 string_vformat_internal (const char *format, std::vector<char>& s, va_list va)
 {
@@ -209,20 +231,14 @@ string_vformat_internal (const char *format, std::vector<char>& s, va_list va)
 #else
     va_copy (va2, va);
 #endif
-    const int size = 2 + vsnprintf (0, 0, format, va);
 #else
     va_list va2 = va;
-#if _MSC_VER > 1100 // TODO
-    const int size = 2 + _vscprintf (format, va);
-#else
-    const int size = 1024;
 #endif
-#endif
-    s.resize ((size_t)size);
-#if _MSC_VER > 1100 // TODO
-    return vsnprintf (&s [0], (size_t)size, format, va2) < size;
+    s.resize ((size_t)string_vformat_length(format, va));
+#if _MSC_VER
+    return _vsnprintf (&s [0], s.size(), format, va2) < s.size();
 #else
-    return _vsnprintf (&s [0], (size_t)size, format, va2) < size;
+    return vsnprintf (&s [0], s.size(), format, va2) < s.size();
 #endif
 }
 

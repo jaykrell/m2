@@ -101,7 +101,7 @@ clean:
 # TODO /Qspectre
 
 $(win): m2.cpp
-	-del $(@R).pdb
+	@-del $(@R).pdb $(@R).ilk
 	cl $(wall) /W4 /MD /Zi /EHsc $** /link /out:$@ /incremental:no
 
 !else
