@@ -2546,6 +2546,16 @@ struct EmptyBase_t
 #undef METADATA_TABLE
 #undef METADATA_COLUMN2
 #undef METADATA_COLUMN3
+#define METADATA_TABLE(name, base, columns)                         name, // TODO longer name?
+#define METADATA_COLUMN2(name, type)                                /* nothing */
+#define METADATA_COLUMN3(name, persistant_type, pointerful_type)    /* nothing */
+//enum _MetadataTableIndex {
+//    METADATA_TABLES
+//};
+
+#undef METADATA_TABLE
+#undef METADATA_COLUMN2
+#undef METADATA_COLUMN3
 #define METADATA_TABLE(name, base, columns)  struct name ##  _t base { name ##  _t ( ) { } columns };
 #define METADATA_COLUMN2(name, type) metadata_schema_TYPED_ ## type name;
 #define METADATA_COLUMN3(name, persistant_type, pointerful_type) pointerful_type name;
@@ -2632,57 +2642,24 @@ METADATA_TABLES
 METADATA_TABLES
     } name;
 };
+#undef METADATA_TABLE
 
 // TODO expand from METADATA_TABLES, i.e. for size and order and names
 const char * GetTableName (uint a)
 {
+
 static const char * const table_names [ ] =
 {
-"Module",
-"TypeRef",
-"TypeDef",
-"Table3",
-"Field",
-"Table5",
-"MethodDef",
-"Table7",
-"Param",
-"InterfaceImpl",
-"MemberRef",
-"Constant",
-"CustomAttribute",
-"FieldMarshal",
-"DeclSecurity",
-"ClassLayout",
-"FieldLayout",
-"StandAloneSig",
-"EventMap",
-"Table19",
-"Event",
-"PropertyMap",
-"Table22",
-"Property",
-"MethodSemantics",
-"MethodImpl",
-"ModuleRef",
-"TypeSpec",
-"ImplMap",
-"FieldRVA",
-"Table30",
-"Table31",
-"Assembly",
-"AssemblyProcessor",
-"AssemblyOS",
-"AssemblyRef",
-"AssemblyRefProcessor",
-"AssemblyRefOS",
-"File",
-"ExportedType",
-"ManifestResource",
-"NestedClass",
-"GenericParam",
-"MethodSpec",
-"GenericParamConstraint",
+#undef METADATA_TABLE
+#undef METADATA_COLUMN2
+#undef METADATA_COLUMN3
+#define METADATA_COLUMN2(name, type)                                /* nothing */
+#define METADATA_COLUMN3(name, persistant_type, pointerful_type)    /* nothing */
+#define METADATA_TABLE(name, base, columns) #name,
+METADATA_TABLES
+#undef METADATA_TABLE
+#undef METADATA_COLUMN2
+#undef METADATA_COLUMN3
 };
     if (a < CountOf (table_names))
         return table_names [a];
@@ -2700,10 +2677,13 @@ struct metadata_table_t
 
 static const metadata_table_schema_t *  const metadata_int_to_table_schema [ ] =
 {
-    // TODO
-    &metadata_row_schema_Module,
-    &metadata_row_schema_TypeRef,
-    &metadata_row_schema_TypeDef,
+#undef METADATA_TABLE
+#undef METADATA_COLUMN2
+#undef METADATA_COLUMN3
+#define METADATA_COLUMN2(name, type)                                /* nothing */
+#define METADATA_COLUMN3(name, persistant_type, pointerful_type)    /* nothing */
+#define METADATA_TABLE(name, base, columns) &metadata_row_schema_ ## name,
+METADATA_TABLES
 };
 
 struct loaded_image_t_z // zeroed loaded_image_t
@@ -2915,6 +2895,7 @@ unknown_stream:
             {
                 printf ("table 0x%X (%s) has %u rows (%s)\n", i, GetTableName (i), *RowCount, (sorted & mask) ? "sorted" : "unsorted");
                 table_info.array [i].RowCount = *RowCount;
+                dump_table (i);
                 ++j;
                 ++RowCount;
             }
@@ -2923,7 +2904,6 @@ unknown_stream:
                 printf ("table 0x%X (%s) is absent\n", i, GetTableName (i));
             }
         }
-        dump_table (TypeDef);
     }
 
     void* rva_to_p (uint32 rva)
