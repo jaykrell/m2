@@ -2038,8 +2038,29 @@ struct MetadataTypeFunctions_t
     // Virtual functions, but allowing for static construction.
     void (*decode)(const MetadataType_t*, void*);
     uint (*size)(const MetadataType_t*, loaded_image_t*);
-    void (*to_string)(const MetadataType_t*, void*);
+    //void (*to_string)(const MetadataType_t*, void*);
+    void (*print)(const MetadataType_t*, loaded_image_t*, int table, int row, int column, void* data, int size);
 };
+
+void
+print_fixed(const MetadataType_t*, loaded_image_t*, int table, int row, int column, void* data, int size)
+{
+    switch (size)
+    {
+    case 1:
+        printf("%X ", *(uint8*)data);
+        return;
+    case 2:
+        printf("%X ", *(uint16*)data);
+        return;
+    case 4:
+        printf("%X ", *(uint32*)data);
+        return;
+    case 8:
+        printf("%X ", *(uint64*)data);
+        return;
+    }
+}
 
 struct MetadataType_t
 {
@@ -2146,6 +2167,7 @@ const MetadataTypeFunctions_t MetadataType_Fixed =
 {
     MetadataDecode_fixed,
     metadata_size_fixed,
+    print_fixed,
 };
 
 const MetadataTypeFunctions_t MetadataType_blob_functions =
@@ -2623,7 +2645,7 @@ struct DynamicTableInfoElement_t
     uint RowSize;
     uint IndexSize; // 2 or 4
     uint ColumnCount;
-    //void* Base;
+    void* Base;
     bool Present;
 };
 
@@ -2787,8 +2809,23 @@ struct loaded_image_t : loaded_image_t_z
         for (i = 0; i < schema->count; ++i)
         {
             const metadata_schema_column_t *field = &fields[i];
-            printf("type:%s name:%s offset:%d size:%d\n", field->type->name, field->name, table_info.array[a].ColumnInfo[i].offset, table_info.array[a].ColumnInfo[i].size);
+            printf("%s layout type:%s name:%s offset:%d size:%d\n", GetTableName (a), field->type->name, field->name, table_info.array[a].ColumnInfo[i].offset, table_info.array[a].ColumnInfo[i].size);
         }
+        char* p = (char*)table_info.array[a].Base;
+        for (uint r = 0; r < table_info.array [a].RowCount; ++r)
+        {
+            printf("%s[%d] ", GetTableName (a), r);
+            for (i = 0; i < schema->count; ++i)
+            {
+                const metadata_schema_column_t *field = &fields[i];
+                int column_size = table_info.array[a].ColumnInfo[i].size;
+                if (field->type->functions->print)
+                    field->type->functions->print(field->type, this, a, r, i, p, column_size);
+                p += column_size;
+            }
+            printf("\n");
+        }
+        printf("\n");
     }
 
     memory_mapped_file_t mmf;
@@ -2921,6 +2958,11 @@ unknown_stream:
         const uint64 one = 1;
         uint j = 0;
         uint32* RowCount = (uint32*)(metadata_tables + 1);
+        char* Base = (char*)RowCount;
+
+        for (i = 0; i < CountOf (table_info.array); ++i)
+            Base += (valid & (one << i)) ? 4 : 0;
+
         for (i = 0; i < CountOf (table_info.array); ++i)
         {
             uint64 const mask = one << i;
@@ -2930,7 +2972,9 @@ unknown_stream:
             {
                 printf ("table 0x%X (%s) has %u rows (%s)\n", i, GetTableName (i), *RowCount, (sorted & mask) ? "sorted" : "unsorted");
                 table_info.array [i].RowCount = *RowCount;
-                dump_table (i);
+                table_info.array [i].Base = Base;
+                dump_table (i); // computes layout
+                Base += table_info.array[i].RowSize * *RowCount;
                 ++j;
                 ++RowCount;
             }
