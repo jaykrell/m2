@@ -32,22 +32,38 @@
 //#define _LARGEFILE_SOURCE
 //#define _LARGEFILE64_SOURCE
 
+#define _cpp_max max // old compiler/library compat
+
 #ifdef _MSC_VER
 
+// We have to include yvals.h early because it breaks warnings.
+#pragma warning(disable:4820) // padding
+#if _MSC_VER && _MSC_VER <= 1100
+#include <yvals.h>
+#endif
+#pragma warning(disable:4018) // unsigned/signed mismatch
+#pragma warning(disable:4244) // integer conversion
+#pragma warning(disable:4615) // not a valid warning (depends on compiler version)
+#pragma warning(disable:4663) // c:\msdev\50\VC\INCLUDE\iosfwd(132) : warning C4663: C++ language change: to explicitly specialize class template 'char_traits' use the following syntax:
+                              // template<> struct char_traits<unsigned short>
 #pragma warning(disable:4100) // unused parameter
+#pragma warning(disable:4146) // unary minus unsigned is still unsigned (xlocnum)
+#pragma warning(disable:4201) // non standard extension : nameless struct/union (windows.h)
+#pragma warning(disable:4238) // non standard extension : class rvalue as lvalue (utility)
 #pragma warning(disable:4510) // function could not be generated
+#pragma warning(disable:4511) // function could not be generated
 #pragma warning(disable:4512) // function could not be generated
 #pragma warning(disable:4514) // unused function
 #pragma warning(disable:4610) // cannot be instantiated
 #pragma warning(disable:4616) // not a valid warning
-#pragma warning(disable:4619) // not a valid warning
 #pragma warning(disable:4623) // default constructor deleted
 #pragma warning(disable:4626) // assignment implicitly deleted
 #pragma warning(disable:4706) // assignment within conditional
 #pragma warning(disable:4710) // function not inlined
-#pragma warning(disable:4820) // padding
 #pragma warning(disable:5027) // move assignment implicitly deleted
+#if _MSC_VER > 1100 // TODO
 #pragma warning(push)
+#endif
 #pragma warning(disable:4480) // specifying enum type
 #pragma warning(disable:4571) // catch(...)
 #pragma warning(disable:4625) // copy constructor implicitly deleted
@@ -84,7 +100,7 @@
 #include <vector>
 #include <string>
 
-#ifdef _MSC_VER
+#if _MSC_VER > 1100 // TODO
 #pragma warning(pop)
 #endif
 
@@ -158,8 +174,12 @@ typedef unsigned long long uint64;
 #pragma warning(pop)
 #endif
 
+#if 0
+#if _MSC_VER <= 1100 // TODO old compiler compat; VC5 has namespaces but they do not work well, i.e. with std::vector<n::m>
 namespace m2
 {
+#endif
+#endif
 
 bool
 string_vformat_internal (const char *format, std::vector<char>& s, va_list va)
@@ -174,10 +194,18 @@ string_vformat_internal (const char *format, std::vector<char>& s, va_list va)
     const int size = 2 + vsnprintf (0, 0, format, va);
 #else
     va_list va2 = va;
+#if _MSC_VER > 1100 // TODO
     const int size = 2 + _vscprintf (format, va);
+#else
+    const int size = 1024;
+#endif
 #endif
     s.resize ((size_t)size);
+#if _MSC_VER > 1100 // TODO
     return vsnprintf (&s [0], (size_t)size, format, va2) < size;
+#else
+    return _vsnprintf (&s [0], (size_t)size, format, va2) < size;
+#endif
 }
 
 std::string
@@ -222,7 +250,13 @@ throw_errno (const char* a = "")
 
 #ifdef _WIN32
 void
-throw_LastError (const char* a = "")
+throw_Win32Error (int err, const char* a = "")
+{
+    throw_int (err, a);
+
+}
+void
+throw_GetLastError (const char* a = "")
 {
     throw_int ((int)GetLastError (), a);
 
@@ -428,22 +462,27 @@ struct explicit_operator_bool
 typedef void (explicit_operator_bool::*bool_type) () const;
 
 #ifdef _WIN32
-struct handle_t
+struct Handle_t
 {
-    // TODO handle_t vs. win32file_t, etc.
+    // TODO Handle_t vs. win32file_t, etc.
 
     uint64 get_file_size (const char * file_name = "")
     {
-        LARGE_INTEGER a = { };
-        if (!GetFileSizeEx (h, &a)) // TODO NT4
-            throw_LastError (string_format ("GetFileSizeEx(%s)", file_name).c_str());
-        return (uint64)a.QuadPart;
+        DWORD hi = 0;
+        DWORD lo = GetFileSize(h, &hi);
+        if (lo == INVALID_FILE_SIZE)
+        {
+            DWORD err = GetLastError();
+            if (err != NO_ERROR)
+                throw_Win32Error (err, string_format ("GetFileSizeEx(%s)", file_name).c_str());
+        }
+        return (((uint64)hi) << 32) | lo;
     }
 
     void * h;
 
-    handle_t (void *a) : h (a) { }
-    handle_t () : h (0) { }
+    Handle_t (void *a) : h (a) { }
+    Handle_t () : h (0) { }
 
     void* get () { return h; }
 
@@ -471,7 +510,7 @@ struct handle_t
         static_cleanup (detach ());
     }
 
-    handle_t& operator= (void* a)
+    Handle_t& operator= (void* a)
     {
         if (h == a) return *this;
         cleanup ();
@@ -490,7 +529,7 @@ struct handle_t
 
     bool operator ! () { return !valid (); }
 
-    ~handle_t ()
+    ~Handle_t ()
     {
         if (valid ()) CloseHandle (h);
         h = 0;
@@ -578,7 +617,7 @@ struct memory_mapped_file_t
     void * base;
     size_t size;
 #ifdef _WIN32
-    handle_t file;
+    Handle_t file;
 #else
     fd_t file;
 #endif
@@ -598,13 +637,13 @@ struct memory_mapped_file_t
     {
 #ifdef _WIN32
         file = CreateFileA (a, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-        if (!file) throw_LastError (string_format ("CreateFileA(%s)", a).c_str ());
+        if (!file) throw_GetLastError (string_format ("CreateFileA(%s)", a).c_str ());
         // FIXME check for size==0 and >4GB.
         size = (size_t)file.get_file_size(a);
-        handle_t h2 = CreateFileMappingW (file, 0, PAGE_READONLY, 0, 0, 0);
-        if (!h2) throw_LastError (string_format ("CreateFileMapping(%s)", a).c_str ());
+        Handle_t h2 = CreateFileMappingW (file, 0, PAGE_READONLY, 0, 0, 0);
+        if (!h2) throw_GetLastError (string_format ("CreateFileMapping(%s)", a).c_str ());
         base = MapViewOfFile (h2, FILE_MAP_READ, 0, 0, 0);
-        if (!base) throw_LastError (string_format ("MapViewOfFile(%s)", a).c_str ());
+        if (!base) throw_GetLastError (string_format ("MapViewOfFile(%s)", a).c_str ());
 #else
         file = open (a, O_RDONLY);
         if (!file) throw_errno (string_format ("open(%s)", a).c_str ());
@@ -767,6 +806,8 @@ typedef uint16 MethodDefImplFlags_t; // table0x06
 
 struct Method_t : Member_t
 {
+    bool operator<(const Method_t&) const; // support for old compiler/library
+    bool operator==(const Method_t&) const; // support for old compiler/library
 };
 
 enum _TypeFlags_t
@@ -840,6 +881,8 @@ typedef uint16 EventFlags_t;
 
 struct Event_t : Member_t // table0x14
 {
+    bool operator<(const Event_t&) const; // support for old compiler/library
+    bool operator==(const Event_t&) const; // support for old compiler/library
     EventFlags_t Flags;
     String_t Name;
     Type_t* EventType;
@@ -847,6 +890,8 @@ struct Event_t : Member_t // table0x14
 
 struct Property_t : Member_t
 {
+    bool operator<(const Property_t&) const; // support for old compiler/library
+    bool operator==(const Property_t&) const; // support for old compiler/library
 };
 
 enum _FieldFlags_t
@@ -904,6 +949,11 @@ typedef uint16 DeclSecurityAction_t; // TODO get the values
 
 struct Interface_t
 {
+    Interface_t () { }
+    Interface_t (const Interface_t&) { }
+    bool operator<(const Interface_t&) const; // support for old compiler/library
+    bool operator==(const Interface_t&) const; // support for old compiler/library
+
     std::vector<Method_t*> methods;
 };
 
@@ -921,7 +971,7 @@ struct Class_t
     std::string name;
     std::vector<Interface_t> interfaces;
     std::vector<Method_t> methods;
-    std::vector<Field_t> fields;
+    //TODO std::vector<Field_t> fields;
     std::vector<Event_t> events;
     std::vector<Property_t> properties;
 };
@@ -2129,7 +2179,7 @@ const MetadataType_t MetadataType_NotStored = { "NotStored", &MetadataType_Fixed
 struct metadata_schema_column_t
 {
     const char* name;
-    const MetadataType_t& type;
+    const MetadataType_t* type; // old compilers do not allow reference here, with initialization
 };
 
 struct metadata_table_schema_t
@@ -2343,6 +2393,36 @@ struct EmptyBase_t
     METADATA_COLUMN3 (Implementation, Implementation, MetadataToken_t))         \
 
 
+// TODO enum
+typedef uint32 ManifestResourceFlags_t;
+
+struct ManifestResource_t // table0x28
+{
+    uint32 Offset;
+    ManifestResourceFlags_t Flags;
+    String_t Name;
+    union {
+        //File_t* File;
+        //Assembly_t* Assembly;
+    } Implementation;
+};
+struct metadata_ManifestResource_t // table0x28
+{
+    uint32 Offset;
+    ManifestResourceFlags_t Flags; // TODO enum
+    MetadataString_t Name;
+    MetadataToken_t Implementation;
+};
+const metadata_schema_column_t metadata_columns_ManifestResource [ ] = // table0x28
+{
+     { "Offset", &MetadataType_uint32 },
+     { "Flags", &MetadataType_uint32 },
+     { "Name", &MetadataType_string },
+     { "Implementation", &MetadataType_Implementation },
+};
+const metadata_table_schema_t metadata_row_schema_ManifestResource = { "ManifestResource", CountOf (metadata_columns_ManifestResource), metadata_columns_ManifestResource };
+
+
 // Every table has two maybe three maybe four sets of types/data/forms.
 // 1. A very typed form. Convenient to work with. Does the most work to form.
 // 2. A very tokeny form. Coded index become tokens. Does minimal work to form. Needed?
@@ -2400,7 +2480,7 @@ struct EmptyBase_t
 #undef METADATA_TABLE
 #undef METADATA_COLUMN2
 #undef METADATA_COLUMN3
-#define METADATA_TABLE(name, base, columns)  struct name ##  _t base { columns };
+#define METADATA_TABLE(name, base, columns)  struct name ##  _t base { name ##  _t ( ) { } columns };
 #define METADATA_COLUMN2(name, type) metadata_schema_TYPED_ ## type name;
 #define METADATA_COLUMN3(name, persistant_type, pointerful_type) pointerful_type name;
 METADATA_TABLES
@@ -2411,14 +2491,14 @@ METADATA_TABLES
 #define METADATA_TABLE(name, base, columns) \
 const metadata_schema_column_t metadata_column_ ## name [ ] = { columns }; \
 const metadata_table_schema_t metadata_row_schema_ ## name = { #name, CountOf (metadata_column_ ## name), metadata_column_ ## name };
-#define METADATA_COLUMN2(name, type) { # name, MetadataType_  ## type },
-#define METADATA_COLUMN3(name, persistant_type, pointerful_type) { # name, MetadataType_  ## persistant_type },
+#define METADATA_COLUMN2(name, type) { # name, &MetadataType_  ## type },
+#define METADATA_COLUMN3(name, persistant_type, pointerful_type) { # name, &MetadataType_  ## persistant_type },
 METADATA_TABLES
 
 const metadata_schema_column_t metadata_columns_MethodSpec [ ] = // table0x2B
 {
-    { "Method", MetadataType_MethodDefOrRef },
-    { "Instantiation", MetadataType_blob },
+    { "Method", &MetadataType_MethodDefOrRef },
+    { "Instantiation", &MetadataType_blob },
 };
 const metadata_table_schema_t metadata_row_schema_MethodSpec = { "MethodSpec", CountOf (metadata_columns_MethodSpec), metadata_columns_MethodSpec };
 
@@ -2434,8 +2514,8 @@ struct metadata_NestedClass_t // table0x29
 };
 const metadata_schema_column_t metadata_columns_NestedClass [ ] = // table0x29
 {
-    { "NestedClass", MetadataType_TypeDef },
-    { "EnclosingClass", MetadataType_TypeDef },
+    { "NestedClass", &MetadataType_TypeDef },
+    { "EnclosingClass", &MetadataType_TypeDef },
 };
 const metadata_table_schema_t metadata_row_schema_NestedClass = { "NestedClass", CountOf (metadata_columns_NestedClass), metadata_columns_NestedClass };
 
@@ -2463,10 +2543,10 @@ struct metadata_GenericParam_t // table0x2A
 };
 const metadata_schema_column_t metadata_columns_GenericParam [ ] = // table0x2A
 {
-    { "Number", MetadataType_uint16 },
-    { "Flags", MetadataType_uint16 },
-    { "Owner", MetadataType_TypeOrMethodDef },
-    { "Name", MetadataType_string },
+    { "Number", &MetadataType_uint16 },
+    { "Flags", &MetadataType_uint16 },
+    { "Owner", &MetadataType_TypeOrMethodDef },
+    { "Name", &MetadataType_string },
 };
 const metadata_table_schema_t metadata_row_schema_GenericParam = { "GenericParam", CountOf (metadata_columns_GenericParam), metadata_columns_GenericParam };
 
@@ -2482,39 +2562,10 @@ struct metadata_GenericParamConstraint_t // table0x2C
 };
 const metadata_schema_column_t metadata_columns_GenericParamConstraint [ ] = // table0x2C
 {
-    { "Owner", MetadataType_GenericParam },
-    { "Constraint", MetadataType_TypeDefOrRef },
+    { "Owner", &MetadataType_GenericParam },
+    { "Constraint", &MetadataType_TypeDefOrRef },
 };
 const metadata_table_schema_t metadata_row_schema_GenericParamConstraint = { "GenericParamConstraint", CountOf (metadata_columns_GenericParamConstraint), metadata_columns_GenericParamConstraint };
-
-// TODO enum
-typedef uint32 ManifestResourceFlags_t;
-
-struct ManifestResource_t // table0x28
-{
-    uint32 Offset;
-    ManifestResourceFlags_t Flags;
-    String_t Name;
-    union {
-        //File_t* File;
-        //Assembly_t* Assembly;
-    } Implementation;
-};
-struct metadata_ManifestResource_t // table0x28
-{
-    uint32 Offset;
-    ManifestResourceFlags_t Flags; // TODO enum
-    MetadataString_t Name;
-    MetadataToken_t Implementation;
-};
-const metadata_schema_column_t metadata_columns_ManifestResource [ ] = // table0x28
-{
-     { "Offset", MetadataType_uint32 },
-     { "Flags", MetadataType_uint32 },
-     { "Name", MetadataType_string },
-     { "Implementation", MetadataType_Implementation },
-};
-const metadata_table_schema_t metadata_row_schema_ManifestResource = { "ManifestResource", CountOf (metadata_columns_ManifestResource), metadata_columns_ManifestResource };
 
 /*
 const int8 ClassLayout = 15;
@@ -2709,7 +2760,7 @@ struct loaded_image_t : loaded_image_t_z
         uint count = schema->count;
         uint size = 0;
         for (uint i = 0; i < count; ++i)
-                size += schema->fields [i].type.functions->size (&schema->fields [i].type, this);
+                size += schema->fields [i].type->functions->size (schema->fields [i].type, this);
         return size;
     }
 
@@ -2769,17 +2820,18 @@ struct loaded_image_t : loaded_image_t_z
         number_of_sections = nt->FileHeader.NumberOfSections;
         printf ("number_of_sections:%X\n", number_of_sections);
         image_section_header_t* section_header = nt->first_section_header ();
-        for (uint i = 0; i < number_of_sections; ++i, ++section_header)
+        uint i = 0;
+        for (i = 0; i < number_of_sections; ++i, ++section_header)
             printf ("section [%02X].Name: %.8s\n", i, section_header->Name);
         image_data_directory_t* DataDirectory = opt32 ? opt32->DataDirectory : opt64->DataDirectory;
-        for (uint i = 0; i < NumberOfRvaAndSizes; ++i)
+        for (i = 0; i < NumberOfRvaAndSizes; ++i)
         {
             printf ("DataDirectory [%02X].Offset: 0x%06X\n", i, DataDirectory[i].VirtualAddress);
             printf ("DataDirectory [%02X].Size: 0x%06X\n", i, DataDirectory[i].Size);
         }
         release_assertf (DataDirectory [14].VirtualAddress, ("Not a .NET image? %x", DataDirectory [14].VirtualAddress));
         release_assertf (DataDirectory [14].Size, ("Not a .NET image? %x", DataDirectory [14].Size));
-        image_clr_header_t* clr = rva_to_p<image_clr_header_t>(DataDirectory [14].VirtualAddress);
+        image_clr_header_t* clr = (image_clr_header_t*)rva_to_p(DataDirectory [14].VirtualAddress);
         printf ("clr.cb:%X\n", clr->cb);
         printf ("clr.MajorRuntimeVersion:%X\n", clr->MajorRuntimeVersion);
         printf ("clr.MinorRuntimeVersion:%X\n", clr->MinorRuntimeVersion);
@@ -2787,7 +2839,7 @@ struct loaded_image_t : loaded_image_t_z
         printf ("clr.MetaData.Size:%X\n", clr->MetaData.Size);
         release_assertf (clr->MetaData.Size, ("%X", clr->MetaData.Size));
         release_assertf (clr->cb >= sizeof (image_clr_header_t), ("%X %X", clr->cb, (uint)sizeof (image_clr_header_t)));
-        MetadataRoot_t* metadata_root = rva_to_p<MetadataRoot_t>(clr->MetaData.VirtualAddress);
+        MetadataRoot_t* metadata_root = (MetadataRoot_t*)rva_to_p(clr->MetaData.VirtualAddress);
         printf ("metadata_root.Signature:%X\n", metadata_root->Signature);
         printf ("metadata_root.MajorVersion:%X\n", metadata_root->MajorVersion);
         printf ("metadata_root.MinorVersion:%X\n", metadata_root->MinorVersion);
@@ -2804,7 +2856,7 @@ struct loaded_image_t : loaded_image_t_z
         printf ("flags:%X\n", *pflags);
         printf ("number_of_streams:%X\n", number_of_streams);
         MetadataStreamHeader_t* stream = (MetadataStreamHeader_t*)(pnumber_of_streams + 1);
-        for (uint i = 0; i < number_of_streams; ++i)
+        for (i = 0; i < number_of_streams; ++i)
         {
             printf ("stream[%X].Offset:%X\n", i, stream->Offset);
             printf ("stream[%X].Size:%X\n", i, stream->Size);
@@ -2860,7 +2912,7 @@ unknown_stream:
         const uint64 one = 1;
         uint j = 0;
         uint32* RowCount = (uint32*)(metadata_tables + 1);
-        for (uint i = 0; i < CountOf (table_info.array); ++i)
+        for (i = 0; i < CountOf (table_info.array); ++i)
         {
             uint64 const mask = one << i;
             bool Present = (valid & mask) != 0;
@@ -2880,10 +2932,10 @@ unknown_stream:
         dump_table (TypeDef);
     }
 
-    template <typename T> T* rva_to_p (uint32 rva)
+    void* rva_to_p (uint32 rva)
     {
         rva = rva_to_file_offset (rva);
-        return rva ? (T*)(((char*)base) + rva) : 0;
+        return rva ? (((char*)base) + rva) : 0;
     }
 
     uint32 rva_to_file_offset (uint32 rva)
@@ -2955,9 +3007,12 @@ image_metadata_size_index (loaded_image_t* image, uint /* todo enum */ table_ind
     return metadata_size_index_compute (image, table_index);
 }
 
+#if 0
+#if _MSC_VER <= 1100 // TODO old compiler compat; VC5 has namespaces but they do not work well, i.e. with std::vector<n::m>
 }
-
 using namespace m2;
+#endif
+#endif
 
 int
 main (int argc, char** argv)

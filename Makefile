@@ -44,13 +44,13 @@ exe:
 ifdef _NMAKE_VER:
 !ifdef _NMAKE_VER
 
-#!if !exist (./config.mk)
-#!if [.\config.cmd]
-#!endif
-#!endif
-#!if exist (./config.mk)
-#!include ./config.mk
-#!endif
+!if !exist (./config.mk)
+!if [.\config.cmd]
+!endif
+!endif
+!if exist (./config.mk)
+!include ./config.mk
+!endif
 
 #!message AMD64=$(AMD64)
 #!message 386=$(386)
@@ -101,7 +101,8 @@ clean:
 # TODO /Qspectre
 
 $(win): m2.cpp
-	cl /Wall /W4 /MD /Zi /EHsc $** /link /out:$@ /incremental:no
+	-del $(@R).pdb
+	cl $(wall) /W4 /MD /Zi /EHsc $** /link /out:$@ /incremental:no
 
 !else
 else
