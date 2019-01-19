@@ -89,7 +89,7 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <limits.h>
-#include <algorithm>
+#include <algorithm> // TODO? remove STL dependency?
 #ifdef _WIN32
 #define NOMINMAX 1
 #include <io.h>
@@ -100,8 +100,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #endif
-#include <vector>
-#include <string>
+#include <vector> // TODO? remove STL dependency?
+#include <string> // TODO? remove STL dependency?
 #if _MSC_VER
 #include <malloc.h>
 #endif
@@ -227,32 +227,26 @@ string_vformat_length (const char *format, va_list va)
 #endif
 }
 
-bool
-string_vformat_internal (const char *format, std::vector<char>& s, va_list va)
+std::string
+string_vformat (const char *format, va_list va)
 {
+    // Some systems, including Linux/amd64, cannot consume a
+    // va_list multiple times. It must be copied first.
+    // Passing the parameter twice does not work.
 #ifndef _MSC_VER
     va_list va2;
 #ifdef __va_copy
     __va_copy (va2, va);
 #else
-    va_copy (va2, va);
+    va_copy (va2, va); // C99
 #endif
-#else
-    va_list va2 = va;
 #endif
-    s.resize ((size_t)string_vformat_length(format, va));
+    std::vector<char> s((size_t)string_vformat_length(format, va));
 #if _MSC_VER
-    return _vsnprintf (&s [0], s.size(), format, va2) < s.size();
+    _vsnprintf (&s [0], s.size(), format, va);
 #else
-    return vsnprintf (&s [0], s.size(), format, va2) < s.size();
+    vsnprintf (&s [0], s.size(), format, va2);
 #endif
-}
-
-std::string
-string_vformat (const char *format, va_list va)
-{
-    std::vector<char> s;
-    while (!string_vformat_internal (format, s, va)) ;
     return &s [0];
 }
 
