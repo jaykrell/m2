@@ -2079,8 +2079,7 @@ int_get_precision(int64 a)
 {
     // How many bits needed to represent.
     // i.e. so leading bit is extendible sign bit, or 64
-    int_split_sign_magnitude_t split(a);
-    return std::min(64, 1 + uint_get_precision (split.u));
+    return std::min(64, 1 + uint_get_precision (int_split_sign_magnitude_t(a).u));
 }
 
 int
@@ -2104,7 +2103,7 @@ uint_to_dec(int64 a, char* buf)
 int
 int_to_dec(int64 a, char* buf)
 {
-    int_split_sign_magnitude_t split(a);
+    const int_split_sign_magnitude_t split(a);
     if (split.neg)
         *buf++ = '-';
     return split.neg + uint_to_dec(split.u, buf);
@@ -2113,7 +2112,7 @@ int_to_dec(int64 a, char* buf)
 int
 int_to_dec_getlen(int64 a)
 {
-    int_split_sign_magnitude_t split(a);
+    const int_split_sign_magnitude_t split(a);
     return split.neg + uint_to_dec_getlen(split.u);
 }
 
