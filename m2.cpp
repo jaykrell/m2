@@ -35,6 +35,14 @@
 #define _cpp_max max // old compiler/library compat
 #define _cpp_min min // old compiler/library compat
 
+#ifndef HAS_TYPED_ENUM
+#if __cplusplus >= 201103L || _MSC_VER >= 1500 // TODO test more compilers
+#define HAS_TYPED_ENUM 1
+#else
+#define HAS_TYPED_ENUM 0
+#endif
+#endif
+
 #ifdef _MSC_VER
 
 // We have to include yvals.h early because it breaks warnings.
@@ -53,6 +61,7 @@
 #pragma warning(disable:4146) // unary minus unsigned is still unsigned (xlocnum)
 #pragma warning(disable:4201) // non standard extension : nameless struct/union (windows.h)
 #pragma warning(disable:4238) // non standard extension : class rvalue as lvalue (utility)
+#pragma warning(disable:4480) // non standard extension : typed enums
 #pragma warning(disable:4510) // function could not be generated
 #pragma warning(disable:4511) // function could not be generated
 #pragma warning(disable:4512) // function could not be generated
@@ -65,7 +74,7 @@
 #pragma warning(disable:4706) // assignment within conditional
 #pragma warning(disable:4710) // function not inlined
 #pragma warning(disable:5027) // move assignment implicitly deleted
-#if _MSC_VER > 1100 // TODO
+#if _MSC_VER > 1100 // TODO test more compilers
 #pragma warning(push)
 #endif
 #pragma warning(disable:4480) // specifying enum type
@@ -107,7 +116,7 @@
 #include <malloc.h>
 #endif
 
-#if _MSC_VER > 1100 // TODO
+#if _MSC_VER > 1100 // TODO test more compilers
 #pragma warning(pop)
 #endif
 
@@ -581,10 +590,10 @@ struct fd_t
     uint64 get_file_size (const char * file_name = "")
     {
 #ifdef __CYGWIN__
-        struct stat st = { 0 }; // TODO
+        struct stat st = { 0 }; // TODO test more systems
         if (fstat (fd, &st))
 #else
-        struct stat64 st = { 0 }; // TODO
+        struct stat64 st = { 0 }; // TODO test more systems
         if (fstat64 (fd, &st))
 #endif
             throw_errno (string_format ("fstat(%s)", file_name).c_str ());
@@ -648,7 +657,7 @@ struct fd_t
 
 struct memory_mapped_file_t
 {
-// TODO allow for redirection to built-in data
+// TODO allow for redirection to built-in data (i.e. filesystem emulation with builtin BCL)
 // TODO allow for systems that must read, not mmap
     void * base;
     size_t size;
@@ -768,7 +777,15 @@ union HasCustomAttribute_t
     voidp TODO;
 };
 
-enum _MethodDefFlags_t // table0x06
+#if 1
+#define BEGIN_ENUM(name, type) enum name : type
+#define END_ENUM(name, type) ;
+#else
+#define BEGIN_ENUM(name, type) enum _ ## name
+#define END_ENUM(name, type) ; typedef type name;
+#endif
+
+BEGIN_ENUM(MethodDefFlags_t, uint16) // table0x06
 {
 //TODO bitfields (need to test little and big endian)
 //TODO or bitfield decoder
@@ -809,10 +826,10 @@ enum _MethodDefFlags_t // table0x06
     MethodDefFlags_RTSpecialName             =   0x1000,     // Runtime should check name encoding.
     MethodDefFlags_HasSecurity               =   0x4000,     // Method has security associate with it.
     MethodDefFlags_RequireSecObject          =   0x8000      // Method calls another method containing security code.
-};
-typedef uint16 MethodDefFlags_t; // table0x06
+}
+END_ENUM(MethodDefFlags_t, uint16) // table0x06
 
-enum _MethodDefImplFlags_t // table0x06
+BEGIN_ENUM(MethodDefImplFlags_t, uint16) // table0x06
 {
     // code impl mask
     MethodDefImplFlags_CodeTypeMask      =   0x0003,   // Flags about code type.
@@ -837,8 +854,8 @@ enum _MethodDefImplFlags_t // table0x06
     MethodDefImplFlags_Synchronized      =   0x0020,   // Method is single threaded through the body.
     MethodDefImplFlags_NoInlining        =   0x0008,   // Method may not be inlined.
     MethodDefImplFlags_MaxMethodImplVal  =   0xffff    // Range check value
-};
-typedef uint16 MethodDefImplFlags_t; // table0x06
+}
+END_ENUM(MethodDefImplFlags_t, uint16) // table0x06
 
 struct Method_t : Member_t
 {
@@ -846,7 +863,7 @@ struct Method_t : Member_t
     bool operator==(const Method_t&) const; // support for old compiler/library
 };
 
-enum _TypeFlags_t
+BEGIN_ENUM(TypeFlags_t, uint32)
 {
     //TODO bitfields (need to test little and big endian)
     //TODO or bitfield decoder
@@ -900,20 +917,20 @@ enum _TypeFlags_t
     TypeFlags_ReservedMask          =   0x00040800,
     TypeFlags_RTSpecialName         =   0x00000800,     // Runtime should check name encoding.
     TypeFlags_HasSecurity           =   0x00040000      // Class has security associate with it.
-};
-typedef uint32 TypeFlags_t;
+}
+END_ENUM(TypeFlags_t, uint32)
 
 struct Type_t // class, valuetype, delegate, inteface, not char, short, int, long, float
 {
 };
 
-enum _EventFlags_t
+BEGIN_ENUM(EventFlags_t, uint16)
 {
     EventFlags_SpecialName           =   0x0200,     // event is special. Name describes how.
     // Reserved flags for Runtime use only.
     EventFlags_RTSpecialName         =   0x0400      // Runtime(metadata internal APIs) should check name encoding.
-};
-typedef uint16 EventFlags_t;
+}
+END_ENUM(EventFlags_t, uint16)
 
 struct Event_t : Member_t // table0x14
 {
@@ -930,7 +947,7 @@ struct Property_t : Member_t
     bool operator==(const Property_t&) const; // support for old compiler/library
 };
 
-enum _FieldFlags_t
+BEGIN_ENUM(FieldFlags_t, uint16)
 {
 //TODO bitfields (need to test little and big endian)
 //TODO or bitfield decoder
@@ -962,10 +979,10 @@ enum _FieldFlags_t
     FieldFlags_HasFieldMarshal           =   0x1000,     // Field has marshalling information.
     FieldFlags_HasDefault                =   0x8000,     // Field has default.
     FieldFlags_HasFieldRVA               =   0x0100      // Field has RVA.
-};
-typedef uint16 FieldFlags_t;
+}
+END_ENUM(FieldFlags_t, uint16)
 
-enum _DeclSecurityAction_t
+BEGIN_ENUM(DeclSecurityAction_t, uint16)
 {
     // TODO values?
     DeclSecurityAction_Assert,
@@ -980,8 +997,8 @@ enum _DeclSecurityAction_t
     DeclSecurityAction_RequestMinimum,
     DeclSecurityAction_RequestOptional,
     DeclSecurityAction_RequestRefuse
-};
-typedef uint16 DeclSecurityAction_t; // TODO get the values
+}
+END_ENUM(DeclSecurityAction_t, uint16) // TODO get the values
 
 
 struct Interface_t
@@ -1038,7 +1055,7 @@ struct TypeOrMethodDef_t
     Method_t* Method;
 };
 
-enum _MethodSemanticsFlags_t
+BEGIN_ENUM(MethodSemanticsFlags_t, uint16)
 {
     MethodSemanticsFlags_Setter = 1, // msSetter
     MethodSemanticsFlags_Getter = 2,
@@ -1046,8 +1063,8 @@ enum _MethodSemanticsFlags_t
     MethodSemanticsFlags_AddOn = 8,
     MethodSemanticsFlags_RemoveOn = 0x10,
     MethodSemanticsFlags_Fire = 0x20
-};
-typedef uint16 MethodSemanticsFlags_t;
+}
+END_ENUM(MethodSemanticsFlags_t, uint16)
 
 union MethodSemanticsAssociation_t // table0x18
 {
@@ -1203,13 +1220,13 @@ CODED_INDEX (HasCustomAttribute, 22,                                            
       GenericParamConstraint COMMA MethodSpec                                          }) /* HasCustomAttribute */
 
 #define CODED_INDEX(a, n, values) CodedIndex_ ## a,
-enum _CodedIndex
+BEGIN_ENUM(CodedIndex, uint8)
 {
 CODED_INDICES
 #undef CODED_INDEX
     CodedIndex_Count
-};
-typedef uint8 CodedIndex;
+}
+END_ENUM(CodedIndex, uint8)
 
 
 struct CodedIndexMap_t // TODO array and named
@@ -1340,7 +1357,7 @@ struct MetadataStreamHeader_t // see mono verify_metadata_header
     char   Name [32]; // multiple of 4, null terminated, max 32
 };
 
-enum _ParamFlags_t
+BEGIN_ENUM(ParamFlags_t, uint16)
 {
     ParamFlags_In                        =   0x0001,     // Param is [In]
     ParamFlags_Out                       =   0x0002,     // Param is [out]
@@ -1352,10 +1369,10 @@ enum _ParamFlags_t
     ParamFlags_HasFieldMarshal           =   0x2000,     // Param has FieldMarshal.
 
     ParamFlags_Unused                    =   0xcfe0
-};
-typedef uint16 ParamFlags_t;
+}
+END_ENUM(ParamFlags_t, uint16)
 
-enum _AssemblyFlags
+BEGIN_ENUM(AssemblyFlags, uint32)
 {
     AssemblyFlags_PublicKey             =   0x0001,     // The assembly ref holds the full (unhashed) public key.
 
@@ -1374,25 +1391,25 @@ enum _AssemblyFlags
 
     AssemblyFlags_Retargetable          =   0x0100,     // The assembly can be retargeted (at runtime) to an
                                                         // assembly from a different publisher.
-};
-typedef uint32 AssemblyFlags;
+}
+END_ENUM(AssemblyFlags, uint32)
 
-enum _FileFlags
+BEGIN_ENUM(FileFlags_t, uint32)
 {
     FileFlags_ContainsMetaData      =   0x0000,     // This is not a resource file
     FileFlags_ContainsNoMetaData    =   0x0001,     // This is a resource file or other non-metadata-containing file
-};
-typedef uint32 FileFlags_t;
+}
+END_ENUM(FileFlags_t, uint32)
 
-enum _ManifestResourceFlags
+BEGIN_ENUM(ManifestResourceFlags_t, uint32)
 {
     ManifestResourceFlags_VisibilityMask        =   0x0007,
     ManifestResourceFlags_Public                =   0x0001,     // The Resource is exported from the Assembly.
     ManifestResourceFlags_Private               =   0x0002,     // The Resource is private to the Assembly.
-};
-typedef uint32 ManifestResourceFlags_t;
+}
+END_ENUM(ManifestResourceFlags_t, uint32)
 
-enum _GenericParamFlags
+BEGIN_ENUM(GenericParamFlags_t, uint16)
 {
     // Variance of type parameters, only applicable to generic parameters
     // for generic interfaces and delegates
@@ -1407,8 +1424,8 @@ enum _GenericParamFlags
     GenericParamFlags_ReferenceTypeConstraint = 0x0004,      // type argument must be a reference type
     GenericParamFlags_NotNullableValueTypeConstraint   =   0x0008, // type argument must be a value type but not Nullable
     GenericParamFlags_DefaultConstructorConstraint = 0x0010, // type argument must have a public default constructor
-};
-typedef uint16 GenericParamFlags_t;
+}
+END_ENUM(GenericParamFlags_t, uint16)
 
 #if 0 // TODO This is copy/pasted from the web and should be gradually
       // worked into types/defines/enums, or deleted because it already was. And cross check with ECMA .pdf.
@@ -1817,13 +1834,7 @@ Columns:
 // the code size is less than 64 bytes. In addition it cannot be used if maxstack > 8 or local variables or exceptions
 //  (extra sections) are present. In all these other cases the fat header is used:
 
-Offset
-
-Size
-
-Field
-
-Description
+Offset Size Field Description
 
 0 12 (bits) Flags Flags (CorILMethod_FatFormat shall be set in bits 0:1).
 12 (bits) 4 (bits) Size Size of this header expressed as the count of 4-byte integers occupied (currently 3).
@@ -1834,71 +1845,29 @@ Description
 
 The available flags are:
 
-Flag Value Description CorILMethod_FatFormat
-
-0x3 Method header is fat.
-CorILMethod_TinyFormat
-
-0x2
-
-Method header is tiny.
-
-CorILMethod_MoreSects
-
-0x8
-
-More sections follow after this header.
-
-CorILMethod_InitLocals
-
-0x10
-
-Call default constructor on all local variables.
-
+Flag Value Description
+CorILMethod_FatFormat 0x3 Method header is fat.
+CorILMethod_TinyFormat 0x2 Method header is tiny.
+CorILMethod_MoreSects 0x8 More sections follow after this header.
+CorILMethod_InitLocals 0x10 Call default constructor on all local variables.
 This means that when the CorILMethod_MoreSects is set, extra sections follow the method. To reach the first extra section we have to add the size of the header to the code size and to the file offset of the method, then aligne to the next 4-byte boundary.
 
 Extra sections can have a Fat (1 byte flags, 3 bytes size) or a Small header (1 byte flags, 1 byte size); the size includes the header size. The type of header and the type of section is specified in the first byte, of course:
 
-Flag
+Flag Value Description
 
-Value
-
-Description
-
-CorILMethod_Sect_EHTable
-
-0x1
-
-Exception handling data.
-
-CorILMethod_Sect_OptILTable
-
-0x2
-
-Reserved, shall be 0.
-
-CorILMethod_Sect_FatFormat
-
-0x40
-
-Data format is of the fat variety, meaning there is a 3-byte length.  If not set, the header is small with a  1-byte length
-
-CorILMethod_Sect_MoreSects
-
-0x80
-
-Another data section occurs after this current section
+CorILMethod_Sect_EHTable 0x1
+Exception handling data. CorILMethod_Sect_OptILTable 0x2 Reserved, shall be 0.
+CorILMethod_Sect_FatFormat 0x40 Data format is of the fat variety, meaning there is a 3-byte length.  If not set, the header is small with a  1-byte length
+CorILMethod_Sect_MoreSects 0x80 Another data section occurs after this current section
 
 // No other types than the exception handling sections are declared (this doesn't mean
 // you shouldn't check the CorILMethod_Sect_EHTable flag). So if the section is small it will be:
 
 Offset Size Field Description
 0 1 Kind Flags as described above.
-
 1 1 DataSize Size of the data for the block, including the header, say n*12+4.
-
 2 2 Reserved Padding, always 0.
-
 4 n Clauses n small exception clauses.
 
 Otherwise:
@@ -1935,10 +1904,10 @@ Available flags are:
 
 Flag Value Description
 
-const uint8 COR_ILEXCEPTION_CLAUSE_EXCEPTION = 0; // A typed exception clause
-const uint8 COR_ILEXCEPTION_CLAUSE_FILTER = 1; // An exception filter and handler clause
-const uint8 COR_ILEXCEPTION_CLAUSE_FINALLY = 2; // A finally clause
-const uint8 COR_ILEXCEPTION_CLAUSE_FAULT = 4; // Fault clause (finally that is called on exception only)
+const uint COR_ILEXCEPTION_CLAUSE_EXCEPTION = 0; // A typed exception clause
+const uint COR_ILEXCEPTION_CLAUSE_FILTER = 1; // An exception filter and handler clause
+const uint COR_ILEXCEPTION_CLAUSE_FINALLY = 2; // A finally clause
+const uint COR_ILEXCEPTION_CLAUSE_FAULT = 4; // Fault clause (finally that is called on exception only)
 
 //The #Blob Stream
 // This stream contains different things as you might have already noticed going through the MetaData tables,
@@ -2205,11 +2174,11 @@ struct MetadataType_t
    };
 };
 
-uint
+uint32
 loadedimage_metadata_size_codedindex_get (loaded_image_t* image, CodedIndex coded_index);
 
-#define CODED_INDEX(x, n, values) uint metadata_size_codedindex_ ## x (MetadataType_t* type, loaded_image_t* image) \
-{ return loadedimage_metadata_size_codedindex_get (image, type->coded_index); }
+//#define CODED_INDEX(x, n, values) uint32 metadata_size_codedindex_ ## x (MetadataType_t* type, loaded_image_t* image) \
+//{ return loadedimage_metadata_size_codedindex_get (image, type->coded_index); }
 //CODED_INDICES
 #undef CODED_INDEX
 
@@ -2271,7 +2240,7 @@ metadata_size_ustring (const MetadataType_t* type, loaded_image_t* image)
     return 4;
 }
 
-uint
+uint32
 metadata_size_codedindex (const MetadataType_t* type, loaded_image_t* image)
 {
     return loadedimage_metadata_size_codedindex_get(image, type->coded_index);
@@ -2703,7 +2672,7 @@ struct EmptyBase_t
 #define METADATA_TABLE(name, base, columns)                         name, // TODO longer name?
 #define METADATA_COLUMN2(name, type)                                /* nothing */
 #define METADATA_COLUMN3(name, persistant_type, pointerful_type)    /* nothing */
-//enum _MetadataTableIndex {
+//BEGIN_ENUM(MetadataTableIndex {
 //    METADATA_TABLES
 //};
 
@@ -3156,7 +3125,7 @@ metadata_size_guid (const MetadataType_t* type, loaded_image_t* image)
     return image->guid_size;
 }
 
-uint
+uint32
 metadata_size_codedindex_compute (loaded_image_t* image, CodedIndex coded_index)
 {
     const CodedIndex_t* data = &CodedIndices.array [(uint)coded_index];
@@ -3168,7 +3137,7 @@ metadata_size_codedindex_compute (loaded_image_t* image, CodedIndex coded_index)
     return (max_rows <= (0xFFFFu >> data->tag_size)) ? 2u : 4u;
 }
 
-uint
+uint32
 loadedimage_metadata_size_codedindex_get (loaded_image_t* image, CodedIndex coded_index)
 {
     const uint a = image->coded_index_size [(uint)coded_index];

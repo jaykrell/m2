@@ -2,16 +2,29 @@
 
 SetLocal
 
-echo int config; > config.c
+echo int config; > config.cpp
 
-set wall=/Wall
-cl %wall% /c config.c
-if errorlevel 1 set wall=
-echo wall=%wall%
+echo _MSC_VER > mscver.cpp
+for /f %%a in ('cl /nologo /EP mscver.cpp') do set mscver=%%a
 
-cl.exe 2>&1 | findstr /e /i x64 >nul: && goto :x64
-cl.exe 2>&1 | findstr /e /i amd64 >nul: && goto :amd64
-cl.exe 2>&1 | findstr /e /i x86 >nul: && goto :x86
+::  not very useful currently
+::  Visual C++ 15.0 has typed enums but __cplusplus=199711L
+::  might still use it later
+::  echo __cplusplus > cplusplus.cpp
+::  for /f %%a in ('cl /nologo /TP /EP cplusplus.cpp') do set cplusplus=%%a
+
+set HAS_TYPED_ENUM=1
+echo enum a : int { }; > typedenum.cpp
+if errorlevel 1 set HAS_TYPED_ENUM=0
+
+set Wall=/Wall
+cl /nologo %Wall% /c config.cpp
+if errorlevel 1 set Wall=
+echo Wall=%Wall%
+
+cl 2>&1 | findstr /e /i x64 >nul: && goto :x64
+cl 2>&1 | findstr /e /i amd64 >nul: && goto :amd64
+cl 2>&1 | findstr /e /i x86 >nul: && goto :x86
 echo ERROR: Failed to configure.
 goto :eof
 
@@ -28,6 +41,14 @@ echo 386=0 >>config.mk
 goto :end
 
 :end
-echo wall=%wall% >>config.mk
+::  echo cplusplus=%cplusplus% >>config.mk
+del config.h 2>nul
+echo mscver=%mscver% >>config.mk
+echo Wall=%Wall% >>config.mk
+echo CONFIG_H=1 >>config.mk
+echo HAS_TYPED_ENUM=%HAS_TYPED_ENUM% >>config.mk
+echo #define HAS_TYPED_ENUM %HAS_TYPED_ENUM% >>config.h
+
 type config.mk
+type config.h
 goto :eof
