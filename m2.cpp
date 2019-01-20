@@ -260,7 +260,7 @@ string_format (const char *format, ...)
     return a;
 }
 
-#define not_implemented_yet() (assertf (0, ("not yet implemented %s %d ", __func__, __LINE__)))
+#define not_implemented_yet() (assertf (0, ("not yet implemented %s 0x%08X ", __func__, __LINE__)))
 
 void
 throw_string (const std::string& a)
@@ -273,7 +273,7 @@ throw_string (const std::string& a)
 void
 throw_int (int i, const char* a = "")
 {
-    throw_string (string_format ("error %d %s\n", i, a));
+    throw_string (string_format ("error 0x%08X %s\n", i, a));
 }
 
 void
@@ -2042,24 +2042,71 @@ struct MetadataTypeFunctions_t
     void (*print)(const MetadataType_t*, loaded_image_t*, int table, int row, int column, void* data, int size);
 };
 
+int
+int_to_hex_getlen(int64 a)
+{
+    uint b = a;
+    int len = 0;
+    do
+        ++len;
+    while (b >>= 4);
+    return len;
+}
+
+char*
+int_to_hexlen(int64 a, int len, char *buf)
+{
+    buf += len;
+    for (int i = 0; i < len; ++i, a >>= 4)
+        *--buf = "0123456789ABCDEF"[a & 0xF];
+    buf[len] = 0; // temporary
+    return buf;
+}
+
+char*
+int_to_hex(int64 a, char *buf)
+{
+    return int_to_hexlen(a, int_to_hex_getlen(a), buf);
+}
+
+char*
+int_to_hex8(int64 a, char *buf)
+{
+    return int_to_hexlen(a, 8, buf);
+}
+
+char*
+int_to_hex_atleast8(int64 a, char *buf)
+{
+    int len = int_to_hex_getlen (a);
+    if (len < 8)
+        len = 8;
+    return int_to_hexlen(a, len, buf);
+}
+
 void
 print_fixed(const MetadataType_t*, loaded_image_t*, int table, int row, int column, void* data, int size)
 {
+    char buf[17] = "";
+    int64 i = 0;
+
     switch (size)
     {
     case 1:
-        printf("%X ", *(uint8*)data);
-        return;
+        i = *(uint8*)data;
+        break;
     case 2:
-        printf("%X ", *(uint16*)data);
-        return;
+        i =  *(uint16*)data;
+        break;
     case 4:
-        printf("%X ", *(uint32*)data);
-        return;
+        i =  *(uint32*)data;
+        break;
     case 8:
-        printf("%X ", *(uint64*)data);
-        return;
+        i =  *(uint64*)data;
+        break;
     }
+    int_to_hex_atleast8(i, buf);
+    printf("0x%s ", buf);
 }
 
 struct MetadataType_t
@@ -2772,7 +2819,7 @@ struct loaded_image_t : loaded_image_t_z
 {
     DynamicTableInfo_t table_info;
 
-    uint compute_row_layout (uint a, const metadata_table_schema_t* schema)
+    uint ComputeTableLayout (uint a, const metadata_table_schema_t* schema)
     {
         DynamicTableInfoElement_t& row_info = table_info.array[a];
         uint count = schema->count;
@@ -2788,20 +2835,20 @@ struct loaded_image_t : loaded_image_t_z
         return size;
     }
 
-    uint get_row_size (uint a)
+    uint GetRowSize (uint a)
     {
         uint b = table_info.array [a].RowSize;
         if (b)
                 return b;
-        return compute_row_layout (a, metadata_int_to_table_schema [a]);
+        return ComputeTableLayout (a, metadata_int_to_table_schema [a]);
     }
 
-    void dump_table (uint a)
+    void DumpTable (uint a)
     {
-        std::string prefix = string_format ("table %X (%s)", a, GetTableName (a));
+        std::string prefix = string_format ("table 0x%08X (%s)", a, GetTableName (a));
         printf ("%s\n", prefix.c_str ());
-        printf ("%s present:%u\n", prefix.c_str (), table_info.array [a].Present);
-        printf ("%s row_size:%u\n", prefix.c_str (), get_row_size (a));
+        printf ("%s present:0x%08X\n", prefix.c_str (), table_info.array [a].Present);
+        printf ("%s row_size:0x%08X\n", prefix.c_str (), GetRowSize (a));
 
         const metadata_table_schema_t* schema = metadata_int_to_table_schema [a];
         const metadata_schema_column_t *fields = schema->fields;
@@ -2809,12 +2856,12 @@ struct loaded_image_t : loaded_image_t_z
         for (i = 0; i < schema->count; ++i)
         {
             const metadata_schema_column_t *field = &fields[i];
-            printf("%s layout type:%s name:%s offset:%d size:%d\n", GetTableName (a), field->type->name, field->name, table_info.array[a].ColumnInfo[i].offset, table_info.array[a].ColumnInfo[i].size);
+            printf("%s layout type:%s name:%s offset:0x%08X size:0x%08X\n", GetTableName (a), field->type->name, field->name, table_info.array[a].ColumnInfo[i].offset, table_info.array[a].ColumnInfo[i].size);
         }
         char* p = (char*)table_info.array[a].Base;
         for (uint r = 0; r < table_info.array [a].RowCount; ++r)
         {
-            printf("%s[%d] ", GetTableName (a), r);
+            printf("%s[0x%08X] ", GetTableName (a), r);
             for (i = 0; i < schema->count; ++i)
             {
                 const metadata_schema_column_t *field = &fields[i];
@@ -2847,24 +2894,24 @@ struct loaded_image_t : loaded_image_t_z
         printf ("pe: %02x%02x%02x%02x\n", pe [0], pe [1], pe [2], pe [3]);
         if (memcmp (pe, "PE\0\0", 4))
             throw_string (string_format ("incorrect PE00 signature %s", file_name));
-        printf ("pe: %c%c\\%d\\%d\n", pe [0], pe [1], pe [2], pe [3]);
+        printf ("pe: %c%c\\0x%08X\\0x%08X\n", pe [0], pe [1], pe [2], pe [3]);
         nt = (image_nt_headers_t*)pe;
-        printf ("Machine:%X\n", nt->FileHeader.Machine);
-        printf ("NumberOfSections:%X\n", nt->FileHeader.NumberOfSections);
-        printf ("TimeDateStamp:%X\n", nt->FileHeader.TimeDateStamp);
-        printf ("PointerToSymbolTable:%X\n", nt->FileHeader.PointerToSymbolTable);
-        printf ("NumberOfSymbols:%X\n", nt->FileHeader.NumberOfSymbols);
-        printf ("SizeOfOptionalHeader:%X\n", nt->FileHeader.SizeOfOptionalHeader);
-        printf ("Characteristics:%X\n", nt->FileHeader.Characteristics);
+        printf ("Machine:0x%08X\n", nt->FileHeader.Machine);
+        printf ("NumberOfSections:0x%08X\n", nt->FileHeader.NumberOfSections);
+        printf ("TimeDateStamp:0x%08X\n", nt->FileHeader.TimeDateStamp);
+        printf ("PointerToSymbolTable:0x%08X\n", nt->FileHeader.PointerToSymbolTable);
+        printf ("NumberOfSymbols:0x%08X\n", nt->FileHeader.NumberOfSymbols);
+        printf ("SizeOfOptionalHeader:0x%08X\n", nt->FileHeader.SizeOfOptionalHeader);
+        printf ("Characteristics:0x%08X\n", nt->FileHeader.Characteristics);
         opt32 = (image_optional_header32_t*)(&nt->OptionalHeader);
         opt64 = (image_optional_header64_t*)(&nt->OptionalHeader);
         opt_magic = opt32->Magic;
         release_assertf ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), ("file:%s opt_magic:%x", file_name, opt_magic));
         printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, (void*)opt32, (void*)opt64);
         NumberOfRvaAndSizes = opt32 ? opt32->NumberOfRvaAndSizes : opt64->NumberOfRvaAndSizes;
-        printf ("opt.rvas:%X\n", NumberOfRvaAndSizes);
+        printf ("opt.rvas:0x%08X\n", NumberOfRvaAndSizes);
         number_of_sections = nt->FileHeader.NumberOfSections;
-        printf ("number_of_sections:%X\n", number_of_sections);
+        printf ("number_of_sections:0x%08X\n", number_of_sections);
         image_section_header_t* section_header = nt->first_section_header ();
         uint i = 0;
         for (i = 0; i < number_of_sections; ++i, ++section_header)
@@ -2872,45 +2919,45 @@ struct loaded_image_t : loaded_image_t_z
         image_data_directory_t* DataDirectory = opt32 ? opt32->DataDirectory : opt64->DataDirectory;
         for (i = 0; i < NumberOfRvaAndSizes; ++i)
         {
-            printf ("DataDirectory [%02X].Offset: 0x%06X\n", i, DataDirectory[i].VirtualAddress);
-            printf ("DataDirectory [%02X].Size: 0x%06X\n", i, DataDirectory[i].Size);
+            printf ("DataDirectory [%02X].Offset: 0x%08X\n", i, DataDirectory[i].VirtualAddress);
+            printf ("DataDirectory [%02X].Size: 0x%08X\n", i, DataDirectory[i].Size);
         }
         release_assertf (DataDirectory [14].VirtualAddress, ("Not a .NET image? %x", DataDirectory [14].VirtualAddress));
         release_assertf (DataDirectory [14].Size, ("Not a .NET image? %x", DataDirectory [14].Size));
         image_clr_header_t* clr = (image_clr_header_t*)rva_to_p(DataDirectory [14].VirtualAddress);
-        printf ("clr.cb:%X\n", clr->cb);
-        printf ("clr.MajorRuntimeVersion:%X\n", clr->MajorRuntimeVersion);
-        printf ("clr.MinorRuntimeVersion:%X\n", clr->MinorRuntimeVersion);
-        printf ("clr.MetaData.Offset:%X\n", clr->MetaData.VirtualAddress);
-        printf ("clr.MetaData.Size:%X\n", clr->MetaData.Size);
-        release_assertf (clr->MetaData.Size, ("%X", clr->MetaData.Size));
-        release_assertf (clr->cb >= sizeof (image_clr_header_t), ("%X %X", clr->cb, (uint)sizeof (image_clr_header_t)));
+        printf ("clr.cb:0x%08X\n", clr->cb);
+        printf ("clr.MajorRuntimeVersion:0x%08X\n", clr->MajorRuntimeVersion);
+        printf ("clr.MinorRuntimeVersion:0x%08X\n", clr->MinorRuntimeVersion);
+        printf ("clr.MetaData.Offset:0x%08X\n", clr->MetaData.VirtualAddress);
+        printf ("clr.MetaData.Size:0x%08X\n", clr->MetaData.Size);
+        release_assertf (clr->MetaData.Size, ("0x%08X", clr->MetaData.Size));
+        release_assertf (clr->cb >= sizeof (image_clr_header_t), ("0x%08X 0x%08X", clr->cb, (uint)sizeof (image_clr_header_t)));
         MetadataRoot_t* metadata_root = (MetadataRoot_t*)rva_to_p(clr->MetaData.VirtualAddress);
-        printf ("metadata_root.Signature:%X\n", metadata_root->Signature);
-        printf ("metadata_root.MajorVersion:%X\n", metadata_root->MajorVersion);
-        printf ("metadata_root.MinorVersion:%X\n", metadata_root->MinorVersion);
-        printf ("metadata_root.Reserved:%X\n", metadata_root->Reserved);
-        printf ("metadata_root.VersionLength:%X\n", metadata_root->VersionLength);
-        release_assertf ((metadata_root->VersionLength % 4) == 0, ("%X", metadata_root->VersionLength));
+        printf ("metadata_root.Signature:0x%08X\n", metadata_root->Signature);
+        printf ("metadata_root.MajorVersion:0x%08X\n", metadata_root->MajorVersion);
+        printf ("metadata_root.MinorVersion:0x%08X\n", metadata_root->MinorVersion);
+        printf ("metadata_root.Reserved:0x%08X\n", metadata_root->Reserved);
+        printf ("metadata_root.VersionLength:0x%08X\n", metadata_root->VersionLength);
+        release_assertf ((metadata_root->VersionLength % 4) == 0, ("0x%08X", metadata_root->VersionLength));
         size_t VersionLength = strlen(metadata_root->Version);
-        release_assertf (VersionLength < metadata_root->VersionLength, ("%X %X", VersionLength, metadata_root->VersionLength));
+        release_assertf (VersionLength < metadata_root->VersionLength, ("0x%08X 0x%08X", VersionLength, metadata_root->VersionLength));
         // TODO bounds checks throughout
         uint16* pflags = (uint16*)&metadata_root->Version[metadata_root->VersionLength];
         uint16* pnumber_of_streams = 1 + pflags;
         number_of_streams = *pnumber_of_streams;
         printf ("metadata_root.Version:%s\n", metadata_root->Version);
-        printf ("flags:%X\n", *pflags);
-        printf ("number_of_streams:%X\n", number_of_streams);
+        printf ("flags:0x%08X\n", *pflags);
+        printf ("number_of_streams:0x%08X\n", number_of_streams);
         MetadataStreamHeader_t* stream = (MetadataStreamHeader_t*)(pnumber_of_streams + 1);
         for (i = 0; i < number_of_streams; ++i)
         {
-            printf ("stream[%X].Offset:%X\n", i, stream->Offset);
-            printf ("stream[%X].Size:%X\n", i, stream->Size);
-            release_assertf ((stream->Size % 4) == 0, ("%X", stream->Size));
+            printf ("stream[0x%08X].Offset:0x%08X\n", i, stream->Offset);
+            printf ("stream[0x%08X].Size:0x%08X\n", i, stream->Size);
+            release_assertf ((stream->Size % 4) == 0, ("0x%08X", stream->Size));
             const char* name = stream->Name;
             size_t length = strlen (name);
-            release_assertf (length <= 32, ("%X:%s", length, name));
-            printf ("stream[%X].Name:%X:%.*s\n", i, (int)length, (int)length, name);
+            release_assertf (length <= 32, ("0x%08X:%s", length, name));
+            printf ("stream[0x%08X].Name:0x%08X:%.*s\n", i, (int)length, (int)length, name);
             if (length >= 2 && name [0] == '#')
             {
                 ++name;
@@ -2936,25 +2983,25 @@ unknown_stream:
             stream = (MetadataStreamHeader_t*)(stream->Name + length);
         }
         metadata_tables = (MetadataTablesHeader_t*)(streams.tables->Offset + (char*)metadata_root);
-        printf ("metadata_tables.reserved:%X\n", metadata_tables->reserved);
-        printf ("metadata_tables.MajorVersion:%X\n", metadata_tables->MajorVersion);
-        printf ("metadata_tables.MinorVersion:%X\n", metadata_tables->MinorVersion);
-        printf ("metadata_tables.HeapSizes:%X\n", metadata_tables->HeapSizes);
+        printf ("metadata_tables.reserved:0x%08X\n", metadata_tables->reserved);
+        printf ("metadata_tables.MajorVersion:0x%08X\n", metadata_tables->MajorVersion);
+        printf ("metadata_tables.MinorVersion:0x%08X\n", metadata_tables->MinorVersion);
+        printf ("metadata_tables.HeapSizes:0x%08X\n", metadata_tables->HeapSizes);
         uint const HeapSize = metadata_tables->HeapSizes;
         string_size = (HeapSize & HeapOffsetSize_String) ? 4u : 2u;
         guid_size = (HeapSize & HeapOffsetSize_Guid) ? 4u: 2u;
         blob_size = (HeapSize & HeapOffsetSize_Blob) ? 4u : 2u;
-        printf ("metadata_tables.reserved2:%X\n", metadata_tables->reserved2);
+        printf ("metadata_tables.reserved2:0x%08X\n", metadata_tables->reserved2);
         uint64 valid = metadata_tables->Valid;
         uint64 sorted = metadata_tables->Sorted;
         uint64 unsorted = valid & ~sorted;
         uint64 invalidSorted = sorted & ~valid;
-        printf ("metadata_tables.        Valid:%08X`%08X\n", (uint32)(valid >> 32), (uint32)valid);
+        printf ("metadata_tables.        Valid:0x%08X`0x%08X\n", (uint32)(valid >> 32), (uint32)valid);
         // Mono does not use sorted, and there are bits set beyond Valid.
         // I suspect this has to do with writing/appending, and occasionally sorting.
-        printf ("metadata_tables.       Sorted:%08X`%08X\n", (uint32)(sorted >> 32), (uint32)sorted);
-        printf ("metadata_tables.     Unsorted:%08X`%08X\n", (uint32)(unsorted >> 32), (uint32)unsorted);
-        printf ("metadata_tables.InvalidSorted:%08X`%08X\n", (uint32)(invalidSorted >> 32), (uint32)invalidSorted);
+        printf ("metadata_tables.       Sorted:0x%08X`0x%08X\n", (uint32)(sorted >> 32), (uint32)sorted);
+        printf ("metadata_tables.     Unsorted:0x%08X`0x%08X\n", (uint32)(unsorted >> 32), (uint32)unsorted);
+        printf ("metadata_tables.InvalidSorted:0x%08X`0x%08X\n", (uint32)(invalidSorted >> 32), (uint32)invalidSorted);
         const uint64 one = 1;
         uint j = 0;
         uint32* RowCount = (uint32*)(metadata_tables + 1);
@@ -2970,17 +3017,17 @@ unknown_stream:
             table_info.array [i].Present = Present;
             if (Present)
             {
-                printf ("table 0x%X (%s) has %u rows (%s)\n", i, GetTableName (i), *RowCount, (sorted & mask) ? "sorted" : "unsorted");
+                printf ("table 0x%08X (%s) has 0x%08X rows (%s)\n", i, GetTableName (i), *RowCount, (sorted & mask) ? "sorted" : "unsorted");
                 table_info.array [i].RowCount = *RowCount;
                 table_info.array [i].Base = Base;
-                dump_table (i); // computes layout
+                DumpTable (i); // computes layout
                 Base += table_info.array[i].RowSize * *RowCount;
                 ++j;
                 ++RowCount;
             }
             else
             {
-                printf ("table 0x%X (%s) is absent\n", i, GetTableName (i));
+                printf ("table 0x%08X (%s) is absent\n", i, GetTableName (i));
             }
         }
     }
@@ -3067,6 +3114,26 @@ using namespace m2;
 int
 main (int argc, char** argv)
 {
+#if 0 // test code
+    char buf [99] = { 0 };
+    printf("%s\n", int_to_hex8(0x123, buf));
+    printf("%s\n", int_to_hex8(0x12345678, buf));
+    printf("%s\n", int_to_hex8(-1, buf));
+    printf("%s\n", int_to_hex(0x1, buf));
+    printf("%s\n", int_to_hex(0x12, buf));
+    printf("%s\n", int_to_hex(0x123, buf));
+    printf("%s\n", int_to_hex(0x12345678, buf));
+    printf("%s\n", int_to_hex(-1, buf));
+    printf("%d\n", int_to_hex_getlen(0x1));
+    printf("%d\n", int_to_hex_getlen(0x12));
+    printf("%d\n", int_to_hex_getlen(0x12345678));
+    printf("%d\n", int_to_hex_getlen(0x01234567));
+    printf("%d\n", int_to_hex_getlen(-1));
+    printf("%d\n", int_to_hex_getlen(~0u >> 1));
+    printf("%d\n", int_to_hex_getlen(~0u >> 2));
+    printf("%d\n", int_to_hex_getlen(~0u >> 4));
+    exit(0);
+#endif
     loaded_image_t im;
 #define X(x) printf ("%s %#x\n", #x, (int)x)
 X (sizeof (image_dos_header_t));
@@ -3086,7 +3153,7 @@ X (CodedIndices.array[(uint)CodedIndex(HasDeclSecurity)].tag_size);
     }
     catch (int er)
     {
-        fprintf (stderr, "error %d\n", er);
+        fprintf (stderr, "error 0x%08X\n", er);
     }
     catch (const std::string& er)
     {
