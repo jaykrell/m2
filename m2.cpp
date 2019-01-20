@@ -2094,7 +2094,7 @@ uint_to_dec_getlen(uint64 b)
 int
 uint_to_dec(int64 a, char* buf)
 {
-    int len = uint_to_dec_getlen(a);
+    const int len = uint_to_dec_getlen(a);
     for (int i = 0; i < len; ++i, a /= 10)
         buf[i] = "0123456789"[a % 10];
     return len;
@@ -2176,18 +2176,14 @@ print_fixed(const MetadataType_t*, loaded_image_t*, int table, int row, int colu
 
     switch (size)
     {
-    case 1:
-        i = *(uint8*)data;
-        break;
-    case 2:
-        i =  *(uint16*)data;
-        break;
-    case 4:
-        i =  *(uint32*)data;
-        break;
-    case 8:
-        i =  *(uint64*)data;
-        break;
+    case 1: i = *(uint8*)data;
+            break;
+    case 2: i =  *(uint16*)data;
+            break;
+    case 4: i =  *(uint32*)data;
+            break;
+    case 8: i =  *(uint64*)data;
+            break;
     }
     int_to_hex_atleast8(i, &buf[2]);
     strcat(buf, " ");
