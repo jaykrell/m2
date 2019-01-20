@@ -110,14 +110,15 @@
 #pragma warning(pop)
 #endif
 
-#if !defined(PRIX64)
-#if defined(_WIN32)
-#define PRIX64 "I64X"
-#elif defined(_ILP64)
-#else
-#define PRIX64 "llX"
-#endif
-#endif
+//#if !defined(PRIX64)
+//#if defined(_WIN32)
+//#define PRIX64 "I64X"
+//#elif defined(_ILP64) || defined(__LP64__)
+//#define PRIX64 "lX"
+//#else
+//#define PRIX64 "llX"
+//#endif
+//#endif
 
 typedef unsigned char uchar;
 //typedef unsigned short ushort;
@@ -2042,15 +2043,74 @@ struct MetadataTypeFunctions_t
     void (*print)(const MetadataType_t*, loaded_image_t*, int table, int row, int column, void* data, int size);
 };
 
+int64
+sign_extend(uint64 value, uint bits)
+{
+    // Extract lower bits from value and signextend.
+    // From detour_sign_extend.
+    const uint left = 64 - bits;
+    const int64 m1 = -1;
+    const int64 wide = (int64)(value << left);
+    const int64 sign = (wide < 0) ? (m1 << left) : 0;
+    return value | sign;
+}
+
+#if 0 // TODO
+
+int
+int_get_precision(int64 a)
+{
+    // How many bits needed to represent.
+    // i.e. so leading bit is extendible sign bit, or 64
+    int sign = a < 0;
+    for (int i = 0; i < 64; ++i)
+    {
+    }
+}
+
+#endif
+
+int
+uint_get_precision(uint64 a)
+{
+    // How many bits needed to represent.
+    // i.e. so leading bit is 0, or 64
+    return 0;
+}
+
+int
+uint_to_dec_getlen(uint64 b)
+{
+    int len = 0;
+    do ++len;
+    while (b /= 10);
+    return len;
+}
+
+int
+int_to_dec_getlen(int64 a)
+{
+    const int neg = (a < 0);
+    uint64 u;
+    if (neg)
+        u = 1 + (uint64)-(a + 1); // Avoid negating most negative number.
+    else
+        u = (uint64)a;
+    return neg + uint_to_dec_getlen(u);
+}
+
 int
 int_to_hex_getlen(int64 a)
 {
-    uint b = a;
+    // If negative and first digit is <8, add one to induce leading 8-F
+    // so that sign extension of most significant bit will work.
+    // This might be a bad idea. TODO.
+    uint64 b = a;
     int len = 0;
-    do
-        ++len;
-    while (b >>= 4);
-    return len;
+    int most_significant;
+    do ++len;
+    while ((most_significant = b), b >>= 4);
+    return len + (a < 0 && most_significant < 8);
 }
 
 char*
@@ -2075,20 +2135,27 @@ int_to_hex8(int64 a, char *buf)
     return int_to_hexlen(a, 8, buf);
 }
 
+int
+int_to_hex_getlen_atleast8(int64 a)
+{
+    int len = int_to_hex_getlen (a);
+    return std::max(len, 8);
+}
+
 char*
 int_to_hex_atleast8(int64 a, char *buf)
 {
-    int len = int_to_hex_getlen (a);
-    if (len < 8)
-        len = 8;
-    return int_to_hexlen(a, len, buf);
+    return int_to_hexlen(a, int_to_hex_getlen_atleast8 (a), buf);
 }
 
 void
 print_fixed(const MetadataType_t*, loaded_image_t*, int table, int row, int column, void* data, int size)
 {
-    char buf[17] = "";
+    char buf[64];
     int64 i = 0;
+    buf[0] = '0';
+    buf[1] = 'x';
+    buf[2] = 0;
 
     switch (size)
     {
@@ -2105,8 +2172,9 @@ print_fixed(const MetadataType_t*, loaded_image_t*, int table, int row, int colu
         i =  *(uint64*)data;
         break;
     }
-    int_to_hex_atleast8(i, buf);
-    printf("0x%s ", buf);
+    int_to_hex_atleast8(i, &buf[2]);
+    strcat(buf, " ");
+    fputs(buf, stdout);
 }
 
 struct MetadataType_t
@@ -3116,22 +3184,45 @@ main (int argc, char** argv)
 {
 #if 0 // test code
     char buf [99] = { 0 };
-    printf("%s\n", int_to_hex8(0x123, buf));
-    printf("%s\n", int_to_hex8(0x12345678, buf));
-    printf("%s\n", int_to_hex8(-1, buf));
-    printf("%s\n", int_to_hex(0x1, buf));
-    printf("%s\n", int_to_hex(0x12, buf));
-    printf("%s\n", int_to_hex(0x123, buf));
-    printf("%s\n", int_to_hex(0x12345678, buf));
-    printf("%s\n", int_to_hex(-1, buf));
-    printf("%d\n", int_to_hex_getlen(0x1));
-    printf("%d\n", int_to_hex_getlen(0x12));
-    printf("%d\n", int_to_hex_getlen(0x12345678));
-    printf("%d\n", int_to_hex_getlen(0x01234567));
-    printf("%d\n", int_to_hex_getlen(-1));
-    printf("%d\n", int_to_hex_getlen(~0u >> 1));
-    printf("%d\n", int_to_hex_getlen(~0u >> 2));
-    printf("%d\n", int_to_hex_getlen(~0u >> 4));
+#define Xd(x) printf("%s %I64d\n", #x, x);
+#define Xx(x) printf("%s %I64x\n", #x, x);
+#define Xs(x) printf("%s %s\n", #x, x);
+    Xd(int_to_dec_getlen(0))
+    Xd(int_to_dec_getlen(1))
+    Xd(int_to_dec_getlen(2))
+    Xd(int_to_dec_getlen(300))
+    Xd(int_to_dec_getlen(-1))
+    Xx(sign_extend(0xf, 0));
+    Xx(sign_extend(0xf, 1));
+    Xx(sign_extend(0xf, 2));
+    Xx(sign_extend(0xf, 3));
+    Xx(sign_extend(0xf, 4));
+    Xx(sign_extend(0xf, 5));
+    Xd(int_to_hex_getlen(0xffffffffa65304e4));
+    Xd(int_to_hex_getlen(0xfffffffa65304e4));
+    Xd(int_to_hex_getlen(-1));
+    Xd(int_to_hex_getlen(-1ui64>>4));
+    Xd(int_to_hex_getlen(0xf));
+    Xd(int_to_hex_getlen(32767));
+    Xd(int_to_hex_getlen(-32767));
+    Xs(int_to_hex(32767, buf));
+    Xs(int_to_hex(-32767, buf));
+    Xs(int_to_hex8(0x123, buf));
+    Xs(int_to_hex8(0xffffffffa65304e4, buf));
+    Xs(int_to_hex8(-1, buf));
+    Xs(int_to_hex(0x1, buf));
+    Xs(int_to_hex(0x12, buf));
+    Xs(int_to_hex(0x123, buf));
+    Xs(int_to_hex(0x12345678, buf));
+    Xs(int_to_hex(-1, buf));
+    Xd(int_to_hex_getlen(0x1));
+    Xd(int_to_hex_getlen(0x12));
+    Xd(int_to_hex_getlen(0x12345678));
+    Xd(int_to_hex_getlen(0x01234567));
+    Xd(int_to_hex_getlen(-1));
+    Xd(int_to_hex_getlen(~0u >> 1));
+    Xd(int_to_hex_getlen(~0u >> 2));
+    Xd(int_to_hex_getlen(~0u >> 4));
     exit(0);
 #endif
     loaded_image_t im;
