@@ -33,6 +33,7 @@
 //#define _LARGEFILE64_SOURCE
 
 #define _cpp_max max // old compiler/library compat
+#define _cpp_min min // old compiler/library compat
 
 #ifdef _MSC_VER
 
@@ -3199,7 +3200,7 @@ using namespace m2;
 int
 main (int argc, char** argv)
 {
-#if 1 // test code
+#if 0 // test code
     char buf [99] = { 0 };
     int len;
 #define Xd(x) printf("%s %I64d\n", #x, x);
