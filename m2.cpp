@@ -2130,39 +2130,42 @@ int_to_hex_getlen(int64 a)
     return len + (a < 0 && most_significant < 8);
 }
 
-char*
+void
 int_to_hexlen(int64 a, int len, char *buf)
 {
     buf += len;
     for (int i = 0; i < len; ++i, a >>= 4)
         *--buf = "0123456789ABCDEF"[a & 0xF];
-    buf[len] = 0; // temporary
-    return buf;
 }
 
-char*
+int
 int_to_hex(int64 a, char *buf)
 {
-    return int_to_hexlen(a, int_to_hex_getlen(a), buf);
+    const int len = int_to_hex_getlen (a);
+    int_to_hexlen(a, len, buf);
+    return len;
 }
 
-char*
+int
 int_to_hex8(int64 a, char *buf)
 {
-    return int_to_hexlen(a, 8, buf);
+    int_to_hexlen(a, 8, buf);
+    return 8;
 }
 
 int
 int_to_hex_getlen_atleast8(int64 a)
 {
-    int len = int_to_hex_getlen (a);
+    const int len = int_to_hex_getlen (a);
     return std::max(len, 8);
 }
 
-char*
+int
 int_to_hex_atleast8(int64 a, char *buf)
 {
-    return int_to_hexlen(a, int_to_hex_getlen_atleast8 (a), buf);
+    const int len = int_to_hex_getlen_atleast8 (a);
+    int_to_hexlen(a, len, buf);
+    return len;
 }
 
 void
@@ -2172,7 +2175,6 @@ print_fixed(const MetadataType_t*, loaded_image_t*, int table, int row, int colu
     int64 i = 0;
     buf[0] = '0';
     buf[1] = 'x';
-    buf[2] = 0;
 
     switch (size)
     {
@@ -2185,8 +2187,9 @@ print_fixed(const MetadataType_t*, loaded_image_t*, int table, int row, int colu
     case 8: i =  *(uint64*)data;
             break;
     }
-    int_to_hex_atleast8(i, &buf[2]);
-    strcat(buf, " ");
+    int len = 2 + int_to_hex_atleast8(i, &buf[2]);;
+    buf[len++] = ' ';
+    buf[len++] = 0;
     fputs(buf, stdout);
 }
 
@@ -3196,11 +3199,12 @@ using namespace m2;
 int
 main (int argc, char** argv)
 {
-#if 0 // test code
+#if 1 // test code
     char buf [99] = { 0 };
+    int len;
 #define Xd(x) printf("%s %I64d\n", #x, x);
 #define Xx(x) printf("%s %I64x\n", #x, x);
-#define Xs(x) printf("%s %s\n", #x, x);
+#define Xs(x) len = x; buf[len] = 0; printf("%s %s\n", #x, buf);
     Xd(uint_get_precision(0));
     Xd(uint_get_precision(1));
     Xd(uint_get_precision(0x2));
