@@ -2838,27 +2838,6 @@ struct loaded_image_t_z // zeroed loaded_image_t
 
     uint8 coded_index_size [CodedIndex_Count]; // 2 or 4
     uint64 file_size;
-    void * base;
-    image_dos_header_t* dos;
-    uint32 pe_offset;
-    uchar* pe;
-    image_nt_headers_t *nt;
-    image_optional_header32_t *opt32;
-    image_optional_header64_t *opt64;
-    uint32 opt_magic;
-    uint number_of_sections;
-    char * strings;
-    char * guids;
-    uint string_index_size;
-    uint guid_index_size;
-    MetadataTablesHeader_t * metadata_tables;
-    uint32 * number_of_rows; // points into metadata_tables_header
-    uint NumberOfRvaAndSizes;
-    uint number_of_streams;
-    uint blob_size; // 2 or 4
-    uint string_size; // 2 or 4
-    //uint ustring_size; // 2 or 4
-    uint guid_size; // 2 or 4
     struct
     {
         MetadataStreamHeader_t* tables;
@@ -2867,6 +2846,26 @@ struct loaded_image_t_z // zeroed loaded_image_t
         MetadataStreamHeader_t* ustring; // unicode/user strings
         MetadataStreamHeader_t* blob;
     } streams;
+    void * base;
+    image_dos_header_t* dos;
+    uchar* pe;
+    image_nt_headers_t *nt;
+    image_optional_header32_t *opt32;
+    image_optional_header64_t *opt64;
+    char * strings;
+    char * guids;
+    //uint string_index_size;
+    //uint guid_index_size;
+    MetadataTablesHeader_t * metadata_tables;
+    //uint32 * number_of_rows; // points into metadata_tables_header
+    uint32 pe_offset;
+    uint32 opt_magic;
+    uint16 number_of_sections;
+    uint8 NumberOfRvaAndSizes;
+    uint8 number_of_streams;
+    uint8 blob_size; // 2 or 4
+    uint8 string_size; // 2 or 4
+    uint8 guid_size; // 2 or 4
 };
 
 struct loaded_image_t : loaded_image_t_z
