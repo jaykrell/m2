@@ -2055,6 +2055,23 @@ sign_extend(uint64 value, uint bits)
     return value | sign;
 }
 
+struct int_split_sign_magnitude_t
+{
+    uint64 u;
+    int neg;
+};
+
+void
+int_split_sign_magnitude(int64 a, int_split_sign_magnitude_t* b)
+{
+    const int neg = (a < 0);
+    b->neg = neg;
+    if (neg)
+        b->u = 1 + (uint64)-(a + 1); // Avoid negating most negative number.
+    else
+        b->u = (uint64)a;
+}
+
 #if 0 // TODO
 
 int
@@ -2068,8 +2085,6 @@ int_get_precision(int64 a)
     }
 }
 
-#endif
-
 int
 uint_get_precision(uint64 a)
 {
@@ -2077,6 +2092,8 @@ uint_get_precision(uint64 a)
     // i.e. so leading bit is 0, or 64
     return 0;
 }
+
+#endif
 
 int
 uint_to_dec_getlen(uint64 b)
@@ -2088,15 +2105,34 @@ uint_to_dec_getlen(uint64 b)
 }
 
 int
+uint_to_dec(int64 a, char* buf)
+{
+    int len = uint_to_dec_getlen(a);
+    int i;
+    for (i = 0; i < len; ++i)
+    {
+        buf[i] = "0123456789"[a % 10];
+        a /= 10;
+    }
+    return len;
+}
+
+int
+int_to_dec(int64 a, char* buf)
+{
+    int_split_sign_magnitude_t split = { 0 };
+    int_split_sign_magnitude(a, &split);
+    if (split.neg)
+        *buf++ = '-';
+    return split.neg + int_to_dec(split.u, buf);
+}
+
+int
 int_to_dec_getlen(int64 a)
 {
-    const int neg = (a < 0);
-    uint64 u;
-    if (neg)
-        u = 1 + (uint64)-(a + 1); // Avoid negating most negative number.
-    else
-        u = (uint64)a;
-    return neg + uint_to_dec_getlen(u);
+    int_split_sign_magnitude_t split = { 0 };
+    int_split_sign_magnitude(a, &split);
+    return split.neg + uint_to_dec_getlen(split.u);
 }
 
 int
