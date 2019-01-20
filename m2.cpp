@@ -2057,43 +2057,31 @@ sign_extend(uint64 value, uint bits)
 
 struct int_split_sign_magnitude_t
 {
-    uint64 u;
+    int_split_sign_magnitude_t(int64 a)
+      : neg(a < 0), 
+        u((a < 0) ? (1 + (uint64)-(a + 1)) // Avoid negating most negative number.
+                  : (uint64)a) { }
     int neg;
+    uint64 u;
 };
 
-void
-int_split_sign_magnitude(int64 a, int_split_sign_magnitude_t* b)
+int
+uint_get_precision(uint64 a)
 {
-    const int neg = (a < 0);
-    b->neg = neg;
-    if (neg)
-        b->u = 1 + (uint64)-(a + 1); // Avoid negating most negative number.
-    else
-        b->u = (uint64)a;
+    // How many bits needed to represent.
+    int len = 1;
+    while ((len <= 64) && (a >>= 1)) ++len;
+    return len;
 }
-
-#if 0 // TODO
 
 int
 int_get_precision(int64 a)
 {
     // How many bits needed to represent.
     // i.e. so leading bit is extendible sign bit, or 64
-    int sign = a < 0;
-    for (int i = 0; i < 64; ++i)
-    {
-    }
+    int_split_sign_magnitude_t split(a);
+    return std::min(64, 1 + uint_get_precision (split.u));
 }
-
-int
-uint_get_precision(uint64 a)
-{
-    // How many bits needed to represent.
-    // i.e. so leading bit is 0, or 64
-    return 0;
-}
-
-#endif
 
 int
 uint_to_dec_getlen(uint64 b)
@@ -2108,30 +2096,24 @@ int
 uint_to_dec(int64 a, char* buf)
 {
     int len = uint_to_dec_getlen(a);
-    int i;
-    for (i = 0; i < len; ++i)
-    {
+    for (int i = 0; i < len; ++i, a /= 10)
         buf[i] = "0123456789"[a % 10];
-        a /= 10;
-    }
     return len;
 }
 
 int
 int_to_dec(int64 a, char* buf)
 {
-    int_split_sign_magnitude_t split = { 0 };
-    int_split_sign_magnitude(a, &split);
+    int_split_sign_magnitude_t split(a);
     if (split.neg)
         *buf++ = '-';
-    return split.neg + int_to_dec(split.u, buf);
+    return split.neg + uint_to_dec(split.u, buf);
 }
 
 int
 int_to_dec_getlen(int64 a)
 {
-    int_split_sign_magnitude_t split = { 0 };
-    int_split_sign_magnitude(a, &split);
+    int_split_sign_magnitude_t split(a);
     return split.neg + uint_to_dec_getlen(split.u);
 }
 
@@ -2949,6 +2931,7 @@ struct loaded_image_t : loaded_image_t_z
 
     void DumpTable (uint a)
     {
+        // TODO less printf
         std::string prefix = string_format ("table 0x%08X (%s)", a, GetTableName (a));
         printf ("%s\n", prefix.c_str ());
         printf ("%s present:0x%08X\n", prefix.c_str (), table_info.array [a].Present);
@@ -3223,6 +3206,24 @@ main (int argc, char** argv)
 #define Xd(x) printf("%s %I64d\n", #x, x);
 #define Xx(x) printf("%s %I64x\n", #x, x);
 #define Xs(x) printf("%s %s\n", #x, x);
+    Xd(uint_get_precision(0));
+    Xd(uint_get_precision(1));
+    Xd(uint_get_precision(0x2));
+    Xd(uint_get_precision(0x2));
+    Xd(uint_get_precision(0x7));
+    Xd(uint_get_precision(0x8));
+    Xd(int_get_precision(0));
+    Xd(int_get_precision(1));
+    Xd(int_get_precision(0x2));
+    Xd(int_get_precision(0x2));
+    Xd(int_get_precision(0x7));
+    Xd(int_get_precision(0x8));
+    Xd(int_get_precision(0));
+    Xd(int_get_precision(-1));
+    Xd(int_get_precision(-0x2));
+    Xd(int_get_precision(-0x2));
+    Xd(int_get_precision(-0x7));
+    Xd(int_get_precision(-0x8));
     Xd(int_to_dec_getlen(0))
     Xd(int_to_dec_getlen(1))
     Xd(int_to_dec_getlen(2))
