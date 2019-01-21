@@ -2909,9 +2909,10 @@ struct Image : ImageZero
 
     Metadata metadata;
 
-    uint ComputeTableLayout (uint a, const MetadataTableSchema* schema)
+    uint LayoutTable (uint table_index)
     {
-        MetadataTable& table = metadata.array[a];
+        const MetadataTableSchema* schema = metadata_int_to_table_schema [table_index];
+        MetadataTable& table = metadata.array[table_index];
         const uint count = schema->count;
         uint size = 0;
         for (uint i = 0; i < count; ++i)
@@ -2925,45 +2926,44 @@ struct Image : ImageZero
         return size;
     }
 
-    uint GetRowSize (uint a)
+    uint GetRowSize (uint table_index)
     {
-        uint b = metadata.array [a].row_size;
-        if (b)
-                return b;
-        return ComputeTableLayout (a, metadata_int_to_table_schema [a]);
+        uint row_size = metadata.array [table_index].row_size;
+        return row_size ? row_size : LayoutTable (table_index);
     }
 
-    void DumpTable (uint a)
+    void DumpTable (uint table_index)
     {
         stdout_stream out;
 
         // TODO less printf
-        std::string prefix = string_format ("table 0x%08X (%s)", a, GetTableName (a));
-        out.printf ("%s\n", prefix.c_str ());
-        out.printf ("%s present:0x%08X\n", prefix.c_str (), metadata.array [a].present);
-        out.printf ("%s row_size:0x%08X\n", prefix.c_str (), GetRowSize (a));
+        std::string prefix = string_format ("table 0x%08X (%s)", table_index, GetTableName (table_index));
+        const char* prefix_cstr = prefix.c_str();
+        out.printf ("%s\n", prefix_cstr);
+        out.printf ("%s present:0x%08X\n", prefix_cstr, metadata.array [table_index].present);
+        out.printf ("%s row_size:0x%08X\n", prefix_cstr, GetRowSize (table_index));
 
-        const MetadataTableSchema* schema = metadata_int_to_table_schema [a];
+        const MetadataTableSchema* schema = metadata_int_to_table_schema [table_index];
         const MetadataTableSchemaColumn *fields = schema->fields;
         const uint count = schema->count;
         uint i;
         for (i = 0; i < count; ++i)
         {
             const MetadataTableSchemaColumn *field = &fields[i];
-            out.printf("%s layout type:%s name:%s offset:0x%08X size:0x%08X\n", GetTableName (a), field->type->name, field->name, metadata.array[a].column[i].offset, metadata.array[a].column[i].size);
+            out.printf("%s layout type:%s name:%s offset:0x%08X size:0x%08X\n", GetTableName (table_index), field->type->name, field->name, metadata.array[table_index].column[i].offset, metadata.array[table_index].column[i].size);
         }
-        char* p = (char*)metadata.array[a].base;
-        for (uint r = 0; r < metadata.array [a].row_count; ++r)
+        char* p = (char*)metadata.array[table_index].base;
+        for (uint r = 0; r < metadata.array [table_index].row_count; ++r)
         {
-            out.printf("%s[0x%08X] ", GetTableName (a), r);
+            out.printf("%s[0x%08X] ", GetTableName (table_index), r);
             for (i = 0; i < schema->count; ++i)
             {
                 const MetadataTableSchemaColumn *field = &fields[i];
-                uint column_size = metadata.array[a].column[i].size;
+                uint column_size = metadata.array[table_index].column[i].size;
                 if (field->type->functions->print)
                 {
                     out.printf("col[%X] ", i);
-                    field->type->functions->print(field->type, this, a, r, i, p, column_size);
+                    field->type->functions->print(field->type, this, table_index, r, i, p, column_size);
                 }
                 p += column_size;
             }
@@ -3100,37 +3100,51 @@ unknown_stream:
         printf ("metadata_tables_header.     Unsorted:0x%08X`0x%08X\n", (uint32)(unsorted >> 32), (uint32)unsorted);
         printf ("metadata_tables_header.InvalidSorted:0x%08X`0x%08X\n", (uint32)(invalidSorted >> 32), (uint32)invalidSorted);
         uint64 mask = 1;
-        uint32* row_count = (uint32*)(metadata_tables_header + 1);
-        char* table_base = (char*)row_count;
+        uint32* prow_count = (uint32*)(metadata_tables_header + 1);
+        char* table_base = (char*)prow_count;
 
-        for (i = 0; i < CountOf (metadata.array); ++i)
+        for (mask = 1, i = 0; i < CountOf (metadata.array); ++i, mask <<= 1)
         {
-            bool present = (valid & mask) != 0;
+            const bool present = (valid & mask) != 0;
             if (present)
                 table_base += 4;
-            mask <<= 1;
         }
 
-        mask = 1;
+        for (mask = 1, i = 0; i < CountOf (metadata.array); ++i, mask <<= 1)
+        {
+            const bool present = (valid & mask) != 0;
+            if (!present)
+                continue;
+            metadata.array [i].present = true;
+            const uint row_count = *prow_count;
+            metadata.array [i].row_count = row_count;
+            metadata.array [i].base = table_base;
+            LayoutTable(i);
+            table_base += metadata.array[i].row_size * row_count;
+            ++prow_count;
+        }
 
-        for (i = 0; i < CountOf (metadata.array); ++i)
+        for (mask = 1, i = 0; i < CountOf (metadata.array); ++i, mask <<= 1)
         {
             bool present = (valid & mask) != 0;
             if (present)
             {
-                printf ("table 0x%08X (%s) has 0x%08X rows (%s)\n", i, GetTableName (i), *row_count, (sorted & mask) ? "sorted" : "unsorted");
-                metadata.array [i].row_count = *row_count;
-                metadata.array [i].base = table_base;
-                if (i == 0x14)
-                    DumpTable (i); // computes layout
-                table_base += metadata.array[i].row_size * *row_count;
-                ++row_count;
+                printf ("table 0x%08X (%s) has 0x%08X rows (%s)\n", i, GetTableName (i), metadata.array [i].row_count, (sorted & mask) ? "sorted" : "unsorted");
+                [&] {
+                    //__try
+                    //{
+                        DumpTable (i);
+                    //}
+                    //__except(1)
+                    //{
+                    //    printf("table 0x%X failed\n", i);
+                    //}
+                }();
             }
             else
             {
                 printf ("table 0x%08X (%s) is absent\n", i, GetTableName (i));
             }
-            mask <<= 1;
         }
     }
 
@@ -3161,7 +3175,7 @@ print_string(const MetadataType_t* type, Image* image, uint table, uint row, uin
     uint a = 0;
     memcpy (&a, data, image->string_size);
     //fputs(image->get_string(a), stdout);
-    printf("%X %p %s", a, image->get_string(a), image->get_string(a));
+    printf("print_string:%X %p %s", a, image->get_string(a), image->get_string(a));
 }
 
 uint
@@ -3189,8 +3203,14 @@ metadata_size_codedindex_compute (Image* image, CodedIndex coded_index)
     uint max_rows = 0;
     uint const map = data->map;
     uint const count = data->count;
+    int8_t* Map = (int8_t*)&CodedIndexMap;
     for (uint i = 0; i < count; ++i)
-        max_rows = std::max (max_rows, image->metadata.array[((uint8*)&CodedIndexMap) [map + i]].row_count);
+    {
+        int m = Map [map + i];
+        if (m < 0)
+            continue;
+        max_rows = std::max (max_rows, image->metadata.array[m].row_count);
+    }
     return (max_rows <= (0xFFFFu >> data->tag_size)) ? 2u : 4u;
 }
 
@@ -3206,7 +3226,7 @@ loadedimage_metadata_size_codedindex_get (Image* image, CodedIndex coded_index)
 uint8
 metadata_size_index_compute (Image* image, uint /* todo enum */ table_index)
 {
-    uint row_count = image->metadata.array [table_index].row_count;
+    const uint row_count = image->metadata.array [table_index].row_count;
     return (row_count <= 0xFFFFu) ? 2u : 4u;
 }
 
