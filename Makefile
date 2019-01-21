@@ -145,7 +145,7 @@ cyg: m2.cpp
 	g++ -g m2.cpp -o $@
 
 lin: m2.cpp
-	g++ -g m2.cpp -o $@
+	g++ -Wall -g m2.cpp -o $@
 
 win32.exe: m2.cpp
 	i686-w64-mingw32-g++ -g m2.cpp -o $@
