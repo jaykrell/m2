@@ -1099,53 +1099,53 @@ struct Guid_t
 };
 
 // TODO enum
-const uint Module = 0;
-const uint TypeRef = 1;
-const uint TypeDef = 2;
-//const uint FieldPtr = 3; // nonstandard
-const uint Field = 4;
-//const uint MethodPtr = 5; // nonstandard
-const uint MethodDef = 6;
-//const uint ParamPtr = 7; // nonstandard
-const uint Param = 8;
-const uint InterfaceImpl = 9;
-const uint MemberRef = 10;
-const uint MethodRef = MemberRef;
-//const uint FieldRef = MemberRef;
-//const uint Constant = 11;
-//const uint CustomAttribute = 12;
-//const uint FieldMarshal = 13;
-const uint DeclSecurity = 14;
-//const uint ClassLayout = 15;
-//const uint FieldLayout = 16;
-const uint StandAloneSig = 17;
-//const uint EventMap = 18;
-//const uint EventPtr = 19; // nonstandard
-const uint Event = 20;
-const uint PropertyMap = 21;
-//const uint ProperyPtr = 22; // nonstandard
-const uint Property = 23;
-const uint MethodSemantics = 24; // 0x18
-const uint MethodImpl = 25; // 0x19
-const uint ModuleRef = 26;
-const uint TypeSpec = 27;
-//const uint ImplMap = 28;
-//const uint FieldRVA = 29;
-//const uint ENCLog = 30; // nonstandard
-//const uint ENCMap = 31; // nonstandard
-const uint Assembly = 32;
-//const uint AssemblyProcessor = 33;
-//const uint AssemblyOS = 34;
-const uint AssemblyRef = 35;
-//const uint AssemblyRefProcessor = 36;
-//const uint AssemblyRefOS = 37;
-const uint File = 38;
-const uint ExportedType = 39;
-const uint ManifestResource = 40; // 0x28
-//const uint NestedClass = 41;
-const uint GenericParam = 42; // 0x2A
-const uint MethodSpec = 0x2B;
-const uint GenericParamConstraint = 44; // 0x2C
+const int8 Module = 0;
+const int8 TypeRef = 1;
+const int8 TypeDef = 2;
+//const int8 FieldPtr = 3; // nonstandard
+const int8 Field = 4;
+//const int8 MethodPtr = 5; // nonstandard
+const int8 MethodDef = 6;
+//const int8 ParamPtr = 7; // nonstandard
+const int8 Param = 8;
+const int8 InterfaceImpl = 9;
+const int8 MemberRef = 10;
+const int8 MethodRef = MemberRef;
+//const int8 FieldRef = MemberRef;
+//const int8 Constant = 11;
+//const int8 CustomAttribute = 12;
+//const int8 FieldMarshal = 13;
+const int8 DeclSecurity = 14;
+//const int8 ClassLayout = 15;
+//const int8 FieldLayout = 16;
+const int8 StandAloneSig = 17;
+//const int8 EventMap = 18;
+//const int8 EventPtr = 19; // nonstandard
+const int8 Event = 20;
+const int8 PropertyMap = 21;
+//const int8 ProperyPtr = 22; // nonstandard
+const int8 Property = 23;
+const int8 MethodSemantics = 24; // 0x18
+const int8 MethodImpl = 25; // 0x19
+const int8 ModuleRef = 26;
+const int8 TypeSpec = 27;
+//const int8 ImplMap = 28;
+//const int8 FieldRVA = 29;
+//const int8 ENCLog = 30; // nonstandard
+//const int8 ENCMap = 31; // nonstandard
+const int8 Assembly = 32;
+//const int8 AssemblyProcessor = 33;
+//const int8 AssemblyOS = 34;
+const int8 AssemblyRef = 35;
+//const int8 AssemblyRefProcessor = 36;
+//const int8 AssemblyRefOS = 37;
+const int8 File = 38;
+const int8 ExportedType = 39;
+const int8 ManifestResource = 40; // 0x28
+//const int8 NestedClass = 41;
+const int8 GenericParam = 42; // 0x2A
+const int8 MethodSpec = 0x2B;
+const int8 GenericParamConstraint = 44; // 0x2C
 
 // TODO enum/bitfield
 const uint CorILMethod_TinyFormat = 2;
@@ -1217,7 +1217,7 @@ CODED_INDEX (CustomAttributeType, 5, {-1 COMMA -1 COMMA MethodDef COMMA MethodRe
 CODED_INDEX (ResolutionScope, 4, {Module COMMA ModuleRef COMMA AssemblyRef COMMA TypeRef})          \
 CODED_INDEX (TypeOrMethodDef, 2, {TypeDef COMMA MethodDef})                                         \
 CODED_INDEX (HasCustomAttribute, 22,                                                                \
-      {MethodDef COMMA     Field COMMA         TypeRef COMMA      TypeDef COMMA          Param COMMA          /* HasCustomAttribute */ \
+      {MethodDef COMMA     Field COMMA        TypeRef COMMA      TypeDef COMMA          Param COMMA          /* HasCustomAttribute */ \
       InterfaceImpl COMMA MemberRef COMMA     Module COMMA       DeclSecurity COMMA     Property COMMA       /* HasCustomAttribute */ \
       Event COMMA         StandAloneSig COMMA ModuleRef COMMA    TypeSpec COMMA         Assembly COMMA       /* HasCustomAttribute */ \
       AssemblyRef COMMA   File COMMA          ExportedType COMMA ManifestResource COMMA GenericParam COMMA   /* HasCustomAttribute */ \
@@ -1325,7 +1325,7 @@ struct MetadataTokenList_t
     uint32 index;
 };
 
-struct MetadataTablesHeader_t // tilde stream
+struct MetadataTablesHeader // tilde stream
 {
     uint32 reserved;    // 0
     uint8 MajorVersion;
@@ -1340,7 +1340,7 @@ struct MetadataTablesHeader_t // tilde stream
     // uint32 NumberOfRows [];
 };
 
-struct MetadataRoot_t
+struct MetadataRoot
 {
     enum { SIGNATURE = 0x424A5342 };
     /* 0 */ uint32 Signature;
@@ -1351,12 +1351,12 @@ struct MetadataRoot_t
     /* 16 */ char Version [1];
     // uint16 Flags; // 0
     // uint16 NumberOfStreams;
-    // MetadataStreamHeader_t stream_headers [NumberOfStreams];
+    // MetadataStreamHeader stream_headers [NumberOfStreams];
 };
 
-struct MetadataStreamHeader_t // see mono verify_metadata_header
+struct MetadataStreamHeader // see mono verify_metadata_header
 {
-    uint32 Offset;
+    uint32 offset;
     uint32 Size; // multiple of 4
     char   Name [32]; // multiple of 4, null terminated, max 32
 };
@@ -2006,15 +2006,15 @@ struct image_clr_header_t // data_directory [15]
 
 struct MetadataType_t;
 
-struct loaded_image_t;
+struct Image;
 
 struct MetadataTypeFunctions_t
 {
     // Virtual functions, but allowing for static construction.
     void (*decode)(const MetadataType_t*, void*);
-    uint (*size)(const MetadataType_t*, loaded_image_t*);
+    uint (*size)(const MetadataType_t*, Image*);
     //void (*to_string)(const MetadataType_t*, void*);
-    void (*print)(const MetadataType_t*, loaded_image_t*, uint table, uint row, uint column, void* data, uint size);
+    void (*print)(const MetadataType_t*, Image*, uint table, uint row, uint column, void* data, uint size);
 };
 
 int64
@@ -2142,8 +2142,42 @@ int_to_hex_atleast8(int64 a, char *buf)
     return len;
 }
 
+struct stream
+{
+    virtual void write(const void* bytes, size_t count) = 0;
+    void prints(const char* a) { write (a, strlen(a)); }
+    void prints(const std::string& a) { prints(a.c_str()); }
+    void printc(char a) { write (&a, 1); }
+    void printf(const char* format, ...)
+    {
+        va_list va;
+        va_start (va, format);
+        printv (format, va);
+        va_end (va);
+    }
+
+    void
+    printv(const char *format, va_list va)
+    {
+        prints(string_vformat(format, va));
+    }
+};
+
+struct stdout_stream : stream
+{
+    virtual void write(const void* bytes, size_t count)
+    {
+        fflush(stdout);
+#if _MSC_VER
+        ::_write(_fileno(stdout), bytes, count);
+#else
+        ::write(fileno(stdout), bytes, count);
+#endif
+    }
+};
+
 void
-print_fixed(const MetadataType_t*, loaded_image_t*, uint table, uint row, uint column, void* data, uint size)
+print_fixed(const MetadataType_t*, Image*, uint table, uint row, uint column, void* data, uint size)
 {
     char buf[64];
     uint64 i = 0;
@@ -2179,9 +2213,9 @@ struct MetadataType_t
 };
 
 uint32
-loadedimage_metadata_size_codedindex_get (loaded_image_t* image, CodedIndex coded_index);
+loadedimage_metadata_size_codedindex_get (Image* image, CodedIndex coded_index);
 
-//#define CODED_INDEX(x, n, values) uint32 metadata_size_codedindex_ ## x (MetadataType_t* type, loaded_image_t* image) { return loadedimage_metadata_size_codedindex_get (image, type->coded_index); }
+//#define CODED_INDEX(x, n, values) uint32 metadata_size_codedindex_ ## x (MetadataType_t* type, Image* image) { return loadedimage_metadata_size_codedindex_get (image, type->coded_index); }
 //CODED_INDICES
 #undef CODED_INDEX
 
@@ -2226,46 +2260,46 @@ MetadataDecode_guid (const MetadataType_t* type, void* output)
 }
 
 uint
-metadata_size_fixed (const MetadataType_t* type, loaded_image_t* image)
+metadata_size_fixed (const MetadataType_t* type, Image* image)
 {
     return type->fixed_size; // TODO? change from int8 to uint8? or uint to int?
 }
 
 uint
-metadata_size_blob (const MetadataType_t* type, loaded_image_t* image);
+metadata_size_blob (const MetadataType_t* type, Image* image);
 
 uint
-metadata_size_string (const MetadataType_t* type, loaded_image_t* image);
+metadata_size_string (const MetadataType_t* type, Image* image);
 
 uint
-metadata_size_ustring (const MetadataType_t* type, loaded_image_t* image)
+metadata_size_ustring (const MetadataType_t* type, Image* image)
 {
-    return 4;
+    return 4u;
 }
 
 uint32
-metadata_size_codedindex (const MetadataType_t* type, loaded_image_t* image)
+metadata_size_codedindex (const MetadataType_t* type, Image* image)
 {
     return loadedimage_metadata_size_codedindex_get(image, type->coded_index);
 }
 
-uint
-image_metadata_size_index (loaded_image_t* image, uint /* todo enum */ table_index);
+uint8
+image_metadata_size_index (Image* image, uint /* todo enum */ table_index);
 
 uint
-metadata_size_index (const MetadataType_t* type, loaded_image_t* image)
+metadata_size_index (const MetadataType_t* type, Image* image)
 {
     return image_metadata_size_index (image, type->table_index);
 }
 
 uint
-metadata_size_index_list (const MetadataType_t* type, loaded_image_t* image)
+metadata_size_index_list (const MetadataType_t* type, Image* image)
 {
     return metadata_size_index (type, image);
 }
 
 uint
-metadata_size_guid (const MetadataType_t* type, loaded_image_t* image);
+metadata_size_guid (const MetadataType_t* type, Image* image);
 
 const MetadataTypeFunctions_t MetadataType_Fixed =
 {
@@ -2280,10 +2314,14 @@ const MetadataTypeFunctions_t MetadataType_blob_functions =
     metadata_size_blob,
 };
 
+void
+print_string(const MetadataType_t* type, Image* image, uint table, uint row, uint column, void* data, uint size);
+
 const MetadataTypeFunctions_t MetadataType_string_functions =
 {
     MetadataDecode_string,
     metadata_size_string,
+    print_string,
 };
 
 const MetadataTypeFunctions_t MetadataType_guid_functions =
@@ -2375,17 +2413,17 @@ const MetadataType_t MetadataType_NotStored = { "NotStored", &MetadataType_Fixed
 #define MetadataType_Unused             MetadataType_Unused
 #define MetadataType_Parent             MetadataType_MemberRefParent
 
-struct metadata_schema_column_t
+struct MetadataTableSchemaColumn
 {
     const char* name;
     const MetadataType_t* type; // old compilers do not allow reference here, with initialization
 };
 
-struct metadata_table_schema_t
+struct MetadataTableSchema
 {
     const char *name;
     uint8 count;
-    const metadata_schema_column_t* fields;
+    const MetadataTableSchemaColumn* fields;
     //void (*unpack)();
 };
 
@@ -2691,8 +2729,8 @@ METADATA_TABLES
 #undef METADATA_COLUMN2
 #undef METADATA_COLUMN3
 #define METADATA_TABLE(name, base, columns) \
-const metadata_schema_column_t metadata_column_ ## name [ ] = { columns }; \
-const metadata_table_schema_t metadata_row_schema_ ## name = { #name, CountOf (metadata_column_ ## name), metadata_column_ ## name };
+const MetadataTableSchemaColumn metadata_column_ ## name [ ] = { columns }; \
+const MetadataTableSchema metadata_row_schema_ ## name = { #name, CountOf (metadata_column_ ## name), metadata_column_ ## name };
 #define METADATA_COLUMN2(name, type) { # name, &MetadataType_  ## type },
 #define METADATA_COLUMN3(name, persistant_type, pointerful_type) { # name, &MetadataType_  ## persistant_type },
 METADATA_TABLES
@@ -2744,12 +2782,12 @@ struct MetadataTable // dynamic
 {
     //MetadataTable() { memset (this, 0, sizeof (*this)); }
 
-    MetadataColumn* ColumnInfo;
-    uint row_count;
-    uint RowSize;
-    uint IndexSize; // 2 or 4
-    uint ColumnCount;
     void* base;
+    MetadataColumn* column;
+    uint row_count;
+    uint row_size;
+    uint8 index_size; // 2 or 4
+    uint8 column_count;
     bool present;
 };
 
@@ -2791,7 +2829,7 @@ METADATA_TABLES
 #undef METADATA_COLUMN3
 #define METADATA_COLUMN2(name, type)                                1+
 #define METADATA_COLUMN3(name, persistant_type, pointerful_type)    1+
-#define METADATA_TABLE(name, base, columns) t->ColumnInfo = c; t->ColumnCount = columns 0; c += columns 0; ++t;
+#define METADATA_TABLE(name, base, columns) t->column = c; t->column_count = columns 0; c += columns 0; ++t;
 METADATA_TABLES
 #undef METADATA_TABLE
 #undef METADATA_COLUMN2
@@ -2817,16 +2855,7 @@ const char * GetTableName (uint a)
     return "unknown";
 }
 
-struct metadata_table_t
-{
-    metadata_table_t() { memset (this, 0, sizeof (*this)); }
-
-    void * base;
-    uint index;
-    uint row_size;
-};
-
-static const metadata_table_schema_t *  const metadata_int_to_table_schema [ ] =
+static const MetadataTableSchema *  const metadata_int_to_table_schema [ ] =
 {
 #undef METADATA_TABLE
 #undef METADATA_COLUMN2
@@ -2837,65 +2866,68 @@ static const metadata_table_schema_t *  const metadata_int_to_table_schema [ ] =
 METADATA_TABLES
 };
 
-struct loaded_image_t_z // zeroed loaded_image_t
+struct ImageZero // zero-inited part of Image
 {
-    loaded_image_t_z() { memset (this, 0, sizeof (*this)); }
+    ImageZero() { memset (this, 0, sizeof (*this)); }
 
     uint coded_index_size [CodedIndex_Count]; // 2 or 4
     uint64 file_size;
     struct
     {
-        MetadataStreamHeader_t* tables;
-        MetadataStreamHeader_t* guid;
-        MetadataStreamHeader_t* string; // utf8
-        MetadataStreamHeader_t* ustring; // unicode/user strings
-        MetadataStreamHeader_t* blob;
+        MetadataStreamHeader* tables;
+        MetadataStreamHeader* guid;
+        MetadataStreamHeader* string; // utf8
+        MetadataStreamHeader* ustring; // unicode/user strings
+        MetadataStreamHeader* blob;
     } streams;
-    void * base;
+    MetadataRoot* metadata_root;
+    void* base;
     image_dos_header_t* dos;
     uchar* pe;
-    image_nt_headers_t *nt;
-    image_optional_header32_t *opt32;
-    image_optional_header64_t *opt64;
-    char * strings;
-    char * guids;
-    //uint string_index_size;
-    //uint guid_index_size;
-    MetadataTablesHeader_t * metadata_tables_header;
-    //uint32 * number_of_rows; // points into metadata_tables_header
+    image_nt_headers_t* nt;
+    image_optional_header32_t* opt32;
+    image_optional_header64_t* opt64;
+    char* strings;
+    char* guids;
+    MetadataTablesHeader* metadata_tables_header;
     uint pe_offset;
     uint32 opt_magic;
-    uint number_of_sections;
-    uint NumberOfRvaAndSizes;
-    uint number_of_streams;
-    uint blob_size; // 2 or 4
-    uint string_size; // 2 or 4
-    uint guid_size; // 2 or 4
+    uint32 NumberOfRvaAndSizes;
+    uint16 number_of_sections;
+    uint16 number_of_streams;
+    uint8 blob_size; // 2 or 4
+    uint8 string_size; // 2 or 4
+    uint8 guid_size; // 2 or 4
 };
 
-struct loaded_image_t : loaded_image_t_z
+struct Image : ImageZero
 {
+    char* get_string(int a)
+    {
+        return streams.string->offset + a + (char*)metadata_root;
+    }
+
     Metadata metadata;
 
-    uint ComputeTableLayout (uint a, const metadata_table_schema_t* schema)
+    uint ComputeTableLayout (uint a, const MetadataTableSchema* schema)
     {
-        MetadataTable& row_info = metadata.array[a];
+        MetadataTable& table = metadata.array[a];
         const uint count = schema->count;
         uint size = 0;
         for (uint i = 0; i < count; ++i)
         {
             uint field_size = schema->fields [i].type->functions->size (schema->fields [i].type, this);
-            row_info.ColumnInfo[i].offset = size;
-            row_info.ColumnInfo[i].size = field_size;
+            table.column[i].offset = size;
+            table.column[i].size = field_size;
             size += field_size;
         }
-        row_info.RowSize = size;
+        table.row_size = size;
         return size;
     }
 
     uint GetRowSize (uint a)
     {
-        uint b = metadata.array [a].RowSize;
+        uint b = metadata.array [a].row_size;
         if (b)
                 return b;
         return ComputeTableLayout (a, metadata_int_to_table_schema [a]);
@@ -2903,36 +2935,41 @@ struct loaded_image_t : loaded_image_t_z
 
     void DumpTable (uint a)
     {
+        stdout_stream out;
+
         // TODO less printf
         std::string prefix = string_format ("table 0x%08X (%s)", a, GetTableName (a));
-        printf ("%s\n", prefix.c_str ());
-        printf ("%s present:0x%08X\n", prefix.c_str (), metadata.array [a].present);
-        printf ("%s row_size:0x%08X\n", prefix.c_str (), GetRowSize (a));
+        out.printf ("%s\n", prefix.c_str ());
+        out.printf ("%s present:0x%08X\n", prefix.c_str (), metadata.array [a].present);
+        out.printf ("%s row_size:0x%08X\n", prefix.c_str (), GetRowSize (a));
 
-        const metadata_table_schema_t* schema = metadata_int_to_table_schema [a];
-        const metadata_schema_column_t *fields = schema->fields;
+        const MetadataTableSchema* schema = metadata_int_to_table_schema [a];
+        const MetadataTableSchemaColumn *fields = schema->fields;
         const uint count = schema->count;
         uint i;
         for (i = 0; i < count; ++i)
         {
-            const metadata_schema_column_t *field = &fields[i];
-            printf("%s layout type:%s name:%s offset:0x%08X size:0x%08X\n", GetTableName (a), field->type->name, field->name, metadata.array[a].ColumnInfo[i].offset, metadata.array[a].ColumnInfo[i].size);
+            const MetadataTableSchemaColumn *field = &fields[i];
+            out.printf("%s layout type:%s name:%s offset:0x%08X size:0x%08X\n", GetTableName (a), field->type->name, field->name, metadata.array[a].column[i].offset, metadata.array[a].column[i].size);
         }
         char* p = (char*)metadata.array[a].base;
         for (uint r = 0; r < metadata.array [a].row_count; ++r)
         {
-            printf("%s[0x%08X] ", GetTableName (a), r);
+            out.printf("%s[0x%08X] ", GetTableName (a), r);
             for (i = 0; i < schema->count; ++i)
             {
-                const metadata_schema_column_t *field = &fields[i];
-                uint column_size = metadata.array[a].ColumnInfo[i].size;
+                const MetadataTableSchemaColumn *field = &fields[i];
+                uint column_size = metadata.array[a].column[i].size;
                 if (field->type->functions->print)
+                {
+                    out.printf("col[%X] ", i);
                     field->type->functions->print(field->type, this, a, r, i, p, column_size);
+                }
                 p += column_size;
             }
-            printf("\n");
+            out.prints("\n");
         }
-        printf("\n");
+        out.prints("\n");
     }
 
     memory_mapped_file_t mmf;
@@ -2992,7 +3029,7 @@ struct loaded_image_t : loaded_image_t_z
         printf ("clr.MetaData.Size:0x%08X\n", clr->MetaData.Size);
         release_assertf (clr->MetaData.Size, ("0x%08X", clr->MetaData.Size));
         release_assertf (clr->cb >= sizeof (image_clr_header_t), ("0x%08X 0x%08X", clr->cb, (uint)sizeof (image_clr_header_t)));
-        MetadataRoot_t* metadata_root = (MetadataRoot_t*)rva_to_p(clr->MetaData.VirtualAddress);
+        metadata_root = (MetadataRoot*)rva_to_p(clr->MetaData.VirtualAddress);
         printf ("metadata_root.Signature:0x%08X\n", metadata_root->Signature);
         printf ("metadata_root.MajorVersion:0x%08X\n", metadata_root->MajorVersion);
         printf ("metadata_root.MinorVersion:0x%08X\n", metadata_root->MinorVersion);
@@ -3008,10 +3045,10 @@ struct loaded_image_t : loaded_image_t_z
         printf ("metadata_root.Version:%s\n", metadata_root->Version);
         printf ("flags:0x%08X\n", *pflags);
         printf ("number_of_streams:0x%08X\n", number_of_streams);
-        MetadataStreamHeader_t* stream = (MetadataStreamHeader_t*)(pnumber_of_streams + 1);
+        MetadataStreamHeader* stream = (MetadataStreamHeader*)(pnumber_of_streams + 1);
         for (i = 0; i < number_of_streams; ++i)
         {
-            printf ("stream[0x%08X].Offset:0x%08X\n", i, stream->Offset);
+            printf ("stream[0x%08X].Offset:0x%08X\n", i, stream->offset);
             printf ("stream[0x%08X].Size:0x%08X\n", i, stream->Size);
             release_assertf ((stream->Size % 4) == 0, ("0x%08X", stream->Size));
             const char* name = stream->Name;
@@ -3040,9 +3077,9 @@ unknown_stream:
                 abort ();
             }
             length = (length + 4) & -4;
-            stream = (MetadataStreamHeader_t*)(stream->Name + length);
+            stream = (MetadataStreamHeader*)(stream->Name + length);
         }
-        metadata_tables_header = (MetadataTablesHeader_t*)(streams.tables->Offset + (char*)metadata_root);
+        metadata_tables_header = (MetadataTablesHeader*)(streams.tables->offset + (char*)metadata_root);
         printf ("metadata_tables_header.reserved:0x%08X\n", metadata_tables_header->reserved);
         printf ("metadata_tables_header.MajorVersion:0x%08X\n", metadata_tables_header->MajorVersion);
         printf ("metadata_tables_header.MinorVersion:0x%08X\n", metadata_tables_header->MinorVersion);
@@ -3062,33 +3099,38 @@ unknown_stream:
         printf ("metadata_tables_header.       Sorted:0x%08X`0x%08X\n", (uint32)(sorted >> 32), (uint32)sorted);
         printf ("metadata_tables_header.     Unsorted:0x%08X`0x%08X\n", (uint32)(unsorted >> 32), (uint32)unsorted);
         printf ("metadata_tables_header.InvalidSorted:0x%08X`0x%08X\n", (uint32)(invalidSorted >> 32), (uint32)invalidSorted);
-        const uint64 one = 1;
-        uint j = 0;
+        uint64 mask = 1;
         uint32* row_count = (uint32*)(metadata_tables_header + 1);
-        char *table_base = (char*)row_count;
-
-        for (i = 0; i < CountOf (metadata.array); ++i)
-            table_base += (valid & (one << i)) ? 4 : 0;
+        char* table_base = (char*)row_count;
 
         for (i = 0; i < CountOf (metadata.array); ++i)
         {
-            uint64 const mask = one << i;
             bool present = (valid & mask) != 0;
-            metadata.array [i].present = present;
+            if (present)
+                table_base += 4;
+            mask <<= 1;
+        }
+
+        mask = 1;
+
+        for (i = 0; i < CountOf (metadata.array); ++i)
+        {
+            bool present = (valid & mask) != 0;
             if (present)
             {
                 printf ("table 0x%08X (%s) has 0x%08X rows (%s)\n", i, GetTableName (i), *row_count, (sorted & mask) ? "sorted" : "unsorted");
                 metadata.array [i].row_count = *row_count;
                 metadata.array [i].base = table_base;
-                DumpTable (i); // computes layout
-                table_base += metadata.array[i].RowSize * *row_count;
-                ++j;
+                if (i == 0x14)
+                    DumpTable (i); // computes layout
+                table_base += metadata.array[i].row_size * *row_count;
                 ++row_count;
             }
             else
             {
                 printf ("table 0x%08X (%s) is absent\n", i, GetTableName (i));
             }
+            mask <<= 1;
         }
     }
 
@@ -3112,26 +3154,36 @@ unknown_stream:
     }
 };
 
+void
+print_string(const MetadataType_t* type, Image* image, uint table, uint row, uint column, void* data, uint size)
+{
+    //__debugbreak();
+    uint a = 0;
+    memcpy (&a, data, image->string_size);
+    //fputs(image->get_string(a), stdout);
+    printf("%X %p %s", a, image->get_string(a), image->get_string(a));
+}
+
 uint
-metadata_size_blob (const MetadataType_t* type, loaded_image_t* image)
+metadata_size_blob (const MetadataType_t* type, Image* image)
 {
     return image->blob_size;
 }
 
 uint
-metadata_size_string (const MetadataType_t* type, loaded_image_t* image)
+metadata_size_string (const MetadataType_t* type, Image* image)
 {
     return image->string_size;
 }
 
 uint
-metadata_size_guid (const MetadataType_t* type, loaded_image_t* image)
+metadata_size_guid (const MetadataType_t* type, Image* image)
 {
     return image->guid_size;
 }
 
 uint32
-metadata_size_codedindex_compute (loaded_image_t* image, CodedIndex coded_index)
+metadata_size_codedindex_compute (Image* image, CodedIndex coded_index)
 {
     const CodedIndex_t* data = &CodedIndices.array [coded_index];
     uint max_rows = 0;
@@ -3143,7 +3195,7 @@ metadata_size_codedindex_compute (loaded_image_t* image, CodedIndex coded_index)
 }
 
 uint32
-loadedimage_metadata_size_codedindex_get (loaded_image_t* image, CodedIndex coded_index)
+loadedimage_metadata_size_codedindex_get (Image* image, CodedIndex coded_index)
 {
     const uint a = image->coded_index_size [coded_index];
     if (a)
@@ -3151,20 +3203,21 @@ loadedimage_metadata_size_codedindex_get (loaded_image_t* image, CodedIndex code
     return metadata_size_codedindex_compute (image, coded_index);
 }
 
-uint
-metadata_size_index_compute (loaded_image_t* image, uint /* todo enum */ table_index)
+uint8
+metadata_size_index_compute (Image* image, uint /* todo enum */ table_index)
 {
     uint row_count = image->metadata.array [table_index].row_count;
     return (row_count <= 0xFFFFu) ? 2u : 4u;
 }
 
-uint
-image_metadata_size_index (loaded_image_t* image, uint /* todo enum */ table_index)
+uint8
+image_metadata_size_index (Image* image, uint /* todo enum */ table_index)
 {
-    uint& a = image->metadata.array [table_index].IndexSize;
+    uint8& ra = image->metadata.array [table_index].index_size;
+    uint8 a = ra;
     if (a)
         return a;
-    return a = metadata_size_index_compute (image, table_index);
+    return ra = metadata_size_index_compute (image, table_index);
 }
 
 }
@@ -3236,7 +3289,7 @@ main (int argc, char** argv)
     Xd(int_to_hex_getlen(~0u >> 4));
     exit(0);
 #endif
-    loaded_image_t im;
+    Image im;
 #define X(x) printf ("%s %#x\n", #x, (int)x)
 X (sizeof (image_dos_header_t));
 X (sizeof (image_file_header_t));
