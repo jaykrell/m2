@@ -2181,11 +2181,18 @@ struct stdout_stream : stream
     virtual void write(const void* bytes, size_t count)
     {
         fflush(stdout);
+        const char* pc = (const char*)bytes;
+        while (count > 0)
+        {
+            uint32 const n = (uint32)std::min(count, ((size_t)1024) * 1024 * 1024);
 #if _MSC_VER
-        ::_write(_fileno(stdout), bytes, count);
+            ::_write(_fileno(stdout), pc, n);
 #else
-        ::write(fileno(stdout), bytes, count);
+            ::write(fileno(stdout), pc, n);
 #endif
+            count -= n;
+            pc += n;
+        }
     }
 };
 
@@ -2194,11 +2201,18 @@ struct stderr_stream : stream
     virtual void write(const void* bytes, size_t count)
     {
         fflush(stderr);
+        const char* pc = (const char*)bytes;
+        while (count > 0)
+        {
+            uint32 const n = (uint32)std::min(count, ((size_t)1024) * 1024 * 1024);
 #if _MSC_VER
-        ::_write(_fileno(stderr), bytes, count);
+            ::_write(_fileno(stderr), pc, n);
 #else
-        ::write(fileno(stderr), bytes, count);
+            ::write(fileno(stderr), pc, n);
 #endif
+            count -= n;
+            pc += n;
+        }
     }
 };
 
@@ -3213,6 +3227,7 @@ unknown_stream:
             ++prow_count;
         }
 #if 0
+        DumpTable (0x0B);
         DumpTable (0);
         DumpTable (1);
         DumpTable (2);
@@ -3225,7 +3240,6 @@ unknown_stream:
         DumpTable (8);
         DumpTable (9);
         DumpTable (0x0A);
-        DumpTable (0x0B);
         DumpTable (0x0C);
         DumpTable (0x0D);
         DumpTable (0x0E);
@@ -3246,7 +3260,7 @@ unknown_stream:
         DumpTable (0x1D);
 #endif
 
-        if (1) for (mask = 1, i = 0; i < CountOf (metadata.array); ++i, mask <<= 1)
+        if (0) for (mask = 1, i = 0; i < CountOf (metadata.array); ++i, mask <<= 1)
         {
 #if 1
             bool present = (valid & mask) != 0;
