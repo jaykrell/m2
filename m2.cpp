@@ -231,10 +231,10 @@ string_vformat_length (const char *format, va_list va)
 #else
     // newer runtime: _vscprintf (format, va);
     // else loop until it fits, getting -1 while it does not.
-    int n = 0;
+    uint n = 0;
     for (;;)
     {
-        int inc = n ? n : 64;
+        uint inc = n ? n : 64;
         if (_vsnprintf((char*)_alloca(inc), n += inc, format, va) != -1)
             return n + 2;
     }
@@ -535,7 +535,7 @@ struct Handle_t
         {
             DWORD err = GetLastError();
             if (err != NO_ERROR)
-                throw_Win32Error (err, string_format ("GetFileSizeEx(%s)", file_name).c_str());
+                throw_Win32Error ((int)err, string_format ("GetFileSizeEx(%s)", file_name).c_str());
         }
         return (((uint64)hi) << 32) | lo;
     }
@@ -2030,15 +2030,15 @@ struct MetadataTypeFunctions_t
     void (*print)(const MetadataType_t*, Image*, uint table, uint row, uint column, void* data, uint size);
 };
 
-int64
+uint64
 sign_extend(uint64 value, uint bits)
 {
     // Extract lower bits from value and signextend.
     // From detour_sign_extend.
     const uint left = 64 - bits;
-    const int64 m1 = -1;
+    const uint64 m1 = (uint64)(int64)-1;
     const int64 wide = (int64)(value << left);
-    const int64 sign = (wide < 0) ? (m1 << left) : 0;
+    const uint64 sign = (wide < 0) ? (m1 << left) : 0;
     return value | sign;
 }
 
@@ -2079,7 +2079,7 @@ uint_to_dec_getlen(uint64 b)
 }
 
 uint
-uint_to_dec(int64 a, char* buf)
+uint_to_dec(uint64 a, char* buf)
 {
     const uint len = uint_to_dec_getlen(a);
     for (uint i = 0; i < len; ++i, a /= 10)
@@ -2104,12 +2104,21 @@ int_to_dec_getlen(int64 a)
 }
 
 uint
+uint_to_hex_getlen (uint64 b)
+{
+    uint len = 0;
+    do ++len;
+    while (b >>= 4);
+    return len;
+}
+
+uint
 int_to_hex_getlen(int64 a)
 {
     // If negative and first digit is <8, add one to induce leading 8-F
     // so that sign extension of most significant bit will work.
     // This might be a bad idea. TODO.
-    uint64 b = a;
+    uint64 b = (uint64)a;
     uint len = 0;
     uint64 most_significant;
     do ++len;
@@ -2118,11 +2127,17 @@ int_to_hex_getlen(int64 a)
 }
 
 void
-int_to_hexlen(int64 a, uint len, char *buf)
+uint_to_hexlen(uint64 a, uint len, char *buf)
 {
     buf += len;
     for (uint i = 0; i < len; ++i, a >>= 4)
         *--buf = "0123456789ABCDEF"[a & 0xF];
+}
+
+void
+int_to_hexlen(int64 a, uint len, char *buf)
+{
+    uint_to_hexlen((uint64)a, len, buf);
 }
 
 uint
@@ -2141,17 +2156,32 @@ int_to_hex8(int64 a, char *buf)
 }
 
 uint
-int_to_hex_getlen_atleast8(int64 a)
+int_to_hex_getlen_atleast8 (int64 a)
 {
     const uint len = int_to_hex_getlen (a);
     return std::max(len, 8u);
 }
 
 uint
-int_to_hex_atleast8(int64 a, char *buf)
+uint_to_hex_getlen_atleast8 (uint64 a)
+{
+    const uint len = uint_to_hex_getlen (a);
+    return std::max (len, 8u);
+}
+
+uint
+int_to_hex_atleast8 (int64 a, char *buf)
 {
     const uint len = int_to_hex_getlen_atleast8 (a);
-    int_to_hexlen(a, len, buf);
+    int_to_hexlen (a, len, buf);
+    return len;
+}
+
+uint
+uint_to_hex_atleast8(uint64 a, char *buf)
+{
+    const uint len = uint_to_hex_getlen_atleast8 (a);
+    uint_to_hexlen (a, len, buf);
     return len;
 }
 
@@ -2235,7 +2265,7 @@ print_fixed(const MetadataType_t*, Image*, uint table, uint row, uint column, vo
     case 8: i =  *(uint64*)data;
             break;
     }
-    uint len = 2 + int_to_hex_atleast8(i, &buf[2]);;
+    uint len = 2 + uint_to_hex_atleast8(i, &buf[2]);;
     buf[len++] = ' ';
     buf[len++] = 0;
     fputs(buf, stdout);
@@ -2987,12 +3017,12 @@ struct Image : ImageZero
 
     Metadata metadata;
 
-    char* get_string(int a)
+    char* get_string(uint a)
     {
         return streams.string->offset + a + (char*)metadata_root;
     }
 
-    Guid_t* get_guid(int a)
+    Guid_t* get_guid(uint a)
     {
         return a + (Guid_t*)(streams.guid->offset + (char*)metadata_root);
     }
@@ -3046,7 +3076,7 @@ struct Image : ImageZero
 
         const MetadataTableSchema* schema = metadata_int_to_table_schema [table_index];
         const MetadataTableSchemaColumn *fields = schema ? schema->fields : 0;
-        const uint count = schema ? schema->count : 0;
+        const uint count = schema ? schema->count : 0u;
 
         //err.printf ("%s\n", prefix_cstr);
         err.printf ("%s present:0x%08X\n", prefix_cstr, metadata.array [table_index].present);
@@ -3226,8 +3256,8 @@ unknown_stream:
             table_base += metadata.array[i].row_size * row_count;
             ++prow_count;
         }
-#if 0
         DumpTable (0x0B);
+#if 0
         DumpTable (0);
         DumpTable (1);
         DumpTable (2);
