@@ -2095,7 +2095,7 @@ sign_extend(uint64 value, uint bits)
 struct int_split_sign_magnitude_t
 {
     int_split_sign_magnitude_t(int64 a)
-      : neg(a < 0), 
+    : neg((a < 0) ? 1u : 0u),
         u((a < 0) ? (1 + (uint64)-(a + 1)) // Avoid negating most negative number.
                   : (uint64)a) { }
     uint neg;
@@ -2923,7 +2923,7 @@ struct MetadataColumn // dynamic
 
 struct MetadataTable // dynamic
 {
-    MetadataTable() { memset (this, 0, sizeof (*this)); }
+    //MetadataTable() { memset (this, 0, sizeof (*this)); }
 
     void* base;
     MetadataColumn* column;
@@ -2946,6 +2946,7 @@ struct Metadata // dynamic
 #define METADATA_TABLE_UNUSED(name) 1+
     METADATA_TABLES
             0];
+
         struct
         {
 #undef METADATA_TABLE_UNUSED
@@ -2954,6 +2955,7 @@ struct Metadata // dynamic
 #define METADATA_TABLE(name, base, columns) MetadataTable name;
 METADATA_TABLES
         } name;
+
     };
 
     MetadataColumn columns[
@@ -3356,23 +3358,30 @@ unknown_stream:
             table_base += metadata.array [i].row_size * metadata.array [i].row_count;
         }
 
-        if (IsDebuggerPresent()) __debugbreak();
-        if (1) for (mask = 1, i = 0; i < CountOf (metadata.array); ++i, mask <<= 1)
+        //if (IsDebuggerPresent()) __debugbreak();
+        //if (1)
+        for (mask = 1, i = 0; i < CountOf (metadata.array); ++i, mask <<= 1)
         {
             bool present = (valid & mask) != 0;
             if (present)
             {
                 fprintf (stderr, "table 0x%08X (%s) has 0x%08X rows (%s)\n", i, GetTableName (i), metadata.array [i].row_count, (sorted & mask) ? "sorted" : "unsorted");
-                [&] {
+#if 0
+                [&]
+                {
                     __try
                     {
+#endif
                         DumpTable (i);
+#if 0
                     }
                     __except(1)
                     {
                         fprintf(stderr, "table 0x%X failed\n", i);
                     }
-                }();
+                }
+                ();
+#endif
             }
             else
             {
@@ -3456,7 +3465,7 @@ print_codedindex(const MetadataType_t* type, Image* image, uint table, uint row,
     if (!index)
         return;
     --index;
-    int8 table_index = ((int8_t*)&CodedIndexMap)[coded_index->map + (code & ~(~0u << coded_index->tag_size))]; // TODO precompute
+    int8 table_index = ((int8*)&CodedIndexMap)[coded_index->map + (code & ~(~0u << coded_index->tag_size))]; // TODO precompute
 
     MetadataTable* t = &image->metadata.array[table_index];
     void* p = ((char*)t->base) + t->row_size * index;
@@ -3536,7 +3545,7 @@ ComputeCodedIndexSize (Image* image, CodedIndex coded_index)
     const CodedIndex_t* data = &CodedIndices.array [coded_index];
     uint const map = data->map;
     uint const count = data->count;
-    int8_t* Map = (int8_t*)&CodedIndexMap;
+    int8* Map = (int8*)&CodedIndexMap;
     uint result = 2;
     uint cap = 0xFFFFu >> data->tag_size;
     for (uint i = 0; i < count; ++i)
