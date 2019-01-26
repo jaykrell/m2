@@ -148,12 +148,10 @@ lin: m2.cpp
 	g++ -Wall -g m2.cpp -o $@
 
 win32.exe: m2.cpp
-	i686-w64-mingw32-g++ -fno-rtti -fno-exceptions -c -g m2.cpp
-	i686-w64-mingw32-gcc m2.o -o $@
+	i686-w64-mingw32-g++ -g m2.cpp
 
 win64.exe: m2.cpp
-	x86_64-w64-mingw32-g++ -fno-rtti -fno-exceptions -c -g m2.cpp
-	x86_64-w64-mingw32-gcc m2.o -o $@
+	x86_64-w64-mingw32-g++ -g m2.cpp
 
 endif
 !endif :
