@@ -570,9 +570,9 @@ struct explicit_operator_bool
 typedef void (explicit_operator_bool::*bool_type) () const;
 
 #ifdef _WIN32
-struct Handle_t
+struct Handle
 {
-    // TODO Handle_t vs. win32file_t, etc.
+    // TODO Handle vs. win32file_t, etc.
 
     uint64 get_file_size (const char * file_name = "")
     {
@@ -589,8 +589,8 @@ struct Handle_t
 
     void * h;
 
-    Handle_t (void *a) : h (a) { }
-    Handle_t () : h (0) { }
+    Handle (void *a) : h (a) { }
+    Handle () : h (0) { }
 
     void* get () { return h; }
 
@@ -618,7 +618,7 @@ struct Handle_t
         static_cleanup (detach ());
     }
 
-    Handle_t& operator= (void* a)
+    Handle& operator= (void* a)
     {
         if (h == a) return *this;
         cleanup ();
@@ -637,7 +637,7 @@ struct Handle_t
 
     bool operator ! () { return !valid (); }
 
-    ~Handle_t ()
+    ~Handle ()
     {
         if (valid ()) CloseHandle (h);
         h = 0;
@@ -645,7 +645,7 @@ struct Handle_t
 };
 #endif
 
-struct fd_t
+struct Fd
 {
     int fd;
 
@@ -702,9 +702,9 @@ struct fd_t
         static_cleanup (detach ());
     }
 
-    fd_t (int a = -1) : fd (a) { }
+    Fd (int a = -1) : fd (a) { }
 
-    fd_t& operator= (int a)
+    Fd& operator= (int a)
     {
         if (fd == a) return *this;
         cleanup ();
@@ -712,26 +712,26 @@ struct fd_t
         return *this;
     }
 
-    ~fd_t ()
+    ~Fd ()
     {
         cleanup ();
     }
 };
 
-struct memory_mapped_file_t
+struct MemoryMappedFile
 {
 // TODO allow for redirection to built-in data (i.e. filesystem emulation with builtin BCL)
 // TODO allow for systems that must read, not mmap
     void * base;
     size_t size;
 #ifdef _WIN32
-    Handle_t file;
+    Handle file;
 #else
-    fd_t file;
+    Fd file;
 #endif
-    memory_mapped_file_t () : base(0), size(0) { }
+    MemoryMappedFile () : base(0), size(0) { }
 
-    ~memory_mapped_file_t ()
+    ~MemoryMappedFile ()
     {
         if (!base) return;
 #ifdef _WIN32
@@ -748,7 +748,7 @@ struct memory_mapped_file_t
         if (!file) throw_GetLastError (StringFormat ("CreateFileA(%s)", a).c_str ());
         // FIXME check for size==0 and >4GB.
         size = (size_t)file.get_file_size(a);
-        Handle_t h2 = CreateFileMappingW (file, 0, PAGE_READONLY, 0, 0, 0);
+        Handle h2 = CreateFileMappingW (file, 0, PAGE_READONLY, 0, 0, 0);
         if (!h2) throw_GetLastError (StringFormat ("CreateFileMapping(%s)", a).c_str ());
         base = MapViewOfFile (h2, FILE_MAP_READ, 0, 0, 0);
         if (!base) throw_GetLastError (StringFormat ("MapViewOfFile(%s)", a).c_str ());
@@ -2998,7 +2998,7 @@ ComputeIndexSize (Image* image, uint /* todo enum */ table_index);
 
 struct Image : ImageZero
 {
-    memory_mapped_file_t mmf;
+    MemoryMappedFile mmf;
 
     std::vector<SectionHeader*> section_headers;
 
