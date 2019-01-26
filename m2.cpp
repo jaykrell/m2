@@ -92,16 +92,14 @@
 #ifdef __clang__
 #pragma GCC diagnostic ignored "-Wunused-const-variable"
 #endif
-#include <memory.h>
-
-#include <stddef.h>
-#include <memory.h>
 #include <assert.h>
+#include <errno.h>
+#include <limits.h>
+#include <memory.h>
+#include <stddef.h>
 #include <string>
 #include <stdio.h>
-#include <errno.h>
 #include <stdarg.h>
-#include <limits.h>
 #include <algorithm> // TODO? remove STL dependency?
 #ifdef _WIN32
 #define NOMINMAX 1
@@ -133,10 +131,6 @@
 //#endif
 //#endif
 
-typedef unsigned char uchar;
-//typedef unsigned short ushort;
-typedef unsigned int uint;
-
 // integral typedefs from Modula-3 m3core.h.
 #if UCHAR_MAX == 0x0FFUL
 typedef   signed char        int8;
@@ -145,17 +139,14 @@ typedef unsigned char       uint8;
 #error unable to find 8bit integer
 #endif
 #if USHRT_MAX == 0x0FFFFUL
-typedef          short      int16;
 typedef unsigned short     uint16;
 #else
 #error unable to find 16bit integer
 #endif
 #if UINT_MAX == 0x0FFFFFFFFUL
-typedef          int        int32;
-typedef unsigned int       uint32;
+typedef unsigned int       uint;
 #elif ULONG_MAX == 0x0FFFFFFFFUL
-typedef          long       int32;
-typedef unsigned long      uint32;
+typedef unsigned long      uint;
 #else
 #error unable to find 32bit integer
 #endif
@@ -165,7 +156,7 @@ typedef unsigned long      uint32;
 #pragma warning(disable:4668) // #if not_defined is #if 0
 #endif
 
-#if defined(_ILP64) || __BITS_PER_LONG == 64 || __WORDSIZE == 64
+#if defined (__LP64__) || defined (_LP64) || __BITS_PER_LONG == 64 || __WORDSIZE == 64
 typedef          long  int64;
 typedef unsigned long uint64;
 #else
@@ -180,9 +171,8 @@ typedef unsigned long long uint64;
 
 // VMS sometimes has 32bit size_t/ptrdiff_t but 64bit pointers.
 //
-// commented out is correct, but so is the #else */
-//#if defined (_WIN64) || __INITIAL_POINTER_SIZE == 64 || defined (__LP64__) || defined (_LP64)*/
-#if __INITIAL_POINTER_SIZE == 64
+// commented out is correct, but so is the #else
+#if defined (_WIN64) || __INITIAL_POINTER_SIZE == 64 || defined (__LP64__) || defined (_LP64)
 //typedef int64 intptr;
 //typedef uint64 uintptr;
 #else
@@ -242,7 +232,7 @@ string_vformat_length (const char *format, va_list va)
 }
 
 std::string
-string_vformat (const char *format, va_list va)
+StringFormatVa (const char *format, va_list va)
 {
     // Some systems, including Linux/amd64, cannot consume a
     // va_list multiple times. It must be copied first.
@@ -265,19 +255,19 @@ string_vformat (const char *format, va_list va)
 }
 
 std::string
-string_format (const char *format, ...)
+StringFormat (const char *format, ...)
 {
     va_list va;
     va_start (va, format);
-    std::string a = string_vformat (format, va);
+    std::string a = StringFormatVa (format, va);
     va_end (va);
     return a;
 }
 
-#define not_implemented_yet() (assertf (0, ("not yet implemented %s 0x%08X ", __func__, __LINE__)))
+#define NotImplementedYed() (AssertFormat (0, ("not yet implemented %s 0x%08X ", __func__, __LINE__)))
 
 void
-throw_string (const std::string& a)
+ThrowString (const std::string& a)
 {
     //fprintf (stderr, "%s\n", a.c_str());
     throw a;
@@ -285,199 +275,215 @@ throw_string (const std::string& a)
 }
 
 void
-throw_int (int i, const char* a = "")
+ThrowInt (int i, const char* a = "")
 {
-    throw_string (string_format ("error 0x%08X %s\n", i, a));
+    ThrowString (StringFormat ("error 0x%08X %s\n", i, a));
 }
 
 void
-throw_errno (const char* a = "")
+ThrowErrno (const char* a = "")
 {
-    throw_int (errno, a);
+    ThrowInt (errno, a);
 }
 
 #ifdef _WIN32
 void
 throw_Win32Error (int err, const char* a = "")
 {
-    throw_int (err, a);
+    ThrowInt (err, a);
 
 }
 void
 throw_GetLastError (const char* a = "")
 {
-    throw_int ((int)GetLastError (), a);
+    ThrowInt ((int)GetLastError (), a);
 
 }
 #endif
 
 void
-assertf_failed (const char* condition, const std::string& extra)
+AssertFailedFormat (const char* condition, const std::string& extra)
 {
-    //fputs (("assertf_failed:" + std::string (condition) + ":" + m2::string_vformat (format, args) + "\n").c_str (), stderr);
-    //assert (0);
+    //fputs (("AssertFailedFormat:" + std::string (condition) + ":" + m2::StringFormatVa (format, args) + "\n").c_str (), stderr);
+    //Assert (0);
     //abort ();
-    throw_string ("assert_failed:" + std::string (condition) + ":" + extra + "\n");
+    ThrowString ("AssertFailed:" + std::string (condition) + ":" + extra + "\n");
 }
 
 void
-assert_failed (const char * expr)
+AssertFailed (const char * expr)
 {
-    fprintf (stderr, "assert_failed:%s\n", expr);
+    fprintf (stderr, "AssertFailed:%s\n", expr);
     assert (0);
     abort ();
 }
 
-#define release_assert(x)         ((x) || ( assert_failed (#x), (int)0))
-#define release_assertf(x, extra) ((x) || (assertf_failed (#x, string_format extra), 0))
-#ifdef NDEBUG
-#define assertf(x, y)          /* nothing */
-#else
-#define assertf           release_assertf
-#endif
+#define Assert(x)         ((x) || ( AssertFailed (#x), (int)0))
+#define AssertFormat(x, extra) ((x) || (AssertFailedFormat (#x, StringFormat extra), 0))
 
-uint16
-unpack2le (const void *a)
+uint
+Unpack2LE (const void *a)
 {
-    uchar* b = (uchar*)a;
-    uint16 c = b [1];
-    c <<= 8;
-    c |= b[0];
-    return c;
+    uint8* b = (uint8*)a;
+    return (((uint)b [1]) << 8) | b [0];;
 }
 
 uint
-unpack4le (const void *a)
+Unpack4LE (const void *a)
 {
-    uint32 c = unpack2le ((char*)a + 2);
-    c <<= 16;
-    c |= unpack2le (a);
-    return c;
+    return (Unpack2LE ((char*)a + 2) << 16) | Unpack2LE (a);
 }
 
 uint
-unpack_2_or_4le (const void *a, uint size)
+Unpack2or4LE (const void *a, uint size)
 {
     switch (size)
     {
-    case 2: return unpack2le(a);
-    case 4: return unpack4le(a);
+    case 2: return Unpack2LE (a);
+    case 4: return Unpack4LE (a);
     }
-    release_assertf(size == 2 || size == 4, ("%X", size));
+    AssertFormat(size == 2 || size == 4, ("%X", size));
     return ~0u;
 }
 
-unsigned
-unpack (char (&a)[2])
+template <uint N>
+struct uintLEn // unsigned little endian integer, size n bits
 {
-    return unpack2le (a);
+    char data[N / 8];
+
+    operator uint ()
+    {
+        uint a = 0;
+        for (uint i = N / 8; i; )
+            a = (a << 8) | (uint)(data[--i] & 0xFF);
+        return a;
+    }
+
+    void operator=(uint);
+};
+
+typedef uintLEn<16> uintLE16;
+typedef uintLEn<32> uintLE;
+typedef uintLEn<64> uintLE64;
+
+uint
+Unpack (uintLE16& a)
+{
+    return Unpack2LE (a.data);
 }
 
-unsigned
-unpack (char (&a)[4])
+uint
+Unpack (uintLE16* a)
 {
-    return unpack4le (a);
+    return Unpack2LE (a->data);
 }
 
-struct image_dos_header_t
+uint
+Unpack (uintLE& a)
 {
-    union {
-        struct {
-            uint16 mz;
-            uint8 pad [64-6];
-            uint32 pe;
-        } b;
-        char a [64];
-    } u;
+    return Unpack4LE (a.data);
+}
 
-    bool check_sig () { return u.a [0] == 'M' && u.a [1] == 'Z'; }
-    unsigned get_pe () { return unpack4le (&u.a [60]); }
+uint
+Unpack (uintLE* a)
+{
+    return Unpack4LE (a->data);
+}
+
+struct DosHeader
+{
+    char mz[2];
+    uint8 pad [64 - 6];
+    uintLE pe;
+
+    bool CheckSignature () { return mz [0] == 'M' && mz [1] == 'Z'; }
+    unsigned GetPE () { return Unpack (pe); }
 };
 
-struct image_file_header_t
+struct FileHeader
 {
-    uint16 Machine;
-    uint16 NumberOfSections;
-    uint32 TimeDateStamp;
-    uint32 PointerToSymbolTable;
-    uint32 NumberOfSymbols;
-    uint16 SizeOfOptionalHeader;
-    uint16 Characteristics;
+    uintLE16 Machine;
+    uintLE16 NumberOfSections;
+    uintLE TimeDateStamp;
+    uintLE PointerToSymbolTable;
+    uintLE NumberOfSymbols;
+    uintLE16 SizeOfOptionalHeader;
+    uintLE16 Characteristics;
 };
 
-struct image_data_directory_t
+struct DataDirectory
 {
-    uint32 VirtualAddress;
-    uint32 Size;
+    uintLE VirtualAddress;
+    uintLE Size;
 };
 
-struct image_optional_header32_t
+struct OptionalHeader32
 {
-    uint16 Magic;
+    uintLE16 Magic;
     uint8  MajorLinkerVersion;
     uint8  MinorLinkerVersion;
-    uint32 SizeOfCode;
-    uint32 SizeOfInitializedData;
-    uint32 SizeOfUninitializedData;
-    uint32 AddressOfEntryPoint;
-    uint32 BaseOfCode;
-    uint32 BaseOfData;
-    uint32 ImageBase;
-    uint32 SectionAlignment;
-    uint32 FileAlignment;
-    uint16 MajorOperatingSystemVersion;
-    uint16 MinorOperatingSystemVersion;
-    uint16 MajorImageVersion;
-    uint16 MinorImageVersion;
-    uint16 MajorSubsystemVersion;
-    uint16 MinorSubsystemVersion;
-    uint32 Win32VersionValue;
-    uint32 SizeOfImage;
-    uint32 SizeOfHeaders;
-    uint32 CheckSum;
-    uint16 Subsystem;
-    uint16 DllCharacteristics;
-    uint32 SizeOfStackReserve;
-    uint32 SizeOfStackCommit;
-    uint32 SizeOfHeapReserve;
-    uint32 SizeOfHeapCommit;
-    uint32 LoaderFlags;
-    uint32 NumberOfRvaAndSizes;
-    image_data_directory_t DataDirectory[1];
+    uintLE SizeOfCode;
+    uintLE SizeOfInitializedData;
+    uintLE SizeOfUninitializedData;
+    uintLE AddressOfEntryPoint;
+    uintLE BaseOfCode;
+    uintLE BaseOfData;
+    uintLE ImageBase;
+    uintLE SectionAlignment;
+    uintLE FileAlignment;
+    uintLE16 MajorOperatingSystemVersion;
+    uintLE16 MinorOperatingSystemVersion;
+    uintLE16 MajorImageVersion;
+    uintLE16 MinorImageVersion;
+    uintLE16 MajorSubsystemVersion;
+    uintLE16 MinorSubsystemVersion;
+    uintLE Win32VersionValue;
+    uintLE SizeOfImage;
+    uintLE SizeOfHeaders;
+    uintLE CheckSum;
+    uintLE16 Subsystem;
+    uintLE16 DllCharacteristics;
+    uintLE SizeOfStackReserve;
+    uintLE SizeOfStackCommit;
+    uintLE SizeOfHeapReserve;
+    uintLE SizeOfHeapCommit;
+    uintLE LoaderFlags;
+    uintLE NumberOfRvaAndSizes;
+    //DataDirectory DataDirectory[NumberOfRvaAndSizes];
 };
 
-struct image_optional_header64_t
+struct OptionalHeader64
 {
-    uint16 Magic;
+    uintLE16 Magic;
     uint8  MajorLinkerVersion;
     uint8  MinorLinkerVersion;
-    uint32 SizeOfCode;
-    uint32 SizeOfInitializedData;
-    uint32 SizeOfUninitializedData;
-    uint32 AddressOfEntryPoint;
-    uint32 BaseOfCode;
-    uint64 ImageBase;
-    uint32 SectionAlignment;
-    uint32 FileAlignment;
-    uint16 MajorOperatingSystemVersion;
-    uint16 MinorOperatingSystemVersion;
-    uint16 MajorImageVersion;
-    uint16 MinorImageVersion;
-    uint16 MajorSubsystemVersion;
-    uint16 MinorSubsystemVersion;
-    uint32 Win32VersionValue;
-    uint32 SizeOfImage;
-    uint32 SizeOfHeaders;
-    uint32 CheckSum;
-    uint16 Subsystem;
-    uint16 DllCharacteristics;
-    uint64 SizeOfStackReserve;
-    uint64 SizeOfStackCommit;
-    uint64 SizeOfHeapReserve;
-    uint64 SizeOfHeapCommit;
-    uint32 LoaderFlags;
-    uint32 NumberOfRvaAndSizes;
-    image_data_directory_t DataDirectory[1];
+    uintLE SizeOfCode;
+    uintLE SizeOfInitializedData;
+    uintLE SizeOfUninitializedData;
+    uintLE AddressOfEntryPoint;
+    uintLE BaseOfCode;
+    uintLE64 ImageBase;
+    uintLE SectionAlignment;
+    uintLE FileAlignment;
+    uintLE16 MajorOperatingSystemVersion;
+    uintLE16 MinorOperatingSystemVersion;
+    uintLE16 MajorImageVersion;
+    uintLE16 MinorImageVersion;
+    uintLE16 MajorSubsystemVersion;
+    uintLE16 MinorSubsystemVersion;
+    uintLE Win32VersionValue;
+    uintLE SizeOfImage;
+    uintLE SizeOfHeaders;
+    uintLE CheckSum;
+    uintLE16 Subsystem;
+    uintLE16 DllCharacteristics;
+    uintLE64 SizeOfStackReserve;
+    uintLE64 SizeOfStackCommit;
+    uintLE64 SizeOfHeapReserve;
+    uintLE64 SizeOfHeapCommit;
+    uintLE LoaderFlags;
+    uintLE NumberOfRvaAndSizes;
+    //DataDirectory DataDirectory[NumberOfRvaAndSizes];
 };
 
 const uint kDataDirectory_Export = 0;
@@ -525,33 +531,33 @@ struct image_section_header_t;
 
 struct image_nt_headers_t
 {
-    uint32 Signature;
-    image_file_header_t FileHeader;
-    char OptionalHeader;
+    uintLE Signature;
+    FileHeader FileHeader;
+    uintLE16 OptionalHeader;
 
     image_section_header_t*
     first_section_header ()
     {
-        return (image_section_header_t*)((char*)&OptionalHeader + FileHeader.SizeOfOptionalHeader);
+        return (image_section_header_t*)((char*)&OptionalHeader + Unpack(FileHeader.SizeOfOptionalHeader));
     }
 };
 
 struct image_section_header_t
 {
     // In very old images, VirtualSize is zero, in which case, use SizeOfRawData.
-    uint8 Name [8];
+    char Name [8];
     union {
-        uint32 PhysicalAddress;
-        uint32 VirtualSize;
+        uintLE PhysicalAddress;
+        uintLE VirtualSize;
     } Misc;
-    uint32 VirtualAddress;
-    uint32 SizeOfRawData;
-    uint32 PointerToRawData;
-    uint32 PointerToRelocations;
-    uint32 PointerToLinenumbers;
-    uint16 NumberOfRelocations;
-    uint16 NumberOfLinenumbers;
-    uint32 Characteristics;
+    uintLE VirtualAddress;
+    uintLE SizeOfRawData;
+    uintLE PointerToRawData;
+    uintLE PointerToRelocations;
+    uintLE PointerToLinenumbers;
+    uintLE16 NumberOfRelocations;
+    uintLE16 NumberOfLinenumbers;
+    uintLE Characteristics;
 };
 
 // C++98 workaround for what C++11 offers.
@@ -576,7 +582,7 @@ struct Handle_t
         {
             DWORD err = GetLastError();
             if (err != NO_ERROR)
-                throw_Win32Error ((int)err, string_format ("GetFileSizeEx(%s)", file_name).c_str());
+                throw_Win32Error ((int)err, StringFormat ("GetFileSizeEx(%s)", file_name).c_str());
         }
         return (((uint64)hi) << 32) | lo;
     }
@@ -653,7 +659,7 @@ struct fd_t
         struct stat64 st = { 0 }; // TODO test more systems
         if (fstat64 (fd, &st))
 #endif
-            throw_errno (string_format ("fstat(%s)", file_name).c_str ());
+            ThrowErrno (StringFormat ("fstat(%s)", file_name).c_str ());
         return st.st_size;
     }
 #endif
@@ -739,20 +745,20 @@ struct memory_mapped_file_t
     {
 #ifdef _WIN32
         file = CreateFileA (a, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-        if (!file) throw_GetLastError (string_format ("CreateFileA(%s)", a).c_str ());
+        if (!file) throw_GetLastError (StringFormat ("CreateFileA(%s)", a).c_str ());
         // FIXME check for size==0 and >4GB.
         size = (size_t)file.get_file_size(a);
         Handle_t h2 = CreateFileMappingW (file, 0, PAGE_READONLY, 0, 0, 0);
-        if (!h2) throw_GetLastError (string_format ("CreateFileMapping(%s)", a).c_str ());
+        if (!h2) throw_GetLastError (StringFormat ("CreateFileMapping(%s)", a).c_str ());
         base = MapViewOfFile (h2, FILE_MAP_READ, 0, 0, 0);
-        if (!base) throw_GetLastError (string_format ("MapViewOfFile(%s)", a).c_str ());
+        if (!base) throw_GetLastError (StringFormat ("MapViewOfFile(%s)", a).c_str ());
 #else
         file = open (a, O_RDONLY);
-        if (!file) throw_errno (string_format ("open(%s)", a).c_str ());
+        if (!file) ThrowErrno (StringFormat ("open(%s)", a).c_str ());
         // FIXME check for size==0 and >4GB.
         size = (size_t)file.get_file_size(a);
         base = mmap (0, size, PROT_READ, MAP_PRIVATE, file, 0);
-        if (base == MAP_FAILED) throw_errno (string_format ("mmap(%s)", a).c_str ());
+        if (base == MAP_FAILED) ThrowErrno (StringFormat ("mmap(%s)", a).c_str ());
 #endif
     }
 };
@@ -921,7 +927,7 @@ struct Method_t : Member_t
     bool operator==(const Method_t&) const; // support for old compiler/library
 };
 
-BEGIN_ENUM(TypeFlags_t, uint32)
+BEGIN_ENUM(TypeFlags_t, uint)
 {
     //TODO bitfields (need to test little and big endian)
     //TODO or bitfield decoder
@@ -976,7 +982,7 @@ BEGIN_ENUM(TypeFlags_t, uint32)
     TypeFlags_RTSpecialName         =   0x00000800,     // Runtime should check name encoding.
     TypeFlags_HasSecurity           =   0x00040000      // Class has security associate with it.
 }
-END_ENUM(TypeFlags_t, uint32)
+END_ENUM(TypeFlags_t, uint)
 
 struct Type_t // class, valuetype, delegate, inteface, not char, short, int, long, float
 {
@@ -1153,53 +1159,53 @@ struct Guid_t
 };
 
 // TODO enum
-const int8 Module = 0;
-const int8 TypeRef = 1;
-const int8 TypeDef = 2;
-//const int8 FieldPtr = 3; // nonstandard
-const int8 Field = 4;
-//const int8 MethodPtr = 5; // nonstandard
-const int8 MethodDef = 6;
-//const int8 ParamPtr = 7; // nonstandard
-const int8 Param = 8;
-const int8 InterfaceImpl = 9;
-const int8 MemberRef = 10;
-const int8 MethodRef = MemberRef;
-//const int8 FieldRef = MemberRef;
-//const int8 Constant = 11;
-//const int8 CustomAttribute = 12;
-//const int8 FieldMarshal = 13;
-const int8 DeclSecurity = 14;
-//const int8 ClassLayout = 15;
-//const int8 FieldLayout = 16;
-const int8 StandAloneSig = 17;
-//const int8 EventMap = 18;
-//const int8 EventPtr = 19; // nonstandard
-const int8 Event = 20;
-const int8 PropertyMap = 21;
-//const int8 ProperyPtr = 22; // nonstandard
-const int8 Property = 23;
-const int8 MethodSemantics = 24; // 0x18
-const int8 MethodImpl = 25; // 0x19
-const int8 ModuleRef = 26;
-const int8 TypeSpec = 27;
-//const int8 ImplMap = 28;
-//const int8 FieldRVA = 29;
-//const int8 ENCLog = 30; // nonstandard
-//const int8 ENCMap = 31; // nonstandard
-const int8 Assembly = 32;
-//const int8 AssemblyProcessor = 33;
-//const int8 AssemblyOS = 34;
-const int8 AssemblyRef = 35;
-//const int8 AssemblyRefProcessor = 36;
-//const int8 AssemblyRefOS = 37;
-const int8 File = 38;
-const int8 ExportedType = 39;
-const int8 ManifestResource = 40; // 0x28
-//const int8 NestedClass = 41;
-const int8 GenericParam = 42; // 0x2A
-const int8 MethodSpec = 0x2B;
-const int8 GenericParamConstraint = 44; // 0x2C
+const uint Module = 0;
+const uint TypeRef = 1;
+const uint TypeDef = 2;
+//const uint FieldPtr = 3; // nonstandard
+const uint Field = 4;
+//const uint MethodPtr = 5; // nonstandard
+const uint MethodDef = 6;
+//const uint ParamPtr = 7; // nonstandard
+const uint Param = 8;
+const uint InterfaceImpl = 9;
+const uint MemberRef = 10;
+const uint MethodRef = MemberRef;
+//const uint FieldRef = MemberRef;
+//const uint Constant = 11;
+//const uint CustomAttribute = 12;
+//const uint FieldMarshal = 13;
+const uint DeclSecurity = 14;
+//const uint ClassLayout = 15;
+//const uint FieldLayout = 16;
+const uint StandAloneSig = 17;
+//const uint EventMap = 18;
+//const uint EventPtr = 19; // nonstandard
+const uint Event = 20;
+const uint PropertyMap = 21;
+//const uint ProperyPtr = 22; // nonstandard
+const uint Property = 23;
+const uint MethodSemantics = 24; // 0x18
+const uint MethodImpl = 25; // 0x19
+const uint ModuleRef = 26;
+const uint TypeSpec = 27;
+//const uint ImplMap = 28;
+//const uint FieldRVA = 29;
+//const uint ENCLog = 30; // nonstandard
+//const uint ENCMap = 31; // nonstandard
+const uint Assembly = 32;
+//const uint AssemblyProcessor = 33;
+//const uint AssemblyOS = 34;
+const uint AssemblyRef = 35;
+//const uint AssemblyRefProcessor = 36;
+//const uint AssemblyRefOS = 37;
+const uint File = 38;
+const uint ExportedType = 39;
+const uint ManifestResource = 40; // 0x28
+//const uint NestedClass = 41;
+const uint GenericParam = 42; // 0x2A
+const uint MethodSpec = 0x2B;
+const uint GenericParamConstraint = 44; // 0x2C
 
 // TODO enum/bitfield
 const uint CorILMethod_TinyFormat = 2;
@@ -1222,8 +1228,8 @@ struct method_header_fat_t
 {
     uint16 FlagsAndHeaderSize;
     uint16 MaxStack;
-    uint32 CodeSize;
-    uint32 LocalVarSigTok;
+    uint CodeSize;
+    uint LocalVarSigTok;
 
     bool MoreSects () { return !!(GetFlags () & CorILMethod_MoreSects); }
     bool InitLocals () { return !!(GetFlags () & CorILMethod_InitLocals); }
@@ -1267,8 +1273,9 @@ CODED_INDEX (HasSemantics,      2, {Event COMMA Property})                      
 CODED_INDEX (MethodDefOrRef,    2, {MethodDef COMMA MethodRef})                                     \
 CODED_INDEX (MemberForwarded,   2, {Field COMMA MethodDef})                                         \
 CODED_INDEX (Implementation,    3, {File COMMA AssemblyRef COMMA ExportedType})                     \
-/* CodeIndex(CustomAttributeType) has a range of 5 values but only 2 are valid. */                  \
-CODED_INDEX (CustomAttributeType, 5, {-1 COMMA -1 COMMA MethodDef COMMA MethodRef COMMA -1})        \
+/* CodeIndex(CustomAttributeType) has a range of 5 values but only 2 are valid.                     \
+ * -1 is "null" and this is a wart, requiring signed numbers. */                                    \
+CODED_INDEX (CustomAttributeType, 5, {-1 COMMA -1 COMMA MethodDef COMMA MemberRef COMMA -1})        \
 CODED_INDEX (ResolutionScope, 4, {Module COMMA ModuleRef COMMA AssemblyRef COMMA TypeRef})          \
 CODED_INDEX (TypeOrMethodDef, 2, {TypeDef COMMA MethodDef})                                         \
 CODED_INDEX (HasCustomAttribute, 22,                                                                \
@@ -1390,7 +1397,7 @@ struct MetadataTokenList_t
 
 struct MetadataTablesHeader // tilde stream
 {
-    uint32 reserved;    // 0
+    uint reserved;    // 0
     uint8 MajorVersion;
     uint8 MinorVersion;
     union {
@@ -1400,17 +1407,17 @@ struct MetadataTablesHeader // tilde stream
     uint8 reserved2;    // 1
     uint64 Valid;       // metadata_typedef etc.
     uint64 Sorted;      // metadata_typedef etc.
-    // uint32 NumberOfRows [];
+    // uint NumberOfRows [];
 };
 
 struct MetadataRoot
 {
     enum { SIGNATURE = 0x424A5342 };
-    /* 0 */ uint32 Signature;
+    /* 0 */ uint Signature;
     /* 4 */ uint16 MajorVersion; // 1, ignore
     /* 6 */ uint16 MinorVersion; // 1, ignore
-    /* 8 */ uint32 Reserved;     // 0
-    /* 12 */ uint32 VersionLength; // VersionLength null, round up to 4
+    /* 8 */ uint Reserved;     // 0
+    /* 12 */ uint VersionLength; // VersionLength null, round up to 4
     /* 16 */ char Version [1];
     // uint16 Flags; // 0
     // uint16 NumberOfStreams;
@@ -1419,8 +1426,8 @@ struct MetadataRoot
 
 struct MetadataStreamHeader // see mono verify_metadata_header
 {
-    uint32 offset;
-    uint32 Size; // multiple of 4
+    uint offset;
+    uint Size; // multiple of 4
     char   Name [32]; // multiple of 4, null terminated, max 32
 };
 
@@ -1439,7 +1446,7 @@ BEGIN_ENUM(ParamFlags_t, uint16)
 }
 END_ENUM(ParamFlags_t, uint16)
 
-BEGIN_ENUM(AssemblyFlags, uint32)
+BEGIN_ENUM(AssemblyFlags, uint)
 {
     AssemblyFlags_PublicKey             =   0x0001,     // The assembly ref holds the full (unhashed) public key.
 
@@ -1459,22 +1466,22 @@ BEGIN_ENUM(AssemblyFlags, uint32)
     AssemblyFlags_Retargetable          =   0x0100,     // The assembly can be retargeted (at runtime) to an
                                                         // assembly from a different publisher.
 }
-END_ENUM(AssemblyFlags, uint32)
+END_ENUM(AssemblyFlags, uint)
 
-BEGIN_ENUM(FileFlags_t, uint32)
+BEGIN_ENUM(FileFlags_t, uint)
 {
     FileFlags_ContainsMetaData      =   0x0000,     // This is not a resource file
     FileFlags_ContainsNoMetaData    =   0x0001,     // This is a resource file or other non-metadata-containing file
 }
-END_ENUM(FileFlags_t, uint32)
+END_ENUM(FileFlags_t, uint)
 
-BEGIN_ENUM(ManifestResourceFlags_t, uint32)
+BEGIN_ENUM(ManifestResourceFlags_t, uint)
 {
     ManifestResourceFlags_VisibilityMask        =   0x0007,
     ManifestResourceFlags_Public                =   0x0001,     // The Resource is exported from the Assembly.
     ManifestResourceFlags_Private               =   0x0002,     // The Resource is private to the Assembly.
 }
-END_ENUM(ManifestResourceFlags_t, uint32)
+END_ENUM(ManifestResourceFlags_t, uint)
 
 BEGIN_ENUM(GenericParamFlags_t, uint16)
 {
@@ -1508,56 +1515,6 @@ END_ENUM(GenericParamFlags_t, uint16)
 // - Parent (index into any metadata table, except the CustomAttribute table itself; more precisely, a HasCustomAttribute coded index)
 // - Type (index into the MethodDef or MethodRef table; more precisely, a CustomAttributeType coded index)
 // - Value (index into Blob heap)
-
-13 - FieldMarshal Table
-
-// Each row tells the way a Param or Field should be threated when called from/to unmanaged code.
-
-// Columns:
-
-// - Parent (index into Field or Param table; more precisely, a HasFieldMarshal coded index)
-// - NativeType (index into the Blob heap)
-
-14 - DeclSecurity Table
-
-Security attributes attached to a class, method or assembly.
-
-Columns:
-
-- Action (2-byte value)
-- Parent (index into the TypeDef, MethodDef or Assembly table; more precisely, a HasDeclSecurity coded index)
-- PermissionSet (index into Blob heap)
-
-15 - ClassLayout Table
-
-//Remember "#pragma pack(n)" for VC++? Well, this is kind of the same thing for .NET. It's
-// useful when handing something from managed to unmanaged code.
-
-Columns:
-
-- PackingSize (a 2-byte constant)
-- ClassSize (a 4-byte constant)
-- Parent (index into TypeDef table)
-
-16 - FieldLayout Table
-
-Related with the ClassLayout.
-
-Columns:
-
-- Offset (a 4-byte constant)
-- Field (index into the Field table)
-
-18 - EventMap Table
-
-List of events for a specific class.
-
-Columns:
-
-- Parent (index into the TypeDef table)
-- EventList (index into Event table). It marks the first of a contiguous run of Events owned by this Type. The run continues to the smaller of:
-        o the last row of the Event table
-        o the next run of Events, found by inspecting the EventList of the next row in the EventMap table
 
 20 - Event Table
 
@@ -1603,21 +1560,6 @@ typedef enum CorPropertyAttr
 
     prUnused                =   0xe9ff
 } CorPropertyAttr;
-
-
-25 - MethodImpl Table
-
-// I quote: "MethodImpls let a compiler override the default inheritance rules provided by the CLI.
-// Their original use was to allow a class “C”, that inherited method “Foo” from interfaces I and J,
-// to provide implementations for both methods (rather than have only one slot for “Foo” in its vtable).
-// But MethodImpls can be used for other reasons too, limited only by the compiler writer’s ingenuity
-// within the constraints defined in the Validation rules below.".
-
-Columns:
-
-- Class (index into TypeDef table)
-- MethodBody (index into MethodDef or MemberRef table; more precisely, a MethodDefOrRef coded index)
-- MethodDeclaration (index into MethodDef or MemberRef table; more precisely, a MethodDefOrRef coded index)
 
 26 - ModuleRef Table
 
@@ -2048,23 +1990,23 @@ typedef enum CorElementType
 // COM+ 2.0 header structure.
 struct image_clr_header_t // data_directory [15]
 {
-    uint32 cb; // count of bytes
-    uint16 MajorRuntimeVersion;
-    uint16 MinorRuntimeVersion;
-    image_data_directory_t MetaData;
-    uint32 Flags;
+    uintLE cb; // count of bytes
+    uintLE16 MajorRuntimeVersion;
+    uintLE16 MinorRuntimeVersion;
+    DataDirectory MetaData;
+    uintLE Flags;
     // If COMIMAGE_FLAGS_NATIVE_ENTRYPOINT is not set, EntryPointToken represents a managed entrypoint.
     // If COMIMAGE_FLAGS_NATIVE_ENTRYPOINT is set, EntryPointRVA represents an RVA to a native entrypoint.
     union {
-        uint32 EntryPointToken;
-        uint32 EntryPointRVA;
+        uintLE EntryPointToken;
+        uintLE EntryPointRVA;
     };
-    image_data_directory_t Resources;
-    image_data_directory_t StrongNameSignature;
-    image_data_directory_t CodeManagerTable;
-    image_data_directory_t VTableFixups;
-    image_data_directory_t ExportAddressTableJumps;
-    image_data_directory_t ManagedNativeHeader;
+    DataDirectory Resources;
+    DataDirectory StrongNameSignature;
+    DataDirectory CodeManagerTable;
+    DataDirectory VTableFixups;
+    DataDirectory ExportAddressTableJumps;
+    DataDirectory ManagedNativeHeader;
 };
 
 struct MetadataType_t;
@@ -2252,7 +2194,7 @@ struct stream
     void
     printv(const char *format, va_list va)
     {
-        prints(string_vformat(format, va));
+        prints(StringFormatVa(format, va));
     }
 };
 
@@ -2310,7 +2252,7 @@ print_fixed(const MetadataType_t*, Image*, uint table, uint row, uint column, vo
             break;
     case 2: i =  *(uint16*)data;
             break;
-    case 4: i =  *(uint32*)data;
+    case 4: i =  *(uint*)data;
             break;
     case 8: i =  *(uint64*)data;
             break;
@@ -2336,7 +2278,7 @@ struct MetadataType_t
 uint
 GetCodedIndexSize (Image* image, CodedIndex coded_index);
 
-//#define CODED_INDEX(x, n, values) uint32 metadata_size_codedindex_ ## x (MetadataType_t* type, Image* image) { return GetCodedIndexSize (image, type->coded_index); }
+//#define CODED_INDEX(x, n, values) uint metadata_size_codedindex_ ## x (MetadataType_t* type, Image* image) { return GetCodedIndexSize (image, type->coded_index); }
 //CODED_INDICES
 #undef CODED_INDEX
 
@@ -2496,14 +2438,9 @@ const MetadataTypeFunctions_t MetadataType_CodedIndex =
     print_codedindex,
 };
 
-const MetadataType_t MetadataType_int8 = { "int8", &MetadataType_Fixed, {1} };
-const MetadataType_t MetadataType_int16 = { "int16", &MetadataType_Fixed, {2} };
-const MetadataType_t MetadataType_int32 = { "int32", &MetadataType_Fixed, {4} };
-const MetadataType_t MetadataType_int64 = { "int64", &MetadataType_Fixed, {8} };
 const MetadataType_t MetadataType_uint8 = { "uint8", &MetadataType_Fixed, {1} };
 const MetadataType_t MetadataType_uint16 = { "uint16", &MetadataType_Fixed, {2} };
-const MetadataType_t MetadataType_uint32 = { "uint32", &MetadataType_Fixed, {4} };
-const MetadataType_t MetadataType_uint64 = { "uint64", &MetadataType_Fixed, {8} };
+const MetadataType_t MetadataType_uint = { "uint", &MetadataType_Fixed, {4} };
 
 // heap indices or offsets
 const MetadataType_t MetadataType_blob                  = { "blob",  &MetadataType_blob_functions };
@@ -2520,19 +2457,19 @@ const MetadataType_t MetadataType_Property              = { "Property", &Metadat
 const MetadataType_t MetadataType_TypeDef               = { "TypeDef", &MetadataType_Index, {TypeDef} };
 
 // coded indices
-const MetadataType_t MetadataType_CustomAttributeType   = { "CustomAttributeType", &MetadataType_CodedIndex, {(int8)CodedIndex(CustomAttributeType)} };
-const MetadataType_t MetadataType_HasConstant           = { "HasConstant", &MetadataType_CodedIndex, {(int8)CodedIndex(HasConstant)} };
-const MetadataType_t MetadataType_HasCustomAttribute    = { "HasCustomAttribute", &MetadataType_CodedIndex, {(int8)CodedIndex(HasCustomAttribute)} };
-const MetadataType_t MetadataType_HasDeclSecurity       = { "HasDeclSecurity", &MetadataType_CodedIndex, {(int8)CodedIndex(HasDeclSecurity)} };
-const MetadataType_t MetadataType_HasFieldMarshal       = { "HasFieldMarshal", &MetadataType_CodedIndex, {(int8)CodedIndex(HasFieldMarshal)} };
-const MetadataType_t MetadataType_HasSemantics          = {" HasSemantics", &MetadataType_CodedIndex, {(int8)CodedIndex(HasSemantics)} };
-const MetadataType_t MetadataType_Implementation        = { "Implementation", &MetadataType_CodedIndex, {(int8)CodedIndex(Implementation)} };
-const MetadataType_t MetadataType_MemberForwarded       = { "MemberForwarded", &MetadataType_CodedIndex, {(int8)CodedIndex(MemberForwarded)} };
-const MetadataType_t MetadataType_MemberRefParent       = { "MemberRefParent", &MetadataType_CodedIndex, {(int8)CodedIndex(MemberRefParent)} };
-const MetadataType_t MetadataType_MethodDefOrRef        = { "MethodDefOrRef", &MetadataType_CodedIndex, {(int8)CodedIndex(MethodDefOrRef)} };
-const MetadataType_t MetadataType_ResolutionScope       = { "ResolutionScope", &MetadataType_CodedIndex, {(int8)CodedIndex(ResolutionScope)} };
-const MetadataType_t MetadataType_TypeDefOrRef          = { "TypeDefOrRef", &MetadataType_CodedIndex, {(int8)CodedIndex(TypeDefOrRef)} };
-const MetadataType_t MetadataType_TypeOrMethodDef       = { "TypeOrMethodDef", &MetadataType_CodedIndex, {(int8)CodedIndex(TypeOrMethodDef)} };
+const MetadataType_t MetadataType_CustomAttributeType   = { "CustomAttributeType", &MetadataType_CodedIndex, { CodedIndex(CustomAttributeType)} };
+const MetadataType_t MetadataType_HasConstant           = { "HasConstant", &MetadataType_CodedIndex, { CodedIndex(HasConstant)} };
+const MetadataType_t MetadataType_HasCustomAttribute    = { "HasCustomAttribute", &MetadataType_CodedIndex, { CodedIndex(HasCustomAttribute)} };
+const MetadataType_t MetadataType_HasDeclSecurity       = { "HasDeclSecurity", &MetadataType_CodedIndex, { CodedIndex(HasDeclSecurity)} };
+const MetadataType_t MetadataType_HasFieldMarshal       = { "HasFieldMarshal", &MetadataType_CodedIndex, { CodedIndex(HasFieldMarshal)} };
+const MetadataType_t MetadataType_HasSemantics          = {" HasSemantics", &MetadataType_CodedIndex, { CodedIndex(HasSemantics)} };
+const MetadataType_t MetadataType_Implementation        = { "Implementation", &MetadataType_CodedIndex, { CodedIndex(Implementation)} };
+const MetadataType_t MetadataType_MemberForwarded       = { "MemberForwarded", &MetadataType_CodedIndex, { CodedIndex(MemberForwarded)} };
+const MetadataType_t MetadataType_MemberRefParent       = { "MemberRefParent", &MetadataType_CodedIndex, { CodedIndex(MemberRefParent)} };
+const MetadataType_t MetadataType_MethodDefOrRef        = { "MethodDefOrRef", &MetadataType_CodedIndex, { CodedIndex(MethodDefOrRef)} };
+const MetadataType_t MetadataType_ResolutionScope       = { "ResolutionScope", &MetadataType_CodedIndex, { CodedIndex(ResolutionScope)} };
+const MetadataType_t MetadataType_TypeDefOrRef          = { "TypeDefOrRef", &MetadataType_CodedIndex, { CodedIndex(TypeDefOrRef)} };
+const MetadataType_t MetadataType_TypeOrMethodDef       = { "TypeOrMethodDef", &MetadataType_CodedIndex, { CodedIndex(TypeOrMethodDef)} };
 
 // Lists go to end of table, or start of next list, referenced from next element of same table
 const MetadataType_t MetadataType_EventList             = { "EventList", &MetadataType_IndexList, {Event} };
@@ -2564,7 +2501,7 @@ struct MetadataTableSchema
     const char *name;
     uint count;
     const MetadataTableSchemaColumn* fields;
-    //void (*unpack)();
+    //void (*Unpack)();
 };
 
 struct EmptyBase_t
@@ -2590,7 +2527,7 @@ struct EmptyBase_t
     METADATA_COLUMN (TypeNameSpace))                                    \
                                                                         \
 /*table0x02*/ METADATA_TABLE (TypeDef, NOTHING,                         \
-    METADATA_COLUMN3 (Flags, uint32, TypeFlags_t)                       \
+    METADATA_COLUMN3 (Flags, uint, TypeFlags_t)                       \
     METADATA_COLUMN (TypeName)                                          \
     METADATA_COLUMN (TypeNameSpace)                                     \
     METADATA_COLUMN (Extends)                                           \
@@ -2607,7 +2544,7 @@ struct EmptyBase_t
 /*table0x05*/ METADATA_TABLE_UNUSED(5) /*MethodPtr nonstandard*/        \
                                                                         \
 /*table0x06*/METADATA_TABLE (MethodDef, NOTHING,                        \
-    METADATA_COLUMN2 (RVA, uint32)                                      \
+    METADATA_COLUMN2 (RVA, uint)                                      \
     METADATA_COLUMN3 (ImplFlags, uint16, MethodDefImplFlags_t) /* TODO higher level support */     \
     METADATA_COLUMN3 (Flags, uint16, MethodDefFlags_t) /* TODO higher level support */             \
     METADATA_COLUMN (Name)                                              \
@@ -2653,11 +2590,11 @@ struct EmptyBase_t
                                                                         \
 /*table0x0F*/ METADATA_TABLE (ClassLayout, NOTHING,                     \
     METADATA_COLUMN2 (PackingSize, uint16)                              \
-    METADATA_COLUMN2 (ClassSize, uint32)                                \
+    METADATA_COLUMN2 (ClassSize, uint)                                \
     METADATA_COLUMN2 (Parent, TypeDef))                                 \
                                                                         \
 /*table0x10*/ METADATA_TABLE (FieldLayout, NOTHING,                     \
-    METADATA_COLUMN2 (Offset, uint32)                                   \
+    METADATA_COLUMN2 (Offset, uint)                                   \
     METADATA_COLUMN3 (Field, Field, Field_t*))                          \
                                                                         \
 /*table0x11*/ METADATA_TABLE (StandaloneSig, NOTHING,                   \
@@ -2712,7 +2649,7 @@ struct EmptyBase_t
     METADATA_COLUMN3 (ImportScope, ModuleRef, ModuleRef_t*))                    \
                                                                                 \
 /*table0x1D*/ METADATA_TABLE (FieldRVA, NOTHING,                                \
-    METADATA_COLUMN2 (RVA, uint32)                                              \
+    METADATA_COLUMN2 (RVA, uint)                                              \
     METADATA_COLUMN3 (Field, Field, Field_t*))                                  \
                                                                                 \
 /*table0x1E*/ METADATA_TABLE_UNUSED(1E)                                         \
@@ -2720,60 +2657,60 @@ struct EmptyBase_t
 /*table0x1F*/ METADATA_TABLE_UNUSED(1F)                                         \
                                                                                 \
 /*table0x20*/ METADATA_TABLE (Assembly, NOTHING,                                \
-    METADATA_COLUMN2 (HashAlgId, uint32)                                        \
+    METADATA_COLUMN2 (HashAlgId, uint)                                        \
     METADATA_COLUMN2 (MajorVersion, uint16)                                     \
     METADATA_COLUMN2 (MinorVersion, uint16)                                     \
     METADATA_COLUMN2 (BuildNumber, uint16)                                      \
     METADATA_COLUMN2 (RevisionNumber, uint16)                                   \
-    METADATA_COLUMN3 (Flags, uint32, AssemblyFlags)                             \
+    METADATA_COLUMN3 (Flags, uint, AssemblyFlags)                             \
     METADATA_COLUMN2 (PublicKey, blob)                                          \
     METADATA_COLUMN2 (Name, string)                                             \
     METADATA_COLUMN2 (Culture, string))                                         \
                                                                                 \
 /*table0x21*/ METADATA_TABLE (AssemblyProcessor, NOTHING,                       \
-    METADATA_COLUMN2 (Processor, uint32))                                       \
+    METADATA_COLUMN2 (Processor, uint))                                       \
                                                                                 \
 /*table0x22*/ METADATA_TABLE (AssemblyOS, NOTHING,                              \
-    METADATA_COLUMN2 (OSPlatformID, uint32)                                     \
-    METADATA_COLUMN2 (OSMajorVersion, uint32)                                   \
-    METADATA_COLUMN2 (OSMinorVersion, uint32))                                  \
+    METADATA_COLUMN2 (OSPlatformID, uint)                                     \
+    METADATA_COLUMN2 (OSMajorVersion, uint)                                   \
+    METADATA_COLUMN2 (OSMinorVersion, uint))                                  \
                                                                                 \
 /*table0x23*/ METADATA_TABLE (AssemblyRef, NOTHING,                             \
     METADATA_COLUMN2 (MajorVersion, uint16)                                     \
     METADATA_COLUMN2 (MinorVersion, uint16)                                     \
     METADATA_COLUMN2 (BuildNumber, uint16)                                      \
     METADATA_COLUMN2 (RevisionNumber, uint16)                                   \
-    METADATA_COLUMN3 (Flags, uint32, AssemblyFlags)                             \
+    METADATA_COLUMN3 (Flags, uint, AssemblyFlags)                             \
     METADATA_COLUMN2 (PublicKey, blob)                                          \
     METADATA_COLUMN2 (Name, string)                                             \
     METADATA_COLUMN2 (Culture, string)                                          \
     METADATA_COLUMN2 (HashValue, blob))                                         \
                                                                                 \
 /*table0x24*/ METADATA_TABLE (AssemblyRefProcessor, NOTHING,                    \
-    METADATA_COLUMN2 (Processor, uint32)                                        \
-    METADATA_COLUMN3 (AssemblyRef, AssemblyRef, uint32 /* index into AssemblyRef table but ignored */)) \
+    METADATA_COLUMN2 (Processor, uint)                                        \
+    METADATA_COLUMN3 (AssemblyRef, AssemblyRef, uint /* index into AssemblyRef table but ignored */)) \
                                                                                 \
 /*table0x25*/ METADATA_TABLE (AssemblyRefOS, NOTHING,                           \
-    METADATA_COLUMN2 (OSPlatformID, uint32)                                     \
-    METADATA_COLUMN2 (OSMajorVersion, uint32)                                   \
-    METADATA_COLUMN2 (OSMinorVersion, uint32)                                   \
-    METADATA_COLUMN3 (AssemblyRef, AssemblyRef, uint32))                        \
+    METADATA_COLUMN2 (OSPlatformID, uint)                                     \
+    METADATA_COLUMN2 (OSMajorVersion, uint)                                   \
+    METADATA_COLUMN2 (OSMinorVersion, uint)                                   \
+    METADATA_COLUMN3 (AssemblyRef, AssemblyRef, uint))                        \
                                                                                 \
 /*table0x26*/ METADATA_TABLE (File, NOTHING,                                    \
-    METADATA_COLUMN3 (Flags, uint32, FileFlags_t)                               \
+    METADATA_COLUMN3 (Flags, uint, FileFlags_t)                               \
     METADATA_COLUMN2 (Name, string)                                             \
     METADATA_COLUMN2 (HashValue, blob))                                         \
                                                                                 \
 /*table0x27*/ METADATA_TABLE (ExportedType, NOTHING,                            \
-    METADATA_COLUMN3 (Flags, uint32, TypeFlags_t)                               \
-    METADATA_COLUMN3 (TypeDefId, uint32, uint32)                                \
+    METADATA_COLUMN3 (Flags, uint, TypeFlags_t)                               \
+    METADATA_COLUMN3 (TypeDefId, uint, uint)                                \
     METADATA_COLUMN  (TypeName)                                                 \
     METADATA_COLUMN  (TypeNameSpace)                                            \
     METADATA_COLUMN3 (Implementation, Implementation, MetadataToken_t))         \
                                                                                 \
 /*table0x28*/ METADATA_TABLE (ManifestResource, NOTHING,                        \
-    METADATA_COLUMN2 (Offset, uint32)                                           \
-    METADATA_COLUMN3 (Flags, uint32, ManifestResourceFlags_t)                   \
+    METADATA_COLUMN2 (Offset, uint)                                           \
+    METADATA_COLUMN3 (Flags, uint, ManifestResourceFlags_t)                   \
     METADATA_COLUMN2 (Name, string)                                             \
     METADATA_COLUMN3 (Implementation, Implementation, Implementation_t))        \
                                                                                 \
@@ -2807,7 +2744,7 @@ struct EmptyBase_t
 #define metadata_schema_TYPED_guid              Guid_t
 #define metadata_schema_TYPED_string            String_t
 #define metadata_schema_TYPED_uint16            uint16
-#define metadata_schema_TYPED_uint32            uint32
+#define metadata_schema_TYPED_uint              uint
 #define metadata_schema_TYPED_uint8             uint8
 #define metadata_schema_TYPED_Class             Class_t*
 #define metadata_schema_TYPED_Extends           voidp_TODO /* union? */
@@ -2819,7 +2756,7 @@ struct EmptyBase_t
 #define metadata_schema_TYPED_ParamList         std::vector<Param_t*>
 #define metadata_schema_TYPED_PropertyList      std::vector<Property_t*>
 //#define metadata_schema_TYPED_Parent            Parent_t
-#define metadata_schema_TYPED_RVA               uint32
+#define metadata_schema_TYPED_RVA               uint
 #define metadata_schema_TYPED_ResolutionScope   voidp_TODO /* union? */
 #define metadata_schema_TYPED_Sequence          uint16
 #define metadata_schema_TYPED_Signature         Signature_t
@@ -2879,27 +2816,23 @@ const MetadataTableSchema metadata_row_schema_ ## name = { #name, CountOf (metad
 METADATA_TABLES
 
 /*
-const int8 ClassLayout = 15;
-const int8 MemberRef = 10;
-const int8 MethodRef = MemberRef;
-const int8 FieldRef = MemberRef;
-const int8 Constant = 11;
-const int8 CustomAttribute = 12;
-const int8 FieldMarshal = 13;
-const int8 DeclSecurity = 14;
-const int8 FieldLayout = 16;
-const int8 EventMap = 18;
-const int8 Event = 20;
-const int8 PropertyMap = 21;
-const int8 Property = 23;
-const int8 MethodSemantics = 24; // 0x18
-const int8 MethodImpl = 25; // 0x19
-const int8 ModuleRef = 26;
-const int8 TypeSpec = 27;
-const int8 AssemblyRef = 35;
-const int8 AssemblyRefProcessor = 36;
-const int8 AssemblyRefOS = 37;
-const int8 MethodSpec = 0x2B;
+const uint ClassLayout = 15;
+const uint MemberRef = 10;
+const uint MethodRef = MemberRef;
+const uint FieldRef = MemberRef;
+const uint Constant = 11;
+const uint CustomAttribute = 12;
+const uint FieldMarshal = 13;
+const uint Event = 20;
+const uint PropertyMap = 21;
+const uint Property = 23;
+const uint MethodSemantics = 24; // 0x18
+const uint ModuleRef = 26;
+const uint TypeSpec = 27;
+const uint AssemblyRef = 35;
+const uint AssemblyRefProcessor = 36;
+const uint AssemblyRefOS = 37;
+const uint MethodSpec = 0x2B;
 */
 
 
@@ -3041,11 +2974,11 @@ struct ImageZero // zero-inited part of Image
     } streams;
     MetadataRoot* metadata_root;
     void* base;
-    image_dos_header_t* dos;
-    uchar* pe;
+    DosHeader* dos;
+    uint8* pe;
     image_nt_headers_t* nt;
-    image_optional_header32_t* opt32;
-    image_optional_header64_t* opt64;
+    OptionalHeader32* opt32;
+    OptionalHeader64* opt64;
     char* strings;
     char* guids;
     uint pe_offset;
@@ -3073,15 +3006,15 @@ struct Image : ImageZero
 
     char* get_string(uint a)
     {
-        assert (streams.string);
-        assert (a <= streams.string->Size);
+        Assert (streams.string);
+        Assert (a <= streams.string->Size);
         return streams.string->offset + a + (char*)metadata_root;
     }
 
     Guid_t* get_guid(uint a)
     {
-        assert (streams.guid);
-        assert (a * 16 <= streams.guid->Size);
+        Assert (streams.guid);
+        Assert (a * 16 <= streams.guid->Size);
         return a + (Guid_t*)(streams.guid->offset + (char*)metadata_root);
     }
 
@@ -3156,7 +3089,7 @@ struct Image : ImageZero
         stderr_stream err;
 
         // TODO less printf
-        std::string prefix = string_format ("table 0x%08X (%s)", table_index, GetTableName (table_index));
+        std::string prefix = StringFormat ("table 0x%08X (%s)", table_index, GetTableName (table_index));
         const char* prefix_cstr = prefix.c_str();
 
         const MetadataTableSchema* schema = metadata_int_to_table_schema [table_index];
@@ -3193,32 +3126,32 @@ struct Image : ImageZero
         mmf.read (file_name);
         base = mmf.base;
         file_size = mmf.file.get_file_size ();
-        dos = (image_dos_header_t*)base;
-        printf ("mz: %02x%02x\n", ((uchar*)dos) [0], ((uchar*)dos) [1]);
+        dos = (DosHeader*)base;
+        printf ("mz: %02x%02x\n", ((uint8*)dos) [0], ((uint8*)dos) [1]);
         if (memcmp (base, "MZ", 2))
-            throw_string (string_format ("incorrect MZ signature %s", file_name));
+            ThrowString (StringFormat ("incorrect MZ signature %s", file_name));
         printf ("mz: %c%c\n", ((char*)dos) [0], ((char*)dos) [1]);
-        pe_offset = dos->get_pe ();
+        pe_offset = dos->GetPE ();
         printf ("pe_offset: %#x\n", pe_offset);
-        pe = (pe_offset + (uchar*)base);
+        pe = (pe_offset + (uint8*)base);
         printf ("pe: %02x%02x%02x%02x\n", pe [0], pe [1], pe [2], pe [3]);
         if (memcmp (pe, "PE\0\0", 4))
-            throw_string (string_format ("incorrect PE00 signature %s", file_name));
+            ThrowString (StringFormat ("incorrect PE00 signature %s", file_name));
         printf ("pe: %c%c\\0x%08X\\0x%08X\n", pe [0], pe [1], pe [2], pe [3]);
         nt = (image_nt_headers_t*)pe;
-        printf ("Machine:0x%08X\n", nt->FileHeader.Machine);
-        printf ("NumberOfSections:0x%08X\n", nt->FileHeader.NumberOfSections);
-        printf ("TimeDateStamp:0x%08X\n", nt->FileHeader.TimeDateStamp);
-        printf ("PointerToSymbolTable:0x%08X\n", nt->FileHeader.PointerToSymbolTable);
-        printf ("NumberOfSymbols:0x%08X\n", nt->FileHeader.NumberOfSymbols);
-        printf ("SizeOfOptionalHeader:0x%08X\n", nt->FileHeader.SizeOfOptionalHeader);
-        printf ("Characteristics:0x%08X\n", nt->FileHeader.Characteristics);
-        opt32 = (image_optional_header32_t*)(&nt->OptionalHeader);
-        opt64 = (image_optional_header64_t*)(&nt->OptionalHeader);
-        uint32 opt_magic = opt32->Magic;
-        release_assertf ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), ("file:%s opt_magic:%x", file_name, opt_magic));
+        printf ("Machine:0x%08X\n", (uint)nt->FileHeader.Machine);
+        printf ("NumberOfSections:0x%08X\n", (uint)nt->FileHeader.NumberOfSections);
+        printf ("TimeDateStamp:0x%08X\n", (uint)nt->FileHeader.TimeDateStamp);
+        printf ("PointerToSymbolTable:0x%08X\n", (uint)nt->FileHeader.PointerToSymbolTable);
+        printf ("NumberOfSymbols:0x%08X\n", (uint)nt->FileHeader.NumberOfSymbols);
+        printf ("SizeOfOptionalHeader:0x%08X\n", (uint)nt->FileHeader.SizeOfOptionalHeader);
+        printf ("Characteristics:0x%08X\n", (uint)nt->FileHeader.Characteristics);
+        opt32 = (OptionalHeader32*)(&nt->OptionalHeader);
+        opt64 = (OptionalHeader64*)(&nt->OptionalHeader);
+        uint opt_magic = Unpack(opt32->Magic);
+        AssertFormat ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), ("file:%s opt_magic:%x", file_name, opt_magic));
         printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, (void*)opt32, (void*)opt64);
-        NumberOfRvaAndSizes = opt32 ? opt32->NumberOfRvaAndSizes : opt64->NumberOfRvaAndSizes;
+        NumberOfRvaAndSizes = Unpack(opt32 ? &opt32->NumberOfRvaAndSizes : &opt64->NumberOfRvaAndSizes);
         printf ("opt.rvas:0x%08X\n", NumberOfRvaAndSizes);
         number_of_sections = nt->FileHeader.NumberOfSections;
         printf ("number_of_sections:0x%08X\n", number_of_sections);
@@ -3226,22 +3159,22 @@ struct Image : ImageZero
         uint i = 0;
         for (i = 0; i < number_of_sections; ++i, ++section_header)
             printf ("section [%02X].Name: %.8s\n", i, section_header->Name);
-        image_data_directory_t* DataDirectory = opt32 ? opt32->DataDirectory : opt64->DataDirectory;
+        DataDirectory* dataDirectory = (DataDirectory*)(opt32 ? (void*)(opt32 + 1) : opt64 + 1);
         for (i = 0; i < NumberOfRvaAndSizes; ++i)
         {
-            printf ("DataDirectory [%s (%02X)].Offset: 0x%08X\n", DataDirectoryName(i), i, DataDirectory[i].VirtualAddress);
-            printf ("DataDirectory [%s (%02X)].Size: 0x%08X\n", DataDirectoryName(i), i, DataDirectory[i].Size);
+            printf ("dataDirectory [%s (%02X)].Offset: 0x%08X\n", DataDirectoryName(i), i, (uint)dataDirectory[i].VirtualAddress);
+            printf ("dataDirectory [%s (%02X)].Size: 0x%08X\n", DataDirectoryName(i), i, (uint)dataDirectory[i].Size);
         }
-        release_assertf (DataDirectory [14].VirtualAddress, ("Not a .NET image? %x", DataDirectory [14].VirtualAddress));
-        release_assertf (DataDirectory [14].Size, ("Not a .NET image? %x", DataDirectory [14].Size));
-        image_clr_header_t* clr = (image_clr_header_t*)rva_to_p(DataDirectory [14].VirtualAddress);
-        printf ("clr.cb:0x%08X\n", clr->cb);
-        printf ("clr.MajorRuntimeVersion:0x%08X\n", clr->MajorRuntimeVersion);
-        printf ("clr.MinorRuntimeVersion:0x%08X\n", clr->MinorRuntimeVersion);
-        printf ("clr.MetaData.Offset:0x%08X\n", clr->MetaData.VirtualAddress);
-        printf ("clr.MetaData.Size:0x%08X\n", clr->MetaData.Size);
-        release_assertf (clr->MetaData.Size, ("0x%08X", clr->MetaData.Size));
-        release_assertf (clr->cb >= sizeof (image_clr_header_t), ("0x%08X 0x%08X", clr->cb, (uint)sizeof (image_clr_header_t)));
+        AssertFormat (dataDirectory [14].VirtualAddress, ("Not a .NET image? %x", dataDirectory [14].VirtualAddress));
+        AssertFormat (dataDirectory [14].Size, ("Not a .NET image? %x", dataDirectory [14].Size));
+        image_clr_header_t* clr = (image_clr_header_t*)rva_to_p(dataDirectory [14].VirtualAddress);
+        printf ("clr.cb:0x%08X\n", (uint)clr->cb);
+        printf ("clr.MajorRuntimeVersion:0x%08X\n", (uint)clr->MajorRuntimeVersion);
+        printf ("clr.MinorRuntimeVersion:0x%08X\n", (uint)clr->MinorRuntimeVersion);
+        printf ("clr.MetaData.Offset:0x%08X\n", (uint)clr->MetaData.VirtualAddress);
+        printf ("clr.MetaData.Size:0x%08X\n", (uint)clr->MetaData.Size);
+        AssertFormat (clr->MetaData.Size, ("0x%08X", clr->MetaData.Size));
+        AssertFormat (clr->cb >= sizeof (image_clr_header_t), ("0x%08X 0x%08X", clr->cb, (uint)sizeof (image_clr_header_t)));
         metadata_root = (MetadataRoot*)rva_to_p(clr->MetaData.VirtualAddress);
         printf ("metadata_root_ptr:%p metadata_root_fileofffset:%X\n", metadata_root, (uint)((char*)metadata_root - (char*)base));
         printf ("metadata_root.Signature:0x%08X\n", metadata_root->Signature);
@@ -3249,9 +3182,9 @@ struct Image : ImageZero
         printf ("metadata_root.MinorVersion:0x%08X\n", metadata_root->MinorVersion);
         printf ("metadata_root.Reserved:0x%08X\n", metadata_root->Reserved);
         printf ("metadata_root.VersionLength:0x%08X\n", metadata_root->VersionLength);
-        release_assertf ((metadata_root->VersionLength % 4) == 0, ("0x%08X", metadata_root->VersionLength));
+        AssertFormat ((metadata_root->VersionLength % 4) == 0, ("0x%08X", metadata_root->VersionLength));
         size_t VersionLength = strlen(metadata_root->Version);
-        release_assertf (VersionLength < metadata_root->VersionLength, ("0x%08X 0x%08X", VersionLength, metadata_root->VersionLength));
+        AssertFormat (VersionLength < metadata_root->VersionLength, ("0x%08X 0x%08X", VersionLength, metadata_root->VersionLength));
         // TODO bounds checks throughout
         uint16* pflags = (uint16*)&metadata_root->Version[metadata_root->VersionLength];
         uint16* pnumber_of_streams = 1 + pflags;
@@ -3264,10 +3197,10 @@ struct Image : ImageZero
         {
             printf ("stream[0x%08X].Offset:0x%08X\n", i, stream->offset);
             printf ("stream[0x%08X].Size:0x%08X\n", i, stream->Size);
-            release_assertf ((stream->Size % 4) == 0, ("0x%08X", stream->Size));
+            AssertFormat ((stream->Size % 4) == 0, ("0x%08X", stream->Size));
             const char* name = stream->Name;
             size_t length = strlen (name);
-            release_assertf (length <= 32, ("0x%08X:%s", length, name));
+            AssertFormat (length <= 32, ("0x%08X:%s", length, name));
             printf ("stream[0x%08X].Name:0x%08X:%.*s\n", i, (int)length, (int)length, name);
             if (length >= 2 && name [0] == '#')
             {
@@ -3307,14 +3240,14 @@ unknown_stream:
         uint64 sorted = metadata_tables_header->Sorted;
         uint64 unsorted = valid & ~sorted;
         uint64 invalidSorted = sorted & ~valid;
-        printf ("metadata_tables_header.        Valid:0x%08X`0x%08X\n", (uint32)(valid >> 32), (uint32)valid);
+        printf ("metadata_tables_header.        Valid:0x%08X`0x%08X\n", (uint)(valid >> 32), (uint)valid);
         // Mono does not use sorted, and there are bits set beyond Valid.
         // I suspect this has to do with writing/appending, and occasionally sorting.
-        printf ("metadata_tables_header.       Sorted:0x%08X`0x%08X\n", (uint32)(sorted >> 32), (uint32)sorted);
-        printf ("metadata_tables_header.     Unsorted:0x%08X`0x%08X\n", (uint32)(unsorted >> 32), (uint32)unsorted);
-        printf ("metadata_tables_header.InvalidSorted:0x%08X`0x%08X\n", (uint32)(invalidSorted >> 32), (uint32)invalidSorted);
+        printf ("metadata_tables_header.       Sorted:0x%08X`0x%08X\n", (uint)(sorted >> 32), (uint)sorted);
+        printf ("metadata_tables_header.     Unsorted:0x%08X`0x%08X\n", (uint)(unsorted >> 32), (uint)unsorted);
+        printf ("metadata_tables_header.InvalidSorted:0x%08X`0x%08X\n", (uint)(invalidSorted >> 32), (uint)invalidSorted);
         uint64 mask = 1;
-        uint32* prow_count = (uint32*)(metadata_tables_header + 1);
+        uint* prow_count = (uint*)(metadata_tables_header + 1);
 
         // Presence and row counts.
         for (mask = 1, i = 0; i < CountOf (metadata.array); ++i, mask <<= 1)
@@ -3414,7 +3347,7 @@ void
 print_stringx(const char* x, const MetadataType_t* type, Image* image, uint table, uint row, uint column, void* data, uint size)
 {
     //__debugbreak();
-    uint a = unpack_2_or_4le (data, image->string_size);
+    uint a = Unpack2or4LE (data, image->string_size);
     //fputs(image->get_string(a), stdout);
     printf(" print_string:x:%s %X %p %s ", x, a, image->get_string(a), image->get_string(a));
 }
@@ -3430,7 +3363,7 @@ void
 print_index(const MetadataType_t* type, Image* image, uint table, uint row, uint column, void* data, uint size)
 {
     //__debugbreak();
-    uint index = unpack_2_or_4le (data, size);
+    uint index = Unpack2or4LE (data, size);
     if (!index)
         return;
     --index;
@@ -3439,7 +3372,7 @@ print_index(const MetadataType_t* type, Image* image, uint table, uint row, uint
     void* p = ((char*)t->base) + t->row_size * index;
     printf(" print_index:%s[%X][%X] => %s/%p ", GetTableName (table), row, column, GetTableName (table_index), p);
 
-    release_assert (index <= t->row_count);
+    Assert (index <= t->row_count);
 
     if (t->name_column_valid)
     {
@@ -3458,20 +3391,22 @@ void
 print_codedindex(const MetadataType_t* type, Image* image, uint table, uint row, uint column, void* data, uint size)
 {
     //__debugbreak();
-    uint code = unpack_2_or_4le (data, size);
+    uint code = Unpack2or4LE (data, size);
     CodedIndex_t const * const coded_index = &CodedIndices.array[type->coded_index];
 
-    uint index       = (code >> coded_index->tag_size);
+    uint index = (code >> coded_index->tag_size);
     if (!index)
         return;
     --index;
-    int8 table_index = ((int8*)&CodedIndexMap)[coded_index->map + (code & ~(~0u << coded_index->tag_size))]; // TODO precompute
+    int table_index = ((int8*)&CodedIndexMap)[coded_index->map + (code & ~(~0u << coded_index->tag_size))]; // TODO precompute
+
+    Assert(table_index >= 0);
 
     MetadataTable* t = &image->metadata.array[table_index];
     void* p = ((char*)t->base) + t->row_size * index;
     printf(" print_codedindex:%s[%X][%X] => %s/%p ", GetTableName (table), row, column, GetTableName ((uint)table_index), p);
 
-    release_assert (index <= t->row_count);
+    Assert (index <= t->row_count);
 
     if (t->name_column_valid)
     {
@@ -3501,7 +3436,7 @@ print_codedindex(const MetadataType_t* type, Image* image, uint table, uint row,
 void
 print_guid(const MetadataType_t* type, Image* image, uint table, uint row, uint column, void* data, uint size)
 {
-    uint a = unpack_2_or_4le (data, image->guid_size);
+    uint a = Unpack2or4LE (data, image->guid_size);
     if (!a)
         return;
     --a;
@@ -3575,7 +3510,7 @@ uint
 image_metadata_size_index (Image* image, uint /* todo enum */ table_index)
 {
     uint a = image->metadata.array [table_index].index_size;
-    release_assert (a == 2 || a == 4);
+    Assert (a == 2 || a == 4);
     return a;
 }
 
@@ -3650,16 +3585,16 @@ main (int argc, char** argv)
 #endif
     Image im;
 #define X(x) printf ("%s %#x\n", #x, (int)x)
-X (sizeof (image_dos_header_t));
-X (sizeof (image_file_header_t));
+X (sizeof (DosHeader));
+X (sizeof (FileHeader));
 X (sizeof (image_nt_headers_t));
 X (sizeof (image_section_header_t));
-X (CodedIndices.array[(uint)CodedIndex(TypeDefOrRef)].tag_size);
-X (CodedIndices.array[(uint)CodedIndex(ResolutionScope)].tag_size);
-X (CodedIndices.array[(uint)CodedIndex(HasConstant)].tag_size);
-X (CodedIndices.array[(uint)CodedIndex(HasCustomAttribute)].tag_size);
-X (CodedIndices.array[(uint)CodedIndex(HasFieldMarshal)].tag_size);
-X (CodedIndices.array[(uint)CodedIndex(HasDeclSecurity)].tag_size);
+X (CodedIndices.array[CodedIndex(TypeDefOrRef)].tag_size);
+X (CodedIndices.array[CodedIndex(ResolutionScope)].tag_size);
+X (CodedIndices.array[CodedIndex(HasConstant)].tag_size);
+X (CodedIndices.array[CodedIndex(HasCustomAttribute)].tag_size);
+X (CodedIndices.array[CodedIndex(HasFieldMarshal)].tag_size);
+X (CodedIndices.array[CodedIndex(HasDeclSecurity)].tag_size);
 #undef X
     try
     {
