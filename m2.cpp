@@ -346,14 +346,21 @@ Unpack2or4LE (const void *a, uint size)
     return ~0u;
 }
 
+
+template <uint N> struct uintLEn_to_native;
+template <> struct uintLEn_to_native<16> { typedef uint T; };
+template <> struct uintLEn_to_native<32> { typedef uint T; };
+template <> struct uintLEn_to_native<64> { typedef uint64 T; };
+
+
 template <uint N>
 struct uintLEn // unsigned little endian integer, size n bits
 {
     char data[N / 8];
 
-    operator uint ()
+    operator typename uintLEn_to_native<N>::T ()
     {
-        uint a = 0;
+        typename uintLEn_to_native<N>::T a = 0;
         for (uint i = N / 8; i; )
             a = (a << 8) | (uint)(data[--i] & 0xFF);
         return a;
@@ -1405,8 +1412,8 @@ struct MetadataTablesHeader // tilde stream
         uint8 HeapSizes;
     };
     uint8 reserved2;    // 1
-    uint64 Valid;       // metadata_typedef etc.
-    uint64 Sorted;      // metadata_typedef etc.
+    uintLE64 Valid;       // metadata_typedef etc.
+    uintLE64 Sorted;      // metadata_typedef etc.
     // uint NumberOfRows [];
 };
 
