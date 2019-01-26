@@ -1213,7 +1213,7 @@ const uint CorILMethod_FatFormat = 3;
 const uint CorILMethod_MoreSects = 8;
 const uint CorILMethod_InitLocals = 0x10;
 
-struct method_header_tiny_t
+struct MethodHeaderTiny
 // no locals
 // no exceptions
 // no extra data sections (what does this mean?)
@@ -1224,7 +1224,7 @@ struct method_header_tiny_t
     uint8 GetSize () { return (uint8)(Value >> 2); }
 };
 
-struct method_header_fat_t
+struct MethodHeaderFat
 {
     uint16 FlagsAndHeaderSize;
     uint16 MaxStack;
@@ -1349,46 +1349,46 @@ CODED_INDICES
 #undef CodedIndex
 #define CodedIndex(x) CodedIndex_ ## x
 
-struct HeapIndex_t
+struct HeapIndex
 {
     const char *heap_name; // string, guid, etc.
     uint8 heap_index; // dynamic?
 };
 
-struct metadata_guid_t
+struct MetadataGuid
 {
     uint index;
     const char* pointer;
 };
 
-struct MetadataString_t
+struct MetadataString
 {
     uint offset;
     uint size;
     const char* pointer;
 };
 
-struct metadata_unicode_string_t
+struct MetadataUnicodeString
 {
     uint offset;
     uint size;
     const char16* pointer;
 };
 
-struct metadata_blob_t
+struct MetadataBlob
 {
     uint offset;
     uint size;
     const void* pointer;
 };
 
-struct MetadataToken_t
+struct MetadataToken
 {
     uint8 table;
     uint index; // uint24
 };
 
-struct MetadataTokenList_t
+struct MetadataTokenList
 {
     uint8 table;
     uint count;
@@ -2706,7 +2706,7 @@ struct EmptyBase_t
     METADATA_COLUMN3 (TypeDefId, uint, uint)                                \
     METADATA_COLUMN  (TypeName)                                                 \
     METADATA_COLUMN  (TypeNameSpace)                                            \
-    METADATA_COLUMN3 (Implementation, Implementation, MetadataToken_t))         \
+    METADATA_COLUMN3 (Implementation, Implementation, MetadataToken))         \
                                                                                 \
 /*table0x28*/ METADATA_TABLE (ManifestResource, NOTHING,                        \
     METADATA_COLUMN2 (Offset, uint)                                           \
@@ -2771,13 +2771,13 @@ struct EmptyBase_t
 #define metadata_schema_TYPED_EventList         std::vector<Event_t*>
 
 // needed?
-//#define metadata_schema_TOKENED_string           MetadataString_t
+//#define metadata_schema_TOKENED_string           MetadataString
 //#define metadata_schema_TOKENED_uint16           uint16
 //#define metadata_schema_TOKENED_guid             Guid_t
-//#define metadata_schema_TOKENED_ResolutionScope  MetadataToken_t /* TODO */
-//#define metadata_schema_TOKENED_TypeDefOrRef     MetadataToken_t /* TODO */
-//#define metadata_schema_TOKENED_FieldList        MetadataTokenList_t
-//#define metadata_schema_TOKENED_MethodList       MetadataTokenList_t
+//#define metadata_schema_TOKENED_ResolutionScope  MetadataToken /* TODO */
+//#define metadata_schema_TOKENED_TypeDefOrRef     MetadataToken /* TODO */
+//#define metadata_schema_TOKENED_FieldList        MetadataTokenList
+//#define metadata_schema_TOKENED_MethodList       MetadataTokenList
 
 #define METADATA_COLUMN(name) METADATA_COLUMN2 (name, name)
 
