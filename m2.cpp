@@ -1233,10 +1233,10 @@ struct MethodHeaderTiny
 
 struct MethodHeaderFat
 {
-    uint16 FlagsAndHeaderSize;
-    uint16 MaxStack;
-    uint CodeSize;
-    uint LocalVarSigTok;
+    uintLE16 FlagsAndHeaderSize;
+    uintLE16 MaxStack;
+    uintLE CodeSize;
+    uintLE LocalVarSigTok;
 
     bool MoreSects () { return !!(GetFlags () & CorILMethod_MoreSects); }
     bool InitLocals () { return !!(GetFlags () & CorILMethod_InitLocals); }
