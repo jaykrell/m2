@@ -527,29 +527,29 @@ X(Com)
     return "unknown";
 }
 
-struct image_section_header_t;
+struct SectionHeader;
 
-struct image_nt_headers_t
+struct NtHeaders
 {
     uintLE Signature;
     FileHeader FileHeader;
     uintLE16 OptionalHeader;
 
-    image_section_header_t*
+    SectionHeader*
     first_section_header ()
     {
-        return (image_section_header_t*)((char*)&OptionalHeader + Unpack(FileHeader.SizeOfOptionalHeader));
+        return (SectionHeader*)((char*)&OptionalHeader + Unpack(FileHeader.SizeOfOptionalHeader));
     }
 };
 
-struct image_section_header_t
+struct SectionHeader
 {
     // In very old images, VirtualSize is zero, in which case, use SizeOfRawData.
     char Name [8];
-    union {
-        uintLE PhysicalAddress;
+    //union {
+    //    uintLE PhysicalAddress;
         uintLE VirtualSize;
-    } Misc;
+    //} Misc;
     uintLE VirtualAddress;
     uintLE SizeOfRawData;
     uintLE PointerToRawData;
@@ -2976,7 +2976,7 @@ struct ImageZero // zero-inited part of Image
     void* base;
     DosHeader* dos;
     uint8* pe;
-    image_nt_headers_t* nt;
+    NtHeaders* nt;
     OptionalHeader32* opt32;
     OptionalHeader64* opt64;
     char* strings;
@@ -3000,7 +3000,7 @@ struct Image : ImageZero
 {
     memory_mapped_file_t mmf;
 
-    std::vector<image_section_header_t*> section_headers;
+    std::vector<SectionHeader*> section_headers;
 
     Metadata metadata;
 
@@ -3138,7 +3138,7 @@ struct Image : ImageZero
         if (memcmp (pe, "PE\0\0", 4))
             ThrowString (StringFormat ("incorrect PE00 signature %s", file_name));
         printf ("pe: %c%c\\0x%08X\\0x%08X\n", pe [0], pe [1], pe [2], pe [3]);
-        nt = (image_nt_headers_t*)pe;
+        nt = (NtHeaders*)pe;
         printf ("Machine:0x%08X\n", (uint)nt->FileHeader.Machine);
         printf ("NumberOfSections:0x%08X\n", (uint)nt->FileHeader.NumberOfSections);
         printf ("TimeDateStamp:0x%08X\n", (uint)nt->FileHeader.TimeDateStamp);
@@ -3155,7 +3155,7 @@ struct Image : ImageZero
         printf ("opt.rvas:0x%08X\n", NumberOfRvaAndSizes);
         number_of_sections = nt->FileHeader.NumberOfSections;
         printf ("number_of_sections:0x%08X\n", number_of_sections);
-        image_section_header_t* section_header = nt->first_section_header ();
+        SectionHeader* section_header = nt->first_section_header ();
         uint i = 0;
         for (i = 0; i < number_of_sections; ++i, ++section_header)
             printf ("section [%02X].Name: %.8s\n", i, section_header->Name);
@@ -3332,7 +3332,7 @@ unknown_stream:
     uint rva_to_file_offset (uint rva)
     {
         // TODO binary search and/or cache
-        image_section_header_t* section_header = nt->first_section_header ();
+        SectionHeader* section_header = nt->first_section_header ();
         for (uint i = 0; i < number_of_sections; ++i, ++section_header)
         {
             uint va = section_header->VirtualAddress;
@@ -3587,8 +3587,8 @@ main (int argc, char** argv)
 #define X(x) printf ("%s %#x\n", #x, (int)x)
 X (sizeof (DosHeader));
 X (sizeof (FileHeader));
-X (sizeof (image_nt_headers_t));
-X (sizeof (image_section_header_t));
+X (sizeof (NtHeaders));
+X (sizeof (SectionHeader));
 X (CodedIndices.array[CodedIndex(TypeDefOrRef)].tag_size);
 X (CodedIndices.array[CodedIndex(ResolutionScope)].tag_size);
 X (CodedIndices.array[CodedIndex(HasConstant)].tag_size);
