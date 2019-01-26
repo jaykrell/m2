@@ -1404,7 +1404,7 @@ struct MetadataTokenList
 
 struct MetadataTablesHeader // tilde stream
 {
-    uint reserved;    // 0
+    uintLE reserved;    // 0
     uint8 MajorVersion;
     uint8 MinorVersion;
     union {
@@ -1414,27 +1414,27 @@ struct MetadataTablesHeader // tilde stream
     uint8 reserved2;    // 1
     uintLE64 Valid;       // metadata_typedef etc.
     uintLE64 Sorted;      // metadata_typedef etc.
-    // uint NumberOfRows [];
+    // uintLE NumberOfRows [];
 };
 
 struct MetadataRoot
 {
     enum { SIGNATURE = 0x424A5342 };
-    /* 0 */ uint Signature;
-    /* 4 */ uint16 MajorVersion; // 1, ignore
-    /* 6 */ uint16 MinorVersion; // 1, ignore
-    /* 8 */ uint Reserved;     // 0
-    /* 12 */ uint VersionLength; // VersionLength null, round up to 4
+    /* 0 */ uintLE Signature;
+    /* 4 */ uintLE16 MajorVersion; // 1, ignore
+    /* 6 */ uintLE16 MinorVersion; // 1, ignore
+    /* 8 */ uintLE Reserved;     // 0
+    /* 12 */ uintLE VersionLength; // VersionLength null, round up to 4
     /* 16 */ char Version [1];
-    // uint16 Flags; // 0
-    // uint16 NumberOfStreams;
+    // uintLE16 Flags; // 0
+    // uintLE16 NumberOfStreams;
     // MetadataStreamHeader stream_headers [NumberOfStreams];
 };
 
 struct MetadataStreamHeader // see mono verify_metadata_header
 {
-    uint offset;
-    uint Size; // multiple of 4
+    uintLE offset;
+    uintLE Size; // multiple of 4
     char   Name [32]; // multiple of 4, null terminated, max 32
 };
 
@@ -3184,14 +3184,14 @@ struct Image : ImageZero
         AssertFormat (clr->cb >= sizeof (image_clr_header_t), ("0x%08X 0x%08X", clr->cb, (uint)sizeof (image_clr_header_t)));
         metadata_root = (MetadataRoot*)rva_to_p(clr->MetaData.VirtualAddress);
         printf ("metadata_root_ptr:%p metadata_root_fileofffset:%X\n", metadata_root, (uint)((char*)metadata_root - (char*)base));
-        printf ("metadata_root.Signature:0x%08X\n", metadata_root->Signature);
-        printf ("metadata_root.MajorVersion:0x%08X\n", metadata_root->MajorVersion);
-        printf ("metadata_root.MinorVersion:0x%08X\n", metadata_root->MinorVersion);
-        printf ("metadata_root.Reserved:0x%08X\n", metadata_root->Reserved);
-        printf ("metadata_root.VersionLength:0x%08X\n", metadata_root->VersionLength);
-        AssertFormat ((metadata_root->VersionLength % 4) == 0, ("0x%08X", metadata_root->VersionLength));
+        printf ("metadata_root.Signature:0x%08X\n", (uint)metadata_root->Signature);
+        printf ("metadata_root.MajorVersion:0x%08X\n", (uint)metadata_root->MajorVersion);
+        printf ("metadata_root.MinorVersion:0x%08X\n", (uint)metadata_root->MinorVersion);
+        printf ("metadata_root.Reserved:0x%08X\n", (uint)metadata_root->Reserved);
+        printf ("metadata_root.VersionLength:0x%08X\n", (uint)metadata_root->VersionLength);
+        AssertFormat ((metadata_root->VersionLength % 4) == 0, ("0x%08X", (uint)metadata_root->VersionLength));
         size_t VersionLength = strlen(metadata_root->Version);
-        AssertFormat (VersionLength < metadata_root->VersionLength, ("0x%08X 0x%08X", VersionLength, metadata_root->VersionLength));
+        AssertFormat (VersionLength < metadata_root->VersionLength, ("0x%08X 0x%08X", VersionLength, (uint)metadata_root->VersionLength));
         // TODO bounds checks throughout
         uint16* pflags = (uint16*)&metadata_root->Version[metadata_root->VersionLength];
         uint16* pnumber_of_streams = 1 + pflags;
@@ -3202,9 +3202,9 @@ struct Image : ImageZero
         MetadataStreamHeader* stream = (MetadataStreamHeader*)(pnumber_of_streams + 1);
         for (i = 0; i < number_of_streams; ++i)
         {
-            printf ("stream[0x%08X].Offset:0x%08X\n", i, stream->offset);
-            printf ("stream[0x%08X].Size:0x%08X\n", i, stream->Size);
-            AssertFormat ((stream->Size % 4) == 0, ("0x%08X", stream->Size));
+            printf ("stream[0x%08X].Offset:0x%08X\n", i, (uint)stream->offset);
+            printf ("stream[0x%08X].Size:0x%08X\n", i, (uint)stream->Size);
+            AssertFormat ((stream->Size % 4) == 0, ("0x%08X", (uint)stream->Size));
             const char* name = stream->Name;
             size_t length = strlen (name);
             AssertFormat (length <= 32, ("0x%08X:%s", length, name));
@@ -3234,7 +3234,7 @@ unknown_stream:
             stream = (MetadataStreamHeader*)(stream->Name + length);
         }
         MetadataTablesHeader* metadata_tables_header = (MetadataTablesHeader*)(streams.tables->offset + (char*)metadata_root);
-        printf ("metadata_tables_header.reserved:0x%08X\n", metadata_tables_header->reserved);
+        printf ("metadata_tables_header.reserved:0x%08X\n", (uint)metadata_tables_header->reserved);
         printf ("metadata_tables_header.MajorVersion:0x%08X\n", metadata_tables_header->MajorVersion);
         printf ("metadata_tables_header.MinorVersion:0x%08X\n", metadata_tables_header->MinorVersion);
         printf ("metadata_tables_header.HeapSizes:0x%08X\n", metadata_tables_header->HeapSizes);
