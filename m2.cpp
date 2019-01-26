@@ -100,7 +100,11 @@
 #include <string>
 #include <stdio.h>
 #include <stdarg.h>
+#include <vector> // TODO? remove STL dependency?
+#include <string> // TODO? remove STL dependency?
 #include <algorithm> // TODO? remove STL dependency?
+using std::vector;
+using std::string;
 #ifdef _WIN32
 #define NOMINMAX 1
 #include <io.h>
@@ -186,6 +190,8 @@ namespace m2
 {
 
 
+#if 0 // TODO
+
 void
 OutOfMemory()
 {
@@ -239,6 +245,9 @@ struct vector
             return;
         if (s > n)
         {
+            // Destroy tail and reset end.
+            for (size_t i = n; i < s; ++i)
+                a[i].~T();
             b = a + n;
             return;
         }
@@ -332,6 +341,8 @@ struct basic_string
 
 typedef basic_string<char> string;
 
+#else
+
 /* This does not compile with Visual C++ 5.0 compiler/library.
 #include <vector>
 
@@ -351,11 +362,13 @@ There are two problems.
 Workaround either by not using namespaces or having local vector without that default construction.
 Adding a constructor from int, and then a default constructor helps, but does not fix the entire problem.
 */
-//#if _MSC_VER == 1100
-//template <typename T> struct vector : std::vector { };
-//#else
+#if _MSC_VER == 1100
+template <typename T> struct vector : std::vector { };
+#else
 //template <typename T> struct vector : std::vector<T> { };
-//#endif
+#endif
+
+#endif
 
 // Portable to old (and new) Visual C++ runtime.
 uint
@@ -2415,6 +2428,9 @@ print_fixed(const MetadataType_t*, Image*, uint table, uint row, uint column, vo
     fputs(buf, stdout);
 }
 
+void
+print_blob(const MetadataType_t* type, Image* image, uint table, uint row, uint column, void* data, uint size);
+
 struct MetadataType_t
 {
     const char *name;
@@ -2527,6 +2543,7 @@ const MetadataTypeFunctions_t MetadataType_blob_functions =
 {
     MetadataDecode_blob,
     metadata_size_blob,
+    print_blob,
 };
 
 // TODO should format into memory
@@ -3170,6 +3187,13 @@ struct Image : ImageZero
         return a + (Guid_t*)(streams.guid->offset + (char*)metadata_root);
     }
 
+    void* GetBlob(uint a)
+    {
+        Assert (streams.blob);
+        Assert (a <= streams.blob->Size);
+        return a + (char*)(streams.blob->offset + (char*)metadata_root);
+    }
+
     uint ComputeRowSize (uint table_index)
     {
         const MetadataTableSchema* schema = metadata_int_to_table_schema [table_index];
@@ -3564,6 +3588,29 @@ print_codedindex(const MetadataType_t* type, Image* image, uint table, uint row,
     {
         //print_stringx ("xcodedindex", 0, image, 0, 0, 0, t->column[t->name_column].offset + (char*)p, 0);
     }
+}
+
+void
+print_blob(const MetadataType_t* type, Image* image, uint table, uint row, uint column, void* data, uint size)
+{
+    printf("\nprint_blob type:%p(%s) image:%p table:%X row:%X column:%X data:%p size:%X\n", type, type->name, image, table, row, column, data, size);
+    uint offset = Unpack2or4LE (data, size);
+    uint8* d = (uint8*)image->GetBlob(offset);
+
+    uint s = 0;
+    uint b2 = d[0];
+    if (!(b2 & 0x80))
+        s = b2;
+    else if ((b2 & 0xC0) == 0xC0) // TODO check against file bounds (reading d and computing size)
+        s = ((b2 & 0x3F) << 8) | d[1];
+    else if ((b2 & 0xE0) == 0xE0) // TODO check against file bounds (reading d and computing size)
+        s = ((b2 & 0x1F) << 24) | (((uint)d[1]) << 16) | (((uint)d[2]) << 8) | ((uint)d[3]);
+    else
+        AssertFailed("invalid metadata (blob)");
+
+    printf("%02X:%02X%02X%02X", s, d[0], d[1], d[2]);
+    exit(1);
+    //__debugbreak();
 }
 
 #define GUID_FORMAT "{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}"
