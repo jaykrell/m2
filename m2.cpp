@@ -111,8 +111,6 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #endif
-#include <vector> // TODO? remove STL dependency?
-#include <string> // TODO? remove STL dependency?
 #if _MSC_VER
 #include <malloc.h>
 #endif
@@ -187,6 +185,153 @@ typedef unsigned long long uint64;
 namespace m2
 {
 
+
+void
+OutOfMemory()
+{
+    abort();
+}
+
+template <typename T>
+struct vector
+{
+    T* a;
+    T* b;
+    T* c;
+
+    T* begin() { return a; }
+    T* end() { return b; }
+
+    vector() : a(0), b(0), c(0) { }
+
+    size_t size() const { return b - a; }
+    size_t capacity() const { return c - a; }
+
+    void reserve(size_t n);
+
+    vector& operator=(const vector& d)
+    {
+        // TODO
+        size_t n = d.size();
+        vector temp(n);
+        for (size_t i = 0; i < n; ++i)
+            new (&temp.a[i]) T(d.a[i]);
+        std::swap(a, temp.a);
+        std::swap(b, temp.b);
+        std::swap(c, temp.c);
+        return *this;
+    }
+
+    vector(const vector& d) :a(0), b(0), c(0)
+    {
+        operator=(d);
+    }
+
+    // TODO do not repeat self
+    T& operator[](size_t n) { return a[n]; }
+    const T& operator[](size_t n) const { return a[n]; }
+
+    void resize(size_t n)
+    {
+        // TODO doubling
+        size_t s = size();
+        if (s == n)
+            return;
+        if (s > n)
+        {
+            b = a + n;
+            return;
+        }
+        T* newa = (T*)calloc(n, sizeof(T));
+        for (size_t i = 0; i < s; ++i)
+            new (&newa[i]) T(a[i]); // TODO move
+        for (size_t i = 0; i < s; ++i)
+            a[i].~T(); // TODO move
+        for (size_t i = s; i < n; ++i)
+            new (&newa[i]) T();
+        free(a);
+        a = newa;
+        b = a + n;
+        c = a + n;
+    }
+
+    ~vector()
+    {
+        // TODO
+    }
+
+    vector(size_t n) : a(0), b(0), c(0)
+    {
+        a = (T*)calloc(n, sizeof(T));
+        if (!a)
+            OutOfMemory();
+        b = a + n;
+        c = a + n;
+        for (size_t i = 0; i < n; ++i)
+            new (&a[i]) T();
+        // TODO
+    }
+};
+
+
+template <typename T>
+struct basic_string
+{
+    vector<T> a;
+
+    basic_string() { }
+
+    static size_t len(const T* c)
+    {
+        size_t a = 0;
+        while (*c)
+        {
+            ++c;
+            ++a;
+        }
+        return a;
+    }
+
+    basic_string(const T* c)
+    {
+        operator=(c);
+    }
+
+    basic_string& operator+(const T* c)
+    {
+        // TODO
+        return *this;
+    }
+
+    friend basic_string operator+(const basic_string& d, const basic_string& e)
+    {
+        // TODO
+        return basic_string();
+    }
+
+
+    friend basic_string operator+(const T* c, const basic_string& d)
+    {
+        // TODO
+        return d;
+    }
+
+    void operator=(const T* c)
+    {
+        size_t n = len(c);
+        a.resize(n + 1);
+        memcpy(&a[0], c, n * sizeof(T));
+        a[n] = (T)0;
+    }
+
+    const T* c_str() const
+    {
+        return &a[0];
+    };
+};
+
+typedef basic_string<char> string;
+
 /* This does not compile with Visual C++ 5.0 compiler/library.
 #include <vector>
 
@@ -206,11 +351,11 @@ There are two problems.
 Workaround either by not using namespaces or having local vector without that default construction.
 Adding a constructor from int, and then a default constructor helps, but does not fix the entire problem.
 */
-#if _MSC_VER == 1100
-template <typename T> struct vector : std::vector { };
-#else
-template <typename T> struct vector : std::vector<T> { };
-#endif
+//#if _MSC_VER == 1100
+//template <typename T> struct vector : std::vector { };
+//#else
+//template <typename T> struct vector : std::vector<T> { };
+//#endif
 
 // Portable to old (and new) Visual C++ runtime.
 uint
@@ -231,7 +376,7 @@ string_vformat_length (const char *format, va_list va)
 #endif
 }
 
-std::string
+string
 StringFormatVa (const char *format, va_list va)
 {
     // Some systems, including Linux/amd64, cannot consume a
@@ -245,7 +390,7 @@ StringFormatVa (const char *format, va_list va)
     va_copy (va2, va); // C99
 #endif
 #endif
-    std::vector<char> s((size_t)string_vformat_length(format, va));
+    vector<char> s((size_t)string_vformat_length(format, va));
 #if _MSC_VER
     _vsnprintf (&s [0], s.size(), format, va);
 #else
@@ -254,12 +399,12 @@ StringFormatVa (const char *format, va_list va)
     return &s [0];
 }
 
-std::string
+string
 StringFormat (const char *format, ...)
 {
     va_list va;
     va_start (va, format);
-    std::string a = StringFormatVa (format, va);
+    string a = StringFormatVa (format, va);
     va_end (va);
     return a;
 }
@@ -267,11 +412,11 @@ StringFormat (const char *format, ...)
 #define NotImplementedYed() (AssertFormat (0, ("not yet implemented %s 0x%08X ", __func__, __LINE__)))
 
 void
-ThrowString (const std::string& a)
+ThrowString (const string& a)
 {
     //fprintf (stderr, "%s\n", a.c_str());
-    throw a;
-    //abort ();
+    //throw a;
+    abort ();
 }
 
 void
@@ -302,12 +447,12 @@ throw_GetLastError (const char* a = "")
 #endif
 
 void
-AssertFailedFormat (const char* condition, const std::string& extra)
+AssertFailedFormat (const char* condition, const string& extra)
 {
-    //fputs (("AssertFailedFormat:" + std::string (condition) + ":" + m2::StringFormatVa (format, args) + "\n").c_str (), stderr);
+    //fputs (("AssertFailedFormat:" + string (condition) + ":" + m2::StringFormatVa (format, args) + "\n").c_str (), stderr);
     //Assert (0);
     //abort ();
-    ThrowString ("AssertFailed:" + std::string (condition) + ":" + extra + "\n");
+    ThrowString ("AssertFailed:" + string (condition) + ":" + extra + "\n");
 }
 
 void
@@ -407,7 +552,7 @@ struct DosHeader
     unsigned GetPE () { return Unpack (pe); }
 };
 
-struct FileHeader
+struct FileHeader_t
 {
     uintLE16 Machine;
     uintLE16 NumberOfSections;
@@ -539,7 +684,7 @@ struct SectionHeader;
 struct NtHeaders
 {
     uintLE Signature;
-    FileHeader FileHeader;
+    FileHeader_t FileHeader;
     uintLE16 OptionalHeader;
 
     SectionHeader*
@@ -789,7 +934,7 @@ struct MethodRef_t;
 struct MethodDef_t;
 struct Assembly_t;
 
-struct String_t : std::string
+struct String_t : string
 {
 };
 
@@ -813,7 +958,7 @@ struct Blob_t
 
 struct Member_t
 {
-    std::string name;
+    string name;
     uint64 offset;
 };
 
@@ -1079,7 +1224,7 @@ struct Interface_t
     bool operator<(const Interface_t&) const; // support for old compiler/library
     bool operator==(const Interface_t&) const; // support for old compiler/library
 
-    std::vector<Method_t*> methods;
+    vector<Method_t*> methods;
 };
 
 struct FieldOrParam_t
@@ -1103,7 +1248,7 @@ struct Implementation_t
 struct Class_t
 {
     Class_t* base;
-    std::string name;
+    string name;
     vector<Interface_t> interfaces;
     vector<Method_t> methods;
     vector<Field_t> fields;
@@ -2188,7 +2333,7 @@ struct stream
 {
     virtual void write(const void* bytes, size_t count) = 0;
     void prints(const char* a) { write (a, strlen(a)); }
-    void prints(const std::string& a) { prints(a.c_str()); }
+    void prints(const string& a) { prints(a.c_str()); }
     void printc(char a) { write (&a, 1); }
     void printf(const char* format, ...)
     {
@@ -2755,13 +2900,13 @@ struct EmptyBase_t
 #define metadata_schema_TYPED_uint8             uint8
 #define metadata_schema_TYPED_Class             Class_t*
 #define metadata_schema_TYPED_Extends           voidp_TODO /* union? */
-#define metadata_schema_TYPED_FieldList         std::vector<Field_t*>
+#define metadata_schema_TYPED_FieldList         vector<Field_t*>
 #define metadata_schema_TYPED_Interface         Interface_t*
 #define metadata_schema_TYPED_MemberRefParent   Parent_t
-#define metadata_schema_TYPED_MethodList        std::vector<Method_t*>
+#define metadata_schema_TYPED_MethodList        vector<Method_t*>
 #define metadata_schema_TYPED_Name              String_t
-#define metadata_schema_TYPED_ParamList         std::vector<Param_t*>
-#define metadata_schema_TYPED_PropertyList      std::vector<Property_t*>
+#define metadata_schema_TYPED_ParamList         vector<Param_t*>
+#define metadata_schema_TYPED_PropertyList      vector<Property_t*>
 //#define metadata_schema_TYPED_Parent            Parent_t
 #define metadata_schema_TYPED_RVA               uint
 #define metadata_schema_TYPED_ResolutionScope   voidp_TODO /* union? */
@@ -2775,7 +2920,7 @@ struct EmptyBase_t
 #define metadata_schema_TYPED_NotStored         Unused_t
 #define metadata_schema_TYPED_CustomAttributeType CustomAttributeType_t
 #define metadata_schema_TYPED_HasCustomAttribute HasCustomAttribute_t
-#define metadata_schema_TYPED_EventList         std::vector<Event_t*>
+#define metadata_schema_TYPED_EventList         vector<Event_t*>
 
 // needed?
 //#define metadata_schema_TOKENED_string           MetadataString
@@ -3007,7 +3152,7 @@ struct Image : ImageZero
 {
     MemoryMappedFile mmf;
 
-    std::vector<SectionHeader*> section_headers;
+    vector<SectionHeader*> section_headers;
 
     Metadata metadata;
 
@@ -3096,7 +3241,7 @@ struct Image : ImageZero
         stderr_stream err;
 
         // TODO less printf
-        std::string prefix = StringFormat ("table 0x%08X (%s)", table_index, GetTableName (table_index));
+        string prefix = StringFormat ("table 0x%08X (%s)", table_index, GetTableName (table_index));
         const char* prefix_cstr = prefix.c_str();
 
         const MetadataTableSchema* schema = metadata_int_to_table_schema [table_index];
@@ -3593,7 +3738,7 @@ main (int argc, char** argv)
     Image im;
 #define X(x) printf ("%s %#x\n", #x, (int)x)
 X (sizeof (DosHeader));
-X (sizeof (FileHeader));
+X (sizeof (FileHeader_t));
 X (sizeof (NtHeaders));
 X (sizeof (SectionHeader));
 X (CodedIndices.array[CodedIndex(TypeDefOrRef)].tag_size);
@@ -3603,17 +3748,21 @@ X (CodedIndices.array[CodedIndex(HasCustomAttribute)].tag_size);
 X (CodedIndices.array[CodedIndex(HasFieldMarshal)].tag_size);
 X (CodedIndices.array[CodedIndex(HasDeclSecurity)].tag_size);
 #undef X
+#if 0
     try
+#endif
     {
         im.init (argv [1]);
     }
+#if 0
     catch (int er)
     {
         fprintf (stderr, "error 0x%08X\n", er);
     }
-    catch (const std::string& er)
+    catch (const string& er)
     {
         fprintf (stderr, "%s", er.c_str());
     }
+#endif
     return 0;
 }
