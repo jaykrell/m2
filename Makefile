@@ -5,8 +5,8 @@
 
 all: check
 
-ifdef _NMAKE_VER:
-!ifdef _NMAKE_VER
+ifdef MAKEDIR:
+!ifdef MAKEDIR
 
 #
 # Microsoft nmake on Windows with desktop CLR, Visual C++.
@@ -41,8 +41,8 @@ clean:
 
 exe:
 
-ifdef _NMAKE_VER:
-!ifdef _NMAKE_VER
+ifdef MAKEDIR:
+!ifdef MAKEDIR
 
 !if !exist (./config.mk)
 !if [.\config.cmd]
@@ -148,10 +148,10 @@ lin: m2.cpp
 	g++ -Wall -g m2.cpp -o $@
 
 win32.exe: m2.cpp
-	i686-w64-mingw32-g++ -g m2.cpp
+	i686-w64-mingw32-g++ -g m2.cpp -o $@
 
 win64.exe: m2.cpp
-	x86_64-w64-mingw32-g++ -g m2.cpp
+	x86_64-w64-mingw32-g++ -g m2.cpp -o $@
 
 endif
 !endif :

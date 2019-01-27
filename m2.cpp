@@ -350,14 +350,16 @@ Unpack2or4LE (const void *a, uint size)
     return ~0u;
 }
 
-#if !_MSC_VER || _MSC_VER > 1000
-
 template <uint N> struct uintLEn_to_native;
+
+#if !_MSC_VER || _MSC_VER > 1000
 template <> struct uintLEn_to_native<16> { typedef uint T; };
 template <> struct uintLEn_to_native<32> { typedef uint T; };
 template <> struct uintLEn_to_native<64> { typedef uint64 T; };
-
-
+#else
+struct uintLEn_to_native<16> { typedef uint T; };
+struct uintLEn_to_native<32> { typedef uint T; };
+struct uintLEn_to_native<64> { typedef uint64 T; };
 #endif
 
 template <uint N>
@@ -365,23 +367,20 @@ struct uintLEn // unsigned little endian integer, size n bits
 {
     char data[N / 8];
 
-#if _MSC_VER == 1000
-    operator uint64 ()
-    {
-        uint64 a = 0;
-        for (uint i = N / 8; i; )
-            a = (a << 8) | (uint)(data[--i] & 0xFF);
-        return a;
-    }
-#else
-    operator typename uintLEn_to_native<N>::T ()
-    {
-        typename uintLEn_to_native<N>::T a = 0;
-        for (uint i = N / 8; i; )
-            a = (a << 8) | (uint)(data[--i] & 0xFF);
-        return a;
-    }
+    operator
+#if !_MSC_VER || _MSC_VER > 1000
+    typename
 #endif
+    uintLEn_to_native<N>::T ()
+    {
+#if !_MSC_VER || _MSC_VER > 1000
+        typename
+#endif
+        uintLEn_to_native<N>::T a = 0;
+        for (uint i = N / 8; i; )
+            a = (a << 8) | (uint)(data[--i] & 0xFF);
+        return a;
+    }
     void operator=(uint);
 };
 
