@@ -2613,7 +2613,7 @@ struct EmptyBase
     METADATA_COLUMN2 (Pad, uint8)                                       \
     METADATA_COLUMN3 (Parent, HasConstant, voidp_TODO)                  \
     METADATA_COLUMN2 (Value, blob)                                      \
-    METADATA_COLUMN2 (IsNull, NotStored))                               \
+    METADATA_COLUMN3 (IsNull, NotStored, bool))                         \
                                                                         \
 /*table0x0C*/METADATA_TABLE (CustomAttribute, NOTHING,                  \
     METADATA_COLUMN2 (Parent, HasCustomAttribute)                       \
