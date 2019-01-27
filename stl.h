@@ -17,7 +17,7 @@ c:\msdev\50\VC\INCLUDE\vector(103) : error C2065: 'b' : undeclared identifier
 c:\msdev\50\VC\INCLUDE\vector(103) : error C2440: 'default argument' : cannot convert from 'int' to 'const struct a::b &'
                                                   Reason: cannot convert from 'int' to 'const struct a::b'
                                                   No constructor could take the source type, or constructor overload resolution was ambiguous
-	void resize(size_type _N, const _Ty& _X = _Ty()) // 103
+	void resize(size_type _N, const _Ty& x = _Ty()) // 103
 
 There are two problems.
 Workaround either by not using namespaces or having local vector without that default construction.
@@ -104,7 +104,7 @@ struct vector
         {
             // Destroy tail and reset end.
             for (size_t i = n; i < s; ++i)
-                a[i].~T();
+                (&a[i])->~T();
             b = a + n;
             return;
         }
@@ -113,7 +113,7 @@ struct vector
         for (i = 0; i < s; ++i)
             new (&newa[i]) T(a[i]); // TODO move
         for (i = 0; i < s; ++i)
-            a[i].~T(); // TODO move
+            (&a[i])->~T(); // TODO move
         for (i = s; i < n; ++i)
             new (&newa[i]) T();
         free(a);

@@ -32,8 +32,8 @@
 //#define _LARGEFILE_SOURCE
 //#define _LARGEFILE64_SOURCE
 
-#define _cpp_max max // old compiler/library compat
-#define _cpp_min min // old compiler/library compat
+//#define _cpp_max max // old compiler/library compat
+//#define _cpp_min min // old compiler/library compat
 
 #ifndef HAS_TYPED_ENUM
 #if __cplusplus >= 201103L || _MSC_VER >= 1500 // TODO test more compilers
@@ -67,6 +67,7 @@
 #pragma warning(disable:4619) // not a valid warning (depends on compiler version)
 #pragma warning(disable:4663) // c:\msdev\50\VC\INCLUDE\iosfwd(132) : warning C4663: C++ language change: to explicitly specialize class template 'char_traits' use the following syntax:
                               // template<> struct char_traits<unsigned short>
+#pragma warning(disable:4097) // typedef-name 'string' used as synonym for class-name 'basic_string<char>'
 #pragma warning(disable:4100) // unused parameter
 #pragma warning(disable:4146) // unary minus unsigned is still unsigned (xlocnum)
 #pragma warning(disable:4201) // non standard extension : nameless struct/union (windows.h)
@@ -110,14 +111,26 @@
 #if !defined(_MSC_VER) || _MSC_VER >= 1100 // TODO check more versions; 4.0?
 #include <string>
 #include <vector>
+#if _MSC_VER == 1100
+using namespace std;
+#else
+using std::basic_string;
+using std::string;
+using std::vector;
+#endif
 //#include <algorithm> // TODO? remove STL dependency?
 #else
 #include "stl.h"
 #endif
+// Portable mini/max.
+template<class T> inline const T& Max(const T& x, const T& y) {return (x < y ? y : x); }
+template<class T> inline const T& Min(const T& x, const T& y) {return (y < x ? y : x); }
+
 #ifdef _WIN32
 #define NOMINMAX 1
 #include <io.h>
 #include <windows.h>
+#define FILE_SHARE_DELETE 0x00000004 // old SDK lacks it
 #else
 #include <unistd.h>
 #include <fcntl.h>
@@ -197,7 +210,7 @@ typedef unsigned long long uint64;
 #pragma warning(pop)
 #endif
 
-#if _MSC_VER > 1100 // workaround compiler bugs
+#if !_MSC_VER || _MSC_VER > 1100 // workaround compiler bugs
 namespace m2
 {
 #endif
@@ -222,7 +235,7 @@ string_vformat_length (const char *format, va_list va)
 #endif
 }
 
-std::string
+string
 StringFormatVa (const char *format, va_list va)
 {
     // Some systems, including Linux/amd64, cannot consume a
@@ -236,7 +249,7 @@ StringFormatVa (const char *format, va_list va)
     va_copy (va2, va); // C99
 #endif
 #endif
-    std::vector<char> s((size_t)string_vformat_length(format, va));
+    vector<char> s((size_t)string_vformat_length(format, va));
 #if _MSC_VER
     _vsnprintf (&s [0], s.size(), format, va);
 #else
@@ -245,12 +258,12 @@ StringFormatVa (const char *format, va_list va)
     return &s [0];
 }
 
-std::string
+string
 StringFormat (const char *format, ...)
 {
     va_list va;
     va_start (va, format);
-    std::string a = StringFormatVa (format, va);
+    string a = StringFormatVa (format, va);
     va_end (va);
     return a;
 }
@@ -258,7 +271,7 @@ StringFormat (const char *format, ...)
 #define NotImplementedYed() (AssertFormat (0, ("not yet implemented %s 0x%08X ", __func__, __LINE__)))
 
 void
-ThrowString (const std::string& a)
+ThrowString (const string& a)
 {
     fprintf (stderr, "%s\n", a.c_str());
     throw a;
@@ -293,12 +306,12 @@ throw_GetLastError (const char* a = "")
 #endif
 
 void
-AssertFailedFormat (const char* condition, const std::string& extra)
+AssertFailedFormat (const char* condition, const string& extra)
 {
-    //fputs (("AssertFailedFormat:" + std::string (condition) + ":" + m2::StringFormatVa (format, args) + "\n").c_str (), stderr);
+    //fputs (("AssertFailedFormat:" + string (condition) + ":" + m2::StringFormatVa (format, args) + "\n").c_str (), stderr);
     //Assert (0);
     //abort ();
-    ThrowString ("AssertFailed:" + std::string (condition) + ":" + extra + "\n");
+    ThrowString ("AssertFailed:" + string (condition) + ":" + extra + "\n");
 }
 
 void
@@ -337,6 +350,7 @@ Unpack2or4LE (const void *a, uint size)
     return ~0u;
 }
 
+#if !_MSC_VER || _MSC_VER > 1000
 
 template <uint N> struct uintLEn_to_native;
 template <> struct uintLEn_to_native<16> { typedef uint T; };
@@ -344,11 +358,22 @@ template <> struct uintLEn_to_native<32> { typedef uint T; };
 template <> struct uintLEn_to_native<64> { typedef uint64 T; };
 
 
+#endif
+
 template <uint N>
 struct uintLEn // unsigned little endian integer, size n bits
 {
     char data[N / 8];
 
+#if _MSC_VER == 1000
+    operator uint64 ()
+    {
+        uint64 a = 0;
+        for (uint i = N / 8; i; )
+            a = (a << 8) | (uint)(data[--i] & 0xFF);
+        return a;
+    }
+#else
     operator typename uintLEn_to_native<N>::T ()
     {
         typename uintLEn_to_native<N>::T a = 0;
@@ -356,7 +381,7 @@ struct uintLEn // unsigned little endian integer, size n bits
             a = (a << 8) | (uint)(data[--i] & 0xFF);
         return a;
     }
-
+#endif
     void operator=(uint);
 };
 
@@ -388,7 +413,7 @@ Unpack (uintLE* a)
     return Unpack4LE (a->data);
 }
 
-struct DosHeader
+struct DosHeader_t
 {
     char mz[2];
     uint8 pad [64 - 6];
@@ -398,7 +423,7 @@ struct DosHeader
     unsigned GetPE () { return Unpack (pe); }
 };
 
-struct FileHeader
+struct FileHeader_t
 {
     uintLE16 Machine;
     uintLE16 NumberOfSections;
@@ -415,7 +440,7 @@ struct DataDirectory
     uintLE Size;
 };
 
-struct OptionalHeader32
+struct OptionalHeader32_t
 {
     uintLE16 Magic;
     uint8  MajorLinkerVersion;
@@ -450,7 +475,7 @@ struct OptionalHeader32
     //DataDirectory DataDirectory[NumberOfRvaAndSizes];
 };
 
-struct OptionalHeader64
+struct OptionalHeader64_t
 {
     uintLE16 Magic;
     uint8  MajorLinkerVersion;
@@ -525,22 +550,22 @@ X(Com)
     return "unknown";
 }
 
-struct SectionHeader;
+struct SectionHeader_t;
 
-struct NtHeaders
+struct NtHeaders_t
 {
     uintLE Signature;
-    FileHeader file_header;
+    FileHeader_t file_header;
     uintLE16 OptionalHeader;
 
-    SectionHeader*
+    SectionHeader_t*
     first_section_header ()
     {
-        return (SectionHeader*)((char*)&OptionalHeader + Unpack(file_header.SizeOfOptionalHeader));
+        return (SectionHeader_t*)((char*)&OptionalHeader + Unpack(file_header.SizeOfOptionalHeader));
     }
 };
 
-struct SectionHeader
+struct SectionHeader_t
 {
     // In very old images, VirtualSize is zero, in which case, use SizeOfRawData.
     char Name [8];
@@ -788,7 +813,7 @@ struct MethodRef_t;
 struct MethodDef_t;
 struct Assembly_t;
 
-struct String : std::string
+struct String : string
 {
 };
 
@@ -798,7 +823,7 @@ typedef wchar_t char16;
 typedef unsigned short char16;
 #endif
 
-typedef std::basic_string<char16> ustring;
+typedef basic_string<char16> ustring;
 
 struct UString : ustring
 {
@@ -818,13 +843,13 @@ struct IMetadataTable
 
 struct Member
 {
-    std::string name;
+    string name;
     uint64 offset;
 };
 
 union Parent // Constant table0x0B
 {
-    Param* Param;
+    Param* param;
     Field_t* Field;
     Property_t* Property;
 };
@@ -933,10 +958,10 @@ BEGIN_ENUM(MethodDefImplFlags, uint16) // table0x06
 }
 END_ENUM(MethodDefImplFlags, uint16) // table0x06
 
-struct Method : Member
+struct Method_t : Member
 {
-    bool operator<(const Method&) const; // support for old compiler/library
-    bool operator==(const Method&) const; // support for old compiler/library
+    bool operator<(const Method_t&) const; // support for old compiler/library
+    bool operator==(const Method_t&) const; // support for old compiler/library
 };
 
 BEGIN_ENUM(TypeFlags, uint)
@@ -1077,46 +1102,46 @@ BEGIN_ENUM(DeclSecurityAction, uint16)
 END_ENUM(DeclSecurityAction, uint16) // TODO get the values
 
 
-struct Interface
+struct Interface_t
 {
-    Interface () { }
-    Interface (const Interface&) { }
-    bool operator<(const Interface&) const; // support for old compiler/library
-    bool operator==(const Interface&) const; // support for old compiler/library
+    Interface_t () { }
+    Interface_t (const Interface_t&) { }
+    bool operator<(const Interface_t&) const; // support for old compiler/library
+    bool operator==(const Interface_t&) const; // support for old compiler/library
 
-    std::vector<Method*> methods;
+    vector<Method_t*> methods;
 };
 
 struct FieldOrParam
 {
 };
 
-struct Signature
+struct Signature_t
 {
 };
 
 struct AssemblyRef;
 struct File;
 
-struct Implementation
+struct Implementation_t
 {
     //union
-        AssemblyRef* assembly_ref;
-        File* file;
+    AssemblyRef* assembly_ref;
+    File* file;
 };
 
-struct Class
+struct Class_t
 {
-    Class* base;
-    std::string name;
-    std::vector<Interface> interfaces;
-    std::vector<Method> methods;
-    std::vector<Field_t*> fields;
-    std::vector<Event_t> events;
-    std::vector<Property_t> properties;
+    Class_t* base;
+    string name;
+    vector<Interface_t> interfaces;
+    vector<Method_t> methods;
+    vector<Field_t*> fields;
+    vector<Event_t> events;
+    vector<Property_t> properties;
 };
 
-class MethodBody
+class MethodBody_t
 {
 };
 
@@ -1127,8 +1152,8 @@ class MethodDeclaration
 struct TypeOrMethodDef
 {
     //union
-    Type* Type;
-    Method* Method;
+    Type* type;
+    Method_t* method;
 };
 
 BEGIN_ENUM(MethodSemanticsFlags, uint16)
@@ -2070,7 +2095,7 @@ int_get_precision(int64 a)
 {
     // How many bits needed to represent.
     // i.e. so leading bit is extendible sign bit, or 64
-    return std::min(64u, 1 + uint_get_precision (int_split_sign_magnitude_t(a).u));
+    return Min(64u, 1 + uint_get_precision (int_split_sign_magnitude_t(a).u));
 }
 
 uint
@@ -2163,14 +2188,14 @@ uint
 int_to_hex_getlen_atleast8 (int64 a)
 {
     const uint len = int_to_hex_getlen (a);
-    return std::max(len, 8u);
+    return Max(len, 8u);
 }
 
 uint
 uint_to_hex_getlen_atleast8 (uint64 a)
 {
     const uint len = uint_to_hex_getlen (a);
-    return std::max (len, 8u);
+    return Max (len, 8u);
 }
 
 uint
@@ -2193,7 +2218,7 @@ struct stream
 {
     virtual void write(const void* bytes, size_t count) = 0;
     void prints(const char* a) { write (a, strlen(a)); }
-    void prints(const std::string& a) { prints(a.c_str()); }
+    void prints(const string& a) { prints(a.c_str()); }
     void printc(char a) { write (&a, 1); }
     void printf(const char* format, ...)
     {
@@ -2218,7 +2243,7 @@ struct stdout_stream : stream
         const char* pc = (const char*)bytes;
         while (count > 0)
         {
-            uint const n = (uint)std::min(count, ((size_t)1024) * 1024 * 1024);
+            uint const n = (uint)Min(count, ((size_t)1024) * 1024 * 1024);
 #if _MSC_VER
             ::_write(_fileno(stdout), pc, n);
 #else
@@ -2238,7 +2263,7 @@ struct stderr_stream : stream
         const char* pc = (const char*)bytes;
         while (count > 0)
         {
-            uint const n = (uint)std::min(count, ((size_t)1024) * 1024 * 1024);
+            uint const n = (uint)Min(count, ((size_t)1024) * 1024 * 1024);
 #if _MSC_VER
             ::_write(_fileno(stderr), pc, n);
 #else
@@ -2543,7 +2568,7 @@ struct EmptyBase
     METADATA_COLUMN (TypeNameSpace))                                    \
                                                                         \
 /*table0x02*/ METADATA_TABLE (TypeDef, NOTHING,                         \
-    METADATA_COLUMN3 (Flags, uint, TypeFlags)                         \
+    METADATA_COLUMN3 (Flags, uint, TypeFlags)                           \
     METADATA_COLUMN (TypeName)                                          \
     METADATA_COLUMN (TypeNameSpace)                                     \
     METADATA_COLUMN (Extends)                                           \
@@ -2552,8 +2577,8 @@ struct EmptyBase
                                                                         \
 /*table0x03*/ METADATA_TABLE_UNUSED(3)                                  \
                                                                         \
-/*table0x04*/ METADATA_TABLE (Field, : Member,                        \
-    METADATA_COLUMN3 (Flags, uint16, FieldFlags)                      \
+/*table0x04*/ METADATA_TABLE (Field, : Member,                          \
+    METADATA_COLUMN3 (Flags, uint16, FieldFlags)                        \
     METADATA_COLUMN (Name)                                              \
     METADATA_COLUMN (Signature))                                        \
                                                                         \
@@ -2648,8 +2673,8 @@ struct EmptyBase
     METADATA_COLUMN3 (Association, HasSemantics, MethodSemanticsAssociation_t)) /* Event or Property, CodedIndex */ \
                                                                                 \
 /*table0x19*/ METADATA_TABLE (MethodImpl, NOTHING,                              \
-    METADATA_COLUMN3 (Class, TypeDef, Class*)                                 \
-    METADATA_COLUMN3 (MethodBody, MethodDefOrRef, MethodBody*)                \
+    METADATA_COLUMN3 (Class, TypeDef, Class_t*)                                 \
+    METADATA_COLUMN3 (MethodBody, MethodDefOrRef, MethodBody_t*)                \
     METADATA_COLUMN3 (MethodDeclaration, MethodDefOrRef, MethodDeclarationRow*)) \
                                                                                 \
 /*table0x1A*/ METADATA_TABLE (ModuleRef, NOTHING,                               \
@@ -2728,7 +2753,7 @@ struct EmptyBase
     METADATA_COLUMN2 (Offset, uint)                                             \
     METADATA_COLUMN3 (Flags, uint, ManifestResourceFlags)                       \
     METADATA_COLUMN2 (Name, string)                                             \
-    METADATA_COLUMN3 (Implementation, Implementation, Implementation))          \
+    METADATA_COLUMN3 (Implementation, Implementation, Implementation_t*))       \
                                                                                 \
 /*table0x29*/ METADATA_TABLE (NestedClass, NOTHING,                             \
     METADATA_COLUMN2 (NestedClass, TypeDef)                                     \
@@ -2736,12 +2761,12 @@ struct EmptyBase
                                                                                 \
 /*table0x2A*/ METADATA_TABLE (GenericParam, NOTHING,                            \
     METADATA_COLUMN2 (Number, uint16)                                           \
-    METADATA_COLUMN3 (Flags, uint16, GenericParamFlags)                       \
-    METADATA_COLUMN3 (Owner, TypeOrMethodDef, TypeOrMethodDef)                \
+    METADATA_COLUMN3 (Flags, uint16, GenericParamFlags)                         \
+    METADATA_COLUMN3 (Owner, TypeOrMethodDef, TypeOrMethodDef)                  \
     METADATA_COLUMN2 (Name, string))                                            \
                                                                                 \
 /*table0x2B*/ METADATA_TABLE (MethodSpec, NOTHING,                              \
-    METADATA_COLUMN3 (Method, MethodDefOrRef, Method)                         \
+    METADATA_COLUMN3 (Method, MethodDefOrRef, Method_t*)                        \
     METADATA_COLUMN2 (Instantiation, blob))                                     \
                                                                                 \
 /*table0x2C*/ METADATA_TABLE (GenericParamConstraint, NOTHING,                  \
@@ -2762,20 +2787,20 @@ struct EmptyBase
 #define metadata_schema_TYPED_uint16            uint16
 #define metadata_schema_TYPED_uint              uint
 #define metadata_schema_TYPED_uint8             uint8
-#define metadata_schema_TYPED_Class             Class*
+#define metadata_schema_TYPED_Class             Class_t*
 #define metadata_schema_TYPED_Extends           voidp_TODO /* union? */
-#define metadata_schema_TYPED_FieldList         std::vector<Field_t*>
-#define metadata_schema_TYPED_Interface         Interface*
+#define metadata_schema_TYPED_FieldList         vector<Field_t*>
+#define metadata_schema_TYPED_Interface         Interface_t*
 #define metadata_schema_TYPED_MemberRefParent   Parent
-#define metadata_schema_TYPED_MethodList        std::vector<Method*>
+#define metadata_schema_TYPED_MethodList        vector<Method_t*>
 #define metadata_schema_TYPED_Name              String
-#define metadata_schema_TYPED_ParamList         std::vector<Param_t*>
-#define metadata_schema_TYPED_PropertyList      std::vector<Property_t*>
+#define metadata_schema_TYPED_ParamList         vector<Param_t*>
+#define metadata_schema_TYPED_PropertyList      vector<Property_t*>
 //#define metadata_schema_TYPED_Parent            Parent
 #define metadata_schema_TYPED_RVA               uint
 #define metadata_schema_TYPED_ResolutionScope   voidp_TODO /* union? */
 #define metadata_schema_TYPED_Sequence          uint16
-#define metadata_schema_TYPED_Signature         Signature
+#define metadata_schema_TYPED_Signature         Signature_t
 #define metadata_schema_TYPED_TypeDef           Type*
 #define metadata_schema_TYPED_TypeDefOrRef      voidp_TODO /* union? */
 #define metadata_schema_TYPED_TypeName          String
@@ -2784,7 +2809,7 @@ struct EmptyBase
 #define metadata_schema_TYPED_NotStored         Unused_t
 #define metadata_schema_TYPED_CustomAttributeType CustomAttributeType
 #define metadata_schema_TYPED_HasCustomAttribute HasCustomAttribute
-#define metadata_schema_TYPED_EventList         std::vector<Event_t*>
+#define metadata_schema_TYPED_EventList         vector<Event_t*>
 
 // needed?
 //#define metadata_schema_TOKENED_string           MetadataString
@@ -2832,7 +2857,7 @@ struct MethodDeclarationRow;
             bool operator==(const name ## Row&) const;                  \
             name ##  Row ( ) { } columns                                \
     };                                                                  \
-    struct name ## Table : std::vector<name ## Row>, IMetadataTable     \
+    struct name ## Table : vector<name ## Row>, IMetadataTable     \
     {                                                                   \
         virtual void SetSize(size_t n) { resize(n); }                   \
     };
@@ -3016,11 +3041,11 @@ struct ImageZero // zero-inited part of Image
     } streams;
     MetadataRoot* metadata_root;
     void* base;
-    DosHeader* dos;
+    DosHeader_t* dos;
     uint8* pe;
-    NtHeaders* nt;
-    OptionalHeader32* opt32;
-    OptionalHeader64* opt64;
+    NtHeaders_t* nt;
+    OptionalHeader32_t* opt32;
+    OptionalHeader64_t* opt64;
     char* strings;
     char* guids;
     uint pe_offset;
@@ -3042,7 +3067,7 @@ struct Image : ImageZero
 {
     MemoryMappedFile mmf;
 
-    std::vector<SectionHeader*> section_headers;
+    vector<SectionHeader_t*> section_headers;
 
     Metadata metadata;
 
@@ -3138,7 +3163,7 @@ struct Image : ImageZero
         stderr_stream err;
 
         // TODO less printf
-        std::string prefix = StringFormat ("table 0x%08X (%s)", table_index, table_name (table_index));
+        string prefix = StringFormat ("table 0x%08X (%s)", table_index, table_name (table_index));
         const char* prefix_cstr = prefix.c_str();
 
         const MetadataTableSchema* schema = table_schema [table_index];
@@ -3175,7 +3200,7 @@ struct Image : ImageZero
         mmf.read (file_name);
         base = mmf.base;
         file_size = mmf.file.get_file_size ();
-        dos = (DosHeader*)base;
+        dos = (DosHeader_t*)base;
         printf ("mz: %02x%02x\n", ((uint8*)dos) [0], ((uint8*)dos) [1]);
         if (memcmp (base, "MZ", 2))
             ThrowString (StringFormat ("incorrect MZ signature %s", file_name));
@@ -3187,7 +3212,7 @@ struct Image : ImageZero
         if (memcmp (pe, "PE\0\0", 4))
             ThrowString (StringFormat ("incorrect PE00 signature %s", file_name));
         printf ("pe: %c%c\\0x%08X\\0x%08X\n", pe [0], pe [1], pe [2], pe [3]);
-        nt = (NtHeaders*)pe;
+        nt = (NtHeaders_t*)pe;
         printf ("Machine:0x%08X\n", (uint)nt->file_header.Machine);
         printf ("NumberOfSections:0x%08X\n", (uint)nt->file_header.NumberOfSections);
         printf ("TimeDateStamp:0x%08X\n", (uint)nt->file_header.TimeDateStamp);
@@ -3195,8 +3220,8 @@ struct Image : ImageZero
         printf ("NumberOfSymbols:0x%08X\n", (uint)nt->file_header.NumberOfSymbols);
         printf ("SizeOfOptionalHeader:0x%08X\n", (uint)nt->file_header.SizeOfOptionalHeader);
         printf ("Characteristics:0x%08X\n", (uint)nt->file_header.Characteristics);
-        opt32 = (OptionalHeader32*)(&nt->OptionalHeader);
-        opt64 = (OptionalHeader64*)(&nt->OptionalHeader);
+        opt32 = (OptionalHeader32_t*)(&nt->OptionalHeader);
+        opt64 = (OptionalHeader64_t*)(&nt->OptionalHeader);
         uint opt_magic = Unpack(opt32->Magic);
         AssertFormat ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), ("file:%s opt_magic:%x", file_name, opt_magic));
         printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, (void*)opt32, (void*)opt64);
@@ -3204,7 +3229,7 @@ struct Image : ImageZero
         printf ("opt.rvas:0x%08X\n", NumberOfRvaAndSizes);
         number_of_sections = nt->file_header.NumberOfSections;
         printf ("number_of_sections:0x%08X\n", number_of_sections);
-        SectionHeader* section_header = nt->first_section_header ();
+        SectionHeader_t* section_header = nt->first_section_header ();
         uint i = 0;
         for (i = 0; i < number_of_sections; ++i, ++section_header)
             printf ("section [%02X].Name: %.8s\n", i, section_header->Name);
@@ -3383,7 +3408,7 @@ unknown_stream:
     uint rva_to_file_offset (uint rva)
     {
         // TODO binary search and/or cache
-        SectionHeader* section_header = nt->first_section_header ();
+        SectionHeader_t* section_header = nt->first_section_header ();
         for (uint i = 0; i < number_of_sections; ++i, ++section_header)
         {
             uint va = section_header->VirtualAddress;
@@ -3588,7 +3613,7 @@ ImageGetIndexSize (Image* image, uint /* todo enum */ table_index)
     return a;
 }
 
-#if _MSC_VER != 1100 // workaround compiler bugs
+#if !_MSC_VER || _MSC_VER > 1100 // workaround compiler bugs
 }
 
 using namespace m2;
@@ -3661,10 +3686,10 @@ main (int argc, char** argv)
 #endif
     Image im;
 #define X(x) printf ("%s %#x\n", #x, (int)x)
-X (sizeof (DosHeader));
-X (sizeof (FileHeader));
-X (sizeof (NtHeaders));
-X (sizeof (SectionHeader));
+X (sizeof (DosHeader_t));
+X (sizeof (FileHeader_t));
+X (sizeof (NtHeaders_t));
+X (sizeof (SectionHeader_t));
 X (CodedIndices.array[CodedIndex(TypeDefOrRef)].tag_size);
 X (CodedIndices.array[CodedIndex(ResolutionScope)].tag_size);
 X (CodedIndices.array[CodedIndex(HasConstant)].tag_size);
@@ -3683,7 +3708,7 @@ X (CodedIndices.array[CodedIndex(HasDeclSecurity)].tag_size);
     {
         fprintf (stderr, "error 0x%08X\n", er);
     }
-    catch (const std::string& er)
+    catch (const string& er)
     {
         fprintf (stderr, "%s", er.c_str());
     }
