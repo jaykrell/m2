@@ -398,7 +398,7 @@ struct DosHeader
     unsigned GetPE () { return Unpack (pe); }
 };
 
-struct FileHeader_t
+struct FileHeader
 {
     uintLE16 Machine;
     uintLE16 NumberOfSections;
@@ -530,13 +530,13 @@ struct SectionHeader;
 struct NtHeaders
 {
     uintLE Signature;
-    FileHeader_t FileHeader;
+    FileHeader file_header;
     uintLE16 OptionalHeader;
 
     SectionHeader*
     first_section_header ()
     {
-        return (SectionHeader*)((char*)&OptionalHeader + Unpack(FileHeader.SizeOfOptionalHeader));
+        return (SectionHeader*)((char*)&OptionalHeader + Unpack(file_header.SizeOfOptionalHeader));
     }
 };
 
@@ -772,6 +772,10 @@ enum NativeType_t
     // TODO
 };
 
+struct Param
+{
+};
+
 struct Param_t
 {
 };
@@ -796,7 +800,7 @@ typedef unsigned short char16;
 
 typedef std::basic_string<char16> ustring;
 
-struct UString_t : ustring
+struct UString : ustring
 {
 };
 
@@ -818,9 +822,9 @@ struct Member
     uint64 offset;
 };
 
-union Parent_t // Constant table0x0B
+union Parent // Constant table0x0B
 {
-    Param_t* Param;
+    Param* Param;
     Field_t* Field;
     Property_t* Property;
 };
@@ -929,10 +933,10 @@ BEGIN_ENUM(MethodDefImplFlags, uint16) // table0x06
 }
 END_ENUM(MethodDefImplFlags, uint16) // table0x06
 
-struct Method_t : Member
+struct Method : Member
 {
-    bool operator<(const Method_t&) const; // support for old compiler/library
-    bool operator==(const Method_t&) const; // support for old compiler/library
+    bool operator<(const Method&) const; // support for old compiler/library
+    bool operator==(const Method&) const; // support for old compiler/library
 };
 
 BEGIN_ENUM(TypeFlags, uint)
@@ -992,7 +996,7 @@ BEGIN_ENUM(TypeFlags, uint)
 }
 END_ENUM(TypeFlags, uint)
 
-struct Type_t // class, valuetype, delegate, inteface, not char, short, int, long, float
+struct Type // class, valuetype, delegate, inteface, not char, short, int, long, float
 {
 };
 
@@ -1010,7 +1014,7 @@ struct Event_t : Member // table0x14
     bool operator==(const Event_t&) const; // support for old compiler/library
     EventFlags Flags;
     String Name;
-    Type_t* EventType;
+    Type* EventType;
 };
 
 struct Property_t : Member
@@ -1080,7 +1084,7 @@ struct Interface
     bool operator<(const Interface&) const; // support for old compiler/library
     bool operator==(const Interface&) const; // support for old compiler/library
 
-    std::vector<Method_t*> methods;
+    std::vector<Method*> methods;
 };
 
 struct FieldOrParam
@@ -1091,14 +1095,14 @@ struct Signature
 {
 };
 
-struct AssemblyRef_t;
-struct File_t;
+struct AssemblyRef;
+struct File;
 
 struct Implementation
 {
     //union
-        AssemblyRef_t* AssemblyRef;
-        File_t* File;
+        AssemblyRef* assembly_ref;
+        File* file;
 };
 
 struct Class
@@ -1106,7 +1110,7 @@ struct Class
     Class* base;
     std::string name;
     std::vector<Interface> interfaces;
-    std::vector<Method_t> methods;
+    std::vector<Method> methods;
     std::vector<Field_t*> fields;
     std::vector<Event_t> events;
     std::vector<Property_t> properties;
@@ -1123,8 +1127,8 @@ class MethodDeclaration
 struct TypeOrMethodDef
 {
     //union
-    Type_t* Type;
-    Method_t* Method;
+    Type* Type;
+    Method* Method;
 };
 
 BEGIN_ENUM(MethodSemanticsFlags, uint16)
@@ -1167,53 +1171,53 @@ struct Guid_t
 };
 
 // TODO enum
-const uint Module = 0;
-const uint TypeRef = 1;
-const uint TypeDef = 2;
-//const uint FieldPtr = 3; // nonstandard
-const uint Field = 4;
-//const uint MethodPtr = 5; // nonstandard
-const uint MethodDef = 6;
-//const uint ParamPtr = 7; // nonstandard
-const uint Param = 8;
-const uint InterfaceImpl = 9;
-const uint MemberRef = 10;
-const uint MethodRef = MemberRef;
-//const uint FieldRef = MemberRef;
-//const uint Constant = 11;
-//const uint CustomAttribute = 12;
-//const uint FieldMarshal = 13;
-const uint DeclSecurity = 14;
-//const uint ClassLayout = 15;
-//const uint FieldLayout = 16;
-const uint StandAloneSig = 17;
-//const uint EventMap = 18;
-//const uint EventPtr = 19; // nonstandard
-const uint Event = 20;
-const uint PropertyMap = 21;
-//const uint ProperyPtr = 22; // nonstandard
-const uint Property = 23;
-const uint MethodSemantics = 24; // 0x18
-const uint MethodImpl = 25; // 0x19
-const uint ModuleRef = 26;
-const uint TypeSpec = 27;
-//const uint ImplMap = 28;
-//const uint FieldRVA = 29;
-//const uint ENCLog = 30; // nonstandard
-//const uint ENCMap = 31; // nonstandard
-const uint Assembly = 32;
-//const uint AssemblyProcessor = 33;
-//const uint AssemblyOS = 34;
-const uint AssemblyRef = 35;
-//const uint AssemblyRefProcessor = 36;
-//const uint AssemblyRefOS = 37;
-const uint File = 38;
-const uint ExportedType = 39;
-const uint ManifestResource = 40; // 0x28
-//const uint NestedClass = 41;
-const uint GenericParam = 42; // 0x2A
-const uint MethodSpec = 0x2B;
-const uint GenericParamConstraint = 44; // 0x2C
+const uint kModule = 0;
+const uint kTypeRef = 1;
+const uint kTypeDef = 2;
+//const uint kFieldPtr = 3; // nonstandard
+const uint kField = 4;
+//const uint kMethodPtr = 5; // nonstandard
+const uint kMethodDef = 6;
+//const uint kParamPtr = 7; // nonstandard
+const uint kParam = 8;
+const uint kInterfaceImpl = 9;
+const uint kMemberRef = 10;
+const uint kMethodRef = kMemberRef;
+//const uint kFieldRef = MemberRef;
+//const uint kConstant = 11;
+//const uint kCustomAttribute = 12;
+//const uint kFieldMarshal = 13;
+const uint kDeclSecurity = 14;
+//const uint kClassLayout = 15;
+//const uint kFieldLayout = 16;
+const uint kStandAloneSig = 17;
+//const uint kEventMap = 18;
+//const uint kEventPtr = 19; // nonstandard
+const uint kEvent = 20;
+const uint kPropertyMap = 21;
+//const uint kProperyPtr = 22; // nonstandard
+const uint kProperty = 23;
+const uint kMethodSemantics = 24; // 0x18
+const uint kMethodImpl = 25; // 0x19
+const uint kModuleRef = 26;
+const uint kTypeSpec = 27;
+//const uint kImplMap = 28;
+//const uint kFieldRVA = 29;
+//const uint kENCLog = 30; // nonstandard
+//const uint kENCMap = 31; // nonstandard
+const uint kAssembly = 32;
+//const uint kAssemblyProcessor = 33;
+//const uint kAssemblyOS = 34;
+const uint kAssemblyRef = 35;
+//const uint kAssemblyRefProcessor = 36;
+//const uint kAssemblyRefOS = 37;
+const uint kFile = 38;
+const uint kExportedType = 39;
+const uint kManifestResource = 40; // 0x28
+//const uint kNestedClass = 41;
+const uint kGenericParam = 42; // 0x2A
+const uint kMethodSpec = 0x2B;
+const uint kGenericParamConstraint = 44; // 0x2C
 
 // TODO enum/bitfield
 const uint CorILMethod_TinyFormat = 2;
@@ -1271,27 +1275,27 @@ struct CodedIndex_t
 // of rows of each possible referenced table, get the maximum, see
 // if it fits 16 - n bits, where n = log base of the number of possible tables.
 // If so, the coded index is 16 bits, else 32 bits.
-#define CODED_INDICES                                                                               \
-CODED_INDEX (TypeDefOrRef,      3, {TypeDef COMMA TypeRef COMMA TypeSpec})                          \
-CODED_INDEX (HasConstant,       3, {Field COMMA Param COMMA Property})                              \
-CODED_INDEX (HasFieldMarshal,   2, {Field COMMA Param})                                             \
-CODED_INDEX (HasDeclSecurity,   3, {TypeDef COMMA MethodDef COMMA Assembly})                        \
-CODED_INDEX (MemberRefParent,   5, {TypeDef COMMA TypeRef COMMA ModuleRef COMMA MethodDef COMMA TypeSpec})      \
-CODED_INDEX (HasSemantics,      2, {Event COMMA Property})                                          \
-CODED_INDEX (MethodDefOrRef,    2, {MethodDef COMMA MethodRef})                                     \
-CODED_INDEX (MemberForwarded,   2, {Field COMMA MethodDef})                                         \
-CODED_INDEX (Implementation,    3, {File COMMA AssemblyRef COMMA ExportedType})                     \
-/* CodeIndex(CustomAttributeType) has a range of 5 values but only 2 are valid.                     \
- * -1 is "null" and this is a wart, requiring signed numbers. */                                    \
-CODED_INDEX (CustomAttributeType, 5, {-1 COMMA -1 COMMA MethodDef COMMA MemberRef COMMA -1})        \
-CODED_INDEX (ResolutionScope, 4, {Module COMMA ModuleRef COMMA AssemblyRef COMMA TypeRef})          \
-CODED_INDEX (TypeOrMethodDef, 2, {TypeDef COMMA MethodDef})                                         \
-CODED_INDEX (HasCustomAttribute, 22,                                                                \
-      {MethodDef COMMA     Field COMMA        TypeRef COMMA      TypeDef COMMA          Param COMMA          /* HasCustomAttribute */ \
-      InterfaceImpl COMMA MemberRef COMMA     Module COMMA       DeclSecurity COMMA     Property COMMA       /* HasCustomAttribute */ \
-      Event COMMA         StandAloneSig COMMA ModuleRef COMMA    TypeSpec COMMA         Assembly COMMA       /* HasCustomAttribute */ \
-      AssemblyRef COMMA   File COMMA          ExportedType COMMA ManifestResource COMMA GenericParam COMMA   /* HasCustomAttribute */ \
-      GenericParamConstraint COMMA MethodSpec                                          }) /* HasCustomAttribute */
+#define CODED_INDICES                                                                                       \
+CODED_INDEX (TypeDefOrRef,      3, {kTypeDef COMMA kTypeRef COMMA kTypeSpec})                               \
+CODED_INDEX (HasConstant,       3, {kField COMMA kParam COMMA kProperty})                                   \
+CODED_INDEX (HasFieldMarshal,   2, {kField COMMA kParam})                                                   \
+CODED_INDEX (HasDeclSecurity,   3, {kTypeDef COMMA kMethodDef COMMA kAssembly})                             \
+CODED_INDEX (MemberRefParent,   5, {kTypeDef COMMA kTypeRef COMMA kModuleRef COMMA kMethodDef COMMA kTypeSpec}) \
+CODED_INDEX (HasSemantics,      2, {kEvent COMMA kProperty})                                                \
+CODED_INDEX (MethodDefOrRef,    2, {kMethodDef COMMA kMethodRef})                                           \
+CODED_INDEX (MemberForwarded,   2, {kField COMMA kMethodDef})                                               \
+CODED_INDEX (Implementation,    3, {kFile COMMA kAssemblyRef COMMA kExportedType})                          \
+/* CodeIndex(CustomAttributeType) has a range of 5 values but only 2 are valid.                             \
+ * -1 is "null" and this is a wart, requiring signed numbers. */                                            \
+CODED_INDEX (CustomAttributeType, 5, {-1 COMMA -1 COMMA kMethodDef COMMA kMemberRef COMMA -1})              \
+CODED_INDEX (ResolutionScope, 4, {kModule COMMA kModuleRef COMMA kAssemblyRef COMMA kTypeRef})              \
+CODED_INDEX (TypeOrMethodDef, 2, {kTypeDef COMMA kMethodDef})                                               \
+CODED_INDEX (HasCustomAttribute, 22,                                                                        \
+      {kMethodDef              COMMA kField         COMMA kTypeRef      COMMA kTypeDef          COMMA kParam COMMA         /* HasCustomAttribute */ \
+       kInterfaceImpl          COMMA kMemberRef     COMMA kModule       COMMA kDeclSecurity     COMMA kProperty COMMA      /* HasCustomAttribute */ \
+       kEvent                  COMMA kStandAloneSig COMMA kModuleRef    COMMA kTypeSpec         COMMA kAssembly COMMA      /* HasCustomAttribute */ \
+       kAssemblyRef            COMMA kFile          COMMA kExportedType COMMA kManifestResource COMMA kGenericParam COMMA  /* HasCustomAttribute */ \
+       kGenericParamConstraint COMMA kMethodSpec                                          })                               /* HasCustomAttribute */
 
 #define CODED_INDEX(a, n, values) CodedIndex_ ## a,
 BEGIN_ENUM(CodedIndex, uint8)
@@ -1491,7 +1495,7 @@ BEGIN_ENUM(ManifestResourceFlags, uint)
 }
 END_ENUM(ManifestResourceFlags, uint)
 
-BEGIN_ENUM(GenericParamFlags_t, uint16)
+BEGIN_ENUM(GenericParamFlags, uint16)
 {
     // Variance of type parameters, only applicable to generic parameters
     // for generic interfaces and delegates
@@ -1507,7 +1511,7 @@ BEGIN_ENUM(GenericParamFlags_t, uint16)
     GenericParamFlags_NotNullableValueTypeConstraint   =   0x0008, // type argument must be a value type but not Nullable
     GenericParamFlags_DefaultConstructorConstraint = 0x0010, // type argument must have a public default constructor
 }
-END_ENUM(GenericParamFlags_t, uint16)
+END_ENUM(GenericParamFlags, uint16)
 
 #if 0 // TODO This is copy/pasted from the web and should be gradually
       // worked into types/defines/enums, or deleted because it already was. And cross check with ECMA .pdf.
@@ -2247,7 +2251,7 @@ struct stderr_stream : stream
 };
 
 void
-print_fixed(const MetadataType*, Image*, uint table, uint row, uint column, void* data, uint size)
+PrintFixed(const MetadataType*, Image*, uint table, uint row, uint column, void* data, uint size)
 {
     char buf[64];
     uint64 i = 0;
@@ -2379,7 +2383,7 @@ const MetadataTypeFunctions MetadataType_Fixed =
 {
     MetatadataReadFixed,
     MetadataGetFixedSize,
-    print_fixed,
+    PrintFixed,
 };
 
 const MetadataTypeFunctions MetadataType_blob_functions =
@@ -2395,7 +2399,7 @@ PrintString(const MetadataType* type, Image* image, uint table, uint row, uint c
 
 // TODO should format into memory
 void
-print_guid(const MetadataType* type, Image* image, uint table, uint row, uint column, void* data, uint size);
+PrintGuid(const MetadataType* type, Image* image, uint table, uint row, uint column, void* data, uint size);
 
 // TODO should format into memory
 void
@@ -2420,7 +2424,7 @@ const MetadataTypeFunctions MetadataType_guid_functions =
 {
     MetatadataReadGuid,
     MetadataGetGuidSize,
-    print_guid,
+    PrintGuid,
 };
 
 const MetadataTypeFunctions MetadataType_ustring_functions =
@@ -2460,13 +2464,13 @@ const MetadataType MetadataType_guid                  = { "guid", &MetadataType_
 const MetadataType MetadataType_string                = { "string", &MetadataType_string_functions };
 
 // table indices
-const MetadataType MetadataType_AssemblyRef           = { "AssemblyRef", &MetadataType_Index, {AssemblyRef} };
-const MetadataType MetadataType_Field                 = { "Field", &MetadataType_Index, {Field} };
-const MetadataType MetadataType_GenericParam          = { "GenericParam", &MetadataType_Index, {GenericParam} };
-const MetadataType MetadataType_MethodDef             = { "MethodDef", &MetadataType_Index, {MethodDef} };
-const MetadataType MetadataType_ModuleRef             = { "ModuleRef", &MetadataType_Index, {ModuleRef} };
-const MetadataType MetadataType_Property              = { "Property", &MetadataType_Index, {Property} };
-const MetadataType MetadataType_TypeDef               = { "TypeDef", &MetadataType_Index, {TypeDef} };
+const MetadataType MetadataType_AssemblyRef           = { "AssemblyRef", &MetadataType_Index, {kAssemblyRef} };
+const MetadataType MetadataType_Field                 = { "Field", &MetadataType_Index, {kField} };
+const MetadataType MetadataType_GenericParam          = { "GenericParam", &MetadataType_Index, {kGenericParam} };
+const MetadataType MetadataType_MethodDef             = { "MethodDef", &MetadataType_Index, {kMethodDef} };
+const MetadataType MetadataType_ModuleRef             = { "ModuleRef", &MetadataType_Index, {kModuleRef} };
+const MetadataType MetadataType_Property              = { "Property", &MetadataType_Index, {kProperty} };
+const MetadataType MetadataType_TypeDef               = { "TypeDef", &MetadataType_Index, {kTypeDef} };
 
 // coded indices
 const MetadataType MetadataType_CustomAttributeType   = { "CustomAttributeType", &MetadataType_CodedIndex, { CodedIndex(CustomAttributeType)} };
@@ -2484,11 +2488,11 @@ const MetadataType MetadataType_TypeDefOrRef          = { "TypeDefOrRef", &Metad
 const MetadataType MetadataType_TypeOrMethodDef       = { "TypeOrMethodDef", &MetadataType_CodedIndex, { CodedIndex(TypeOrMethodDef)} };
 
 // Lists go to end of table, or start of next list, referenced from next element of same table
-const MetadataType MetadataType_EventList             = { "EventList", &MetadataType_IndexList, {Event} };
-const MetadataType MetadataType_FieldList             = { "FieldList", &MetadataType_IndexList, {Field} };
-const MetadataType MetadataType_MethodList            = { "MethodList", &MetadataType_IndexList, {MethodDef} };
-const MetadataType MetadataType_ParamList             = { "ParamList", &MetadataType_IndexList, {Param} };
-const MetadataType MetadataType_PropertyList          = { "PropertyList", &MetadataType_IndexList, {Property} };
+const MetadataType MetadataType_EventList             = { "EventList", &MetadataType_IndexList, {kEvent} };
+const MetadataType MetadataType_FieldList             = { "FieldList", &MetadataType_IndexList, {kField} };
+const MetadataType MetadataType_MethodList            = { "MethodList", &MetadataType_IndexList, {kMethodDef} };
+const MetadataType MetadataType_ParamList             = { "ParamList", &MetadataType_IndexList, {kParam} };
+const MetadataType MetadataType_PropertyList          = { "PropertyList", &MetadataType_IndexList, {kProperty} };
 const MetadataType MetadataType_Unused                = { "Unused" /* TODO runtime error */ };
 const MetadataType MetadataType_NotStored             = { "NotStored", &MetadataType_Fixed };
 
@@ -2732,12 +2736,12 @@ struct EmptyBase
                                                                                 \
 /*table0x2A*/ METADATA_TABLE (GenericParam, NOTHING,                            \
     METADATA_COLUMN2 (Number, uint16)                                           \
-    METADATA_COLUMN3 (Flags, uint16, GenericParamFlags_t)                       \
+    METADATA_COLUMN3 (Flags, uint16, GenericParamFlags)                       \
     METADATA_COLUMN3 (Owner, TypeOrMethodDef, TypeOrMethodDef)                \
     METADATA_COLUMN2 (Name, string))                                            \
                                                                                 \
 /*table0x2B*/ METADATA_TABLE (MethodSpec, NOTHING,                              \
-    METADATA_COLUMN3 (Method, MethodDefOrRef, Method_t)                         \
+    METADATA_COLUMN3 (Method, MethodDefOrRef, Method)                         \
     METADATA_COLUMN2 (Instantiation, blob))                                     \
                                                                                 \
 /*table0x2C*/ METADATA_TABLE (GenericParamConstraint, NOTHING,                  \
@@ -2762,17 +2766,17 @@ struct EmptyBase
 #define metadata_schema_TYPED_Extends           voidp_TODO /* union? */
 #define metadata_schema_TYPED_FieldList         std::vector<Field_t*>
 #define metadata_schema_TYPED_Interface         Interface*
-#define metadata_schema_TYPED_MemberRefParent   Parent_t
-#define metadata_schema_TYPED_MethodList        std::vector<Method_t*>
+#define metadata_schema_TYPED_MemberRefParent   Parent
+#define metadata_schema_TYPED_MethodList        std::vector<Method*>
 #define metadata_schema_TYPED_Name              String
 #define metadata_schema_TYPED_ParamList         std::vector<Param_t*>
 #define metadata_schema_TYPED_PropertyList      std::vector<Property_t*>
-//#define metadata_schema_TYPED_Parent            Parent_t
+//#define metadata_schema_TYPED_Parent            Parent
 #define metadata_schema_TYPED_RVA               uint
 #define metadata_schema_TYPED_ResolutionScope   voidp_TODO /* union? */
 #define metadata_schema_TYPED_Sequence          uint16
 #define metadata_schema_TYPED_Signature         Signature
-#define metadata_schema_TYPED_TypeDef           Type_t*
+#define metadata_schema_TYPED_TypeDef           Type*
 #define metadata_schema_TYPED_TypeDefOrRef      voidp_TODO /* union? */
 #define metadata_schema_TYPED_TypeName          String
 #define metadata_schema_TYPED_TypeNameSpace     String
@@ -2970,9 +2974,7 @@ METADATA_TABLES
 };
 #undef METADATA_TABLE
 
-const char * GetTableName (uint a)
-{
-static const char * const table_names [ ] =
+static const char * const table_name [ ] =
 {
 #undef METADATA_TABLE
 #undef METADATA_COLUMN2
@@ -2983,12 +2985,9 @@ static const char * const table_names [ ] =
 METADATA_TABLES
 #undef METADATA_TABLE
 };
-    if (a < CountOf (table_names))
-        return table_names [a];
-    return "unknown";
-}
+#define table_name(x) table_name[x]
 
-static const MetadataTableSchema *  const metadata_int_to_table_schema [ ] =
+static const MetadataTableSchema *  const table_schema [ ] =
 {
 #undef METADATA_TABLE
 #undef METADATA_COLUMN2
@@ -3070,7 +3069,7 @@ struct Image : ImageZero
 
     void ComputeRowSize (uint table_index)
     {
-        const MetadataTableSchema* schema = metadata_int_to_table_schema [table_index];
+        const MetadataTableSchema* schema = table_schema [table_index];
         if (!schema)
             return;
         MetadataTable* table = &metadata.raw.array[table_index];
@@ -3096,7 +3095,7 @@ struct Image : ImageZero
                 }
             }
         }
-        printf("ComputeRowSize(%s):%X\n", GetTableName (table_index), size);
+        printf("ComputeRowSize(%s):%X\n", table_name (table_index), size);
         table->row_size = size;
     }
 
@@ -3111,11 +3110,11 @@ struct Image : ImageZero
     {
         stdout_stream out;
         stderr_stream err;
-        const MetadataTableSchema* schema = metadata_int_to_table_schema [table_index];
+        const MetadataTableSchema* schema = table_schema [table_index];
         const MetadataTableSchemaColumn *fields = schema ? schema->fields : 0;
         const uint count = schema ? schema->count : 0u;
 
-        out.printf("%s[0x%08X] ", GetTableName (table_index), r);
+        out.printf("%s[0x%08X] ", table_name (table_index), r);
         for (uint i = 0; i < count; ++i)
         {
             const MetadataTableSchemaColumn *field = &fields[i];
@@ -3139,10 +3138,10 @@ struct Image : ImageZero
         stderr_stream err;
 
         // TODO less printf
-        std::string prefix = StringFormat ("table 0x%08X (%s)", table_index, GetTableName (table_index));
+        std::string prefix = StringFormat ("table 0x%08X (%s)", table_index, table_name (table_index));
         const char* prefix_cstr = prefix.c_str();
 
-        const MetadataTableSchema* schema = metadata_int_to_table_schema [table_index];
+        const MetadataTableSchema* schema = table_schema [table_index];
         const MetadataTableSchemaColumn *fields = schema ? schema->fields : 0;
         const uint count = schema ? schema->count : 0u;
 
@@ -3157,12 +3156,12 @@ struct Image : ImageZero
         for (i = 0; i < count; ++i)
         {
             const MetadataTableSchemaColumn *field = &fields[i];
-            out.printf("%s layout type:%s name:%s offset:0x%08X size:0x%08X\n", GetTableName (table_index), field->type->name, field->name, metadata.raw.array[table_index].column[i].offset, metadata.raw.array[table_index].column[i].size);
+            out.printf("%s layout type:%s name:%s offset:0x%08X size:0x%08X\n", table_name (table_index), field->type->name, field->name, metadata.raw.array[table_index].column[i].offset, metadata.raw.array[table_index].column[i].size);
         }
         char* p = (char*)metadata.raw.array[table_index].raw_base + (r - 1) * metadata.raw.array[table_index].row_size;
         for (;r <= metadata.raw.array [table_index].row_count; ++r)
         {
-            out.printf("%s[0x%08X] ", GetTableName (table_index), r);
+            out.printf("%s[0x%08X] ", table_name (table_index), r);
             DumpRow (table_index, r, p);
             for (i = 0; i < count; ++i)
                 p += metadata.raw.array[table_index].column[i].size;
@@ -3189,13 +3188,13 @@ struct Image : ImageZero
             ThrowString (StringFormat ("incorrect PE00 signature %s", file_name));
         printf ("pe: %c%c\\0x%08X\\0x%08X\n", pe [0], pe [1], pe [2], pe [3]);
         nt = (NtHeaders*)pe;
-        printf ("Machine:0x%08X\n", (uint)nt->FileHeader.Machine);
-        printf ("NumberOfSections:0x%08X\n", (uint)nt->FileHeader.NumberOfSections);
-        printf ("TimeDateStamp:0x%08X\n", (uint)nt->FileHeader.TimeDateStamp);
-        printf ("PointerToSymbolTable:0x%08X\n", (uint)nt->FileHeader.PointerToSymbolTable);
-        printf ("NumberOfSymbols:0x%08X\n", (uint)nt->FileHeader.NumberOfSymbols);
-        printf ("SizeOfOptionalHeader:0x%08X\n", (uint)nt->FileHeader.SizeOfOptionalHeader);
-        printf ("Characteristics:0x%08X\n", (uint)nt->FileHeader.Characteristics);
+        printf ("Machine:0x%08X\n", (uint)nt->file_header.Machine);
+        printf ("NumberOfSections:0x%08X\n", (uint)nt->file_header.NumberOfSections);
+        printf ("TimeDateStamp:0x%08X\n", (uint)nt->file_header.TimeDateStamp);
+        printf ("PointerToSymbolTable:0x%08X\n", (uint)nt->file_header.PointerToSymbolTable);
+        printf ("NumberOfSymbols:0x%08X\n", (uint)nt->file_header.NumberOfSymbols);
+        printf ("SizeOfOptionalHeader:0x%08X\n", (uint)nt->file_header.SizeOfOptionalHeader);
+        printf ("Characteristics:0x%08X\n", (uint)nt->file_header.Characteristics);
         opt32 = (OptionalHeader32*)(&nt->OptionalHeader);
         opt64 = (OptionalHeader64*)(&nt->OptionalHeader);
         uint opt_magic = Unpack(opt32->Magic);
@@ -3203,7 +3202,7 @@ struct Image : ImageZero
         printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, (void*)opt32, (void*)opt64);
         NumberOfRvaAndSizes = Unpack(opt32 ? &opt32->NumberOfRvaAndSizes : &opt64->NumberOfRvaAndSizes);
         printf ("opt.rvas:0x%08X\n", NumberOfRvaAndSizes);
-        number_of_sections = nt->FileHeader.NumberOfSections;
+        number_of_sections = nt->file_header.NumberOfSections;
         printf ("number_of_sections:0x%08X\n", number_of_sections);
         SectionHeader* section_header = nt->first_section_header ();
         uint i = 0;
@@ -3305,7 +3304,7 @@ unknown_stream:
             const bool present = (valid & mask) != 0;
             if (!present)
             {
-                printf ("%X(%s) not present\n", i, GetTableName (i));
+                printf ("%X(%s) not present\n", i, table_name (i));
                 continue;
             }
             metadata.raw.array [i].present = true;
@@ -3317,7 +3316,7 @@ unknown_stream:
             const bool present = (valid & mask) != 0;
             if (!present)
                 continue;
-            printf ("%X(%s).row_count:%X\n", i, GetTableName (i), metadata.raw.array [i].row_count);
+            printf ("%X(%s).row_count:%X\n", i, table_name (i), metadata.raw.array [i].row_count);
         }
 
         // After row counts, coded index size and index size.
@@ -3337,7 +3336,7 @@ unknown_stream:
                 continue;
             ComputeRowSize (i);
             metadata.raw.array [i].raw_base = table_base;
-            printf ("%s at p:%p metadata_offset:%X file_offset:%X\n", GetTableName(i), table_base, (uint)((char*)table_base - (char*)metadata_root), (uint)((char*)table_base - (char*)base));
+            printf ("%s at p:%p metadata_offset:%X file_offset:%X\n", table_name(i), table_base, (uint)((char*)table_base - (char*)metadata_root), (uint)((char*)table_base - (char*)base));
             table_base += metadata.raw.array [i].row_size * metadata.raw.array [i].row_count;
         }
 
@@ -3350,7 +3349,7 @@ unknown_stream:
             bool present = (valid & mask) != 0;
             if (present)
             {
-                fprintf (stderr, "table 0x%08X (%s) has 0x%08X rows (%s)\n", i, GetTableName (i), metadata.raw.array [i].row_count, (sorted & mask) ? "sorted" : "unsorted");
+                fprintf (stderr, "table 0x%08X (%s) has 0x%08X rows (%s)\n", i, table_name (i), metadata.raw.array [i].row_count, (sorted & mask) ? "sorted" : "unsorted");
 #if 0
                 [&]
                 {
@@ -3370,7 +3369,7 @@ unknown_stream:
             }
             else
             {
-                fprintf (stderr, "table 0x%08X (%s) is absent\n", i, GetTableName (i));
+                fprintf (stderr, "table 0x%08X (%s) is absent\n", i, table_name (i));
             }
         }
     }
@@ -3422,7 +3421,7 @@ PrintIndex(const MetadataType* type, Image* image, uint table, uint row, uint co
     uint table_index = type->table_index;
     MetadataTable* t = &image->metadata.raw.array[table_index];
     void* p = ((char*)t->raw_base) + t->row_size * index;
-    printf(" PrintIndex:%s[%X][%X] => %s/%p ", GetTableName (table), row, column, GetTableName (table_index), p);
+    printf(" PrintIndex:%s[%X][%X] => %s/%p ", table_name (table), row, column, table_name (table_index), p);
 
     Assert (index <= t->row_count);
 
@@ -3456,7 +3455,7 @@ PrintCodedIndex(const MetadataType* type, Image* image, uint table, uint row, ui
 
     MetadataTable* t = &image->metadata.raw.array[table_index];
     void* p = ((char*)t->raw_base) + t->row_size * index;
-    printf(" PrintCodedIndex:%s[%X][%X] => %s/%p ", GetTableName (table), row, column, GetTableName ((uint)table_index), p);
+    printf(" PrintCodedIndex:%s[%X][%X] => %s/%p ", table_name (table), row, column, table_name ((uint)table_index), p);
 
     Assert (index <= t->row_count);
 
@@ -3509,15 +3508,15 @@ PrintBlob(const MetadataType* type, Image* image, uint table, uint row, uint col
 (g)->bytes[15] \
 
 void
-print_guid(const MetadataType* type, Image* image, uint table, uint row, uint column, void* data, uint size)
+PrintGuid(const MetadataType* type, Image* image, uint table, uint row, uint column, void* data, uint size)
 {
     uint a = Unpack2or4LE (data, image->guid_size);
     if (!a)
         return;
     --a;
-    //fputs(image->print_guid(a), stdout);
+    //fputs(image->PrintGuid(a), stdout);
     Guid_t* b = image->GetGuid(a);
-    printf("print_guid:%X %p " GUID_FORMAT, a, b, GUID_BYTES(b));
+    printf("PrintGuid:%X %p " GUID_FORMAT, a, b, GUID_BYTES(b));
 }
 
 uint
@@ -3543,7 +3542,7 @@ ComputeIndexSize (Image* image, uint /* todo enum */ table_index)
 {
     const uint row_count = image->metadata.raw.array [table_index].row_count;
     uint result = (row_count <= 0xFFFFu) ? 2u : 4u;
-    const char* name = GetTableName (table_index);
+    const char* name = table_name (table_index);
     printf("ComputeIndexSize %X(%s) cap:%X result:%X\n", table_index, name, 0xFFFFu, result);
     image->metadata.raw.array [table_index].index_size = result;
 }
@@ -3663,7 +3662,7 @@ main (int argc, char** argv)
     Image im;
 #define X(x) printf ("%s %#x\n", #x, (int)x)
 X (sizeof (DosHeader));
-X (sizeof (FileHeader_t));
+X (sizeof (FileHeader));
 X (sizeof (NtHeaders));
 X (sizeof (SectionHeader));
 X (CodedIndices.array[CodedIndex(TypeDefOrRef)].tag_size);
