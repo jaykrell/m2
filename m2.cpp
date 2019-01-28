@@ -4,7 +4,7 @@
 // https://www.ntcore.com/files/dotnetformat.htm
 // https://www.ecma-international.org/publications/files/ECMA-ST/ECMA-335.pdf.
 
-// Implementation language is C++. At least C+11.
+// Implementation language is C++. At least C++11.
 // The following features of C++ are desirable:
 //   RAII (destructors, C++98)
 //   enum class (C++11)
@@ -16,6 +16,9 @@
 //   explicit operator bool (C++11 but easy to emulate in C++98)
 //   variadic template (C++11, really needed?)
 //   variadic macros (really needed?)
+//   std::vector
+//   std::string
+//   Probably more of STL.
 //
 // C++ library dependencies are likely to be removed, but we'll see.
 
@@ -32,8 +35,8 @@
 //#define _LARGEFILE_SOURCE
 //#define _LARGEFILE64_SOURCE
 
-//#define _cpp_max max // old compiler/library compat
-//#define _cpp_min min // old compiler/library compat
+#define _cpp_max max // old compiler/library compat
+#define _cpp_min min // old compiler/library compat
 
 #ifndef HAS_TYPED_ENUM
 #if __cplusplus >= 201103L || _MSC_VER >= 1500 // TODO test more compilers
@@ -128,11 +131,11 @@ using std::vector;
 #endif
 //#include <algorithm> // TODO? remove STL dependency?
 #else
-//#include "stl.h"
+#include "stl.h"
 #endif
 // Portable mini/max.
-template<class T> inline const T& Max(const T& x, const T& y) {return (x < y ? y : x); }
-template<class T> inline const T& Min(const T& x, const T& y) {return (y < x ? y : x); }
+template<class T> inline const T& Max(const T& x, const T& y) {return x < y ? y : x; }
+template<class T> inline const T& Min(const T& x, const T& y) {return y < x ? y : x; }
 
 #ifdef _WIN32
 #define NOMINMAX 1
@@ -249,7 +252,7 @@ StringFormatVa (const char *format, va_list va)
     // Some systems, including Linux/amd64, cannot consume a
     // va_list multiple times. It must be copied first.
     // Passing the parameter twice does not work.
-#ifndef _MSC_VER
+#if !_WIN32
     va_list va2;
 #ifdef __va_copy
     __va_copy (va2, va);
@@ -258,7 +261,7 @@ StringFormatVa (const char *format, va_list va)
 #endif
 #endif
     vector<char> s((size_t)string_vformat_length(format, va));
-#if _MSC_VER
+#if _WIN32
     _vsnprintf (&s [0], s.size(), format, va);
 #else
     vsnprintf (&s [0], s.size(), format, va2);
@@ -281,7 +284,7 @@ StringFormat (const char *format, ...)
 void
 ThrowString (const string& a)
 {
-    fprintf (stderr, "%s\n", a.c_str());
+    //fprintf (stderr, "%s\n", a.c_str());
     throw a;
     //abort ();
 }
@@ -447,7 +450,7 @@ struct DataDirectory_t
     uintLE Size;
 };
 
-struct OptionalHeader32_t
+struct OptionalHeader32
 {
     uintLE16 Magic;
     uint8  MajorLinkerVersion;
@@ -482,7 +485,7 @@ struct OptionalHeader32_t
     //DataDirectory_t DataDirectory_t[NumberOfRvaAndSizes];
 };
 
-struct OptionalHeader64_t
+struct OptionalHeader64
 {
     uintLE16 Magic;
     uint8  MajorLinkerVersion;
@@ -844,8 +847,10 @@ struct Blob_t
 
 struct IMetadataTable
 {
-    virtual void SetSize(size_t) = 0;
-    virtual ~IMetadataTable() { }
+    virtual void iresize(size_t) { };
+    virtual void* ibase() { return 0; };
+    virtual size_t isize() { return 0; };
+//    virtual ~IMetadataTable() { }
 };
 
 struct Member
@@ -2060,7 +2065,7 @@ struct Image;
 struct MetadataTypeFunctions
 {
     // Virtual functions, but allowing for static construction.
-    void (*Read)(const MetadataType*, void*);
+    void (*Read)(const MetadataType*, const void* file, void* mem);
     uint (*GetSize)(const MetadataType*, Image*);
     //void (*ToString)(const MetadataType*, void*);
     void (*Print)(const MetadataType*, Image*, uint table, uint row, uint field, void* data, uint size);
@@ -2330,43 +2335,51 @@ GetCodedIndexSize (Image* image, CodedIndex coded_index);
 #undef CODED_INDEX
 
 void
-MetatadataReadFixed (const MetadataType* type, void* output)
+MetatadataReadFixed (const MetadataType* type, const void* file, void* mem)
 {
+    printf("MetatadataReadFixed\n");
 }
 
 void
-MetatadataReadBlob (const MetadataType* type, void* output)
+MetatadataReadBlob (const MetadataType* type, const void* file, void* mem)
 {
+    printf("MetatadataReadBlob\n");
 }
 
 void
-MetatadataReadString (const MetadataType* type, void* output)
+MetatadataReadString (const MetadataType* type, const void* file, void* mem)
 {
+    printf("MetatadataReadString\n");
 }
 
 void
-MetatadataReadUString (const MetadataType* type, void* output)
+MetatadataReadUString (const MetadataType* type, const void* file, void* mem)
 {
+    printf("MetatadataReadUString\n");
 }
 
 void
-MetadataReadCodedIndex (const MetadataType* type, void* output)
+MetadataReadCodedIndex (const MetadataType* type, const void* file, void* mem)
 {
+    printf("MetadataReadCodedIndex\n");
 }
 
 void
-MetatadataReadIndex (const MetadataType* type, void* output)
+MetatadataReadIndex (const MetadataType* type, const void* file, void* mem)
 {
+    printf("MetatadataReadIndex\n");
 }
 
 void
-MetatadataReadIndexList (const MetadataType* type, void* output)
+MetatadataReadIndexList (const MetadataType* type, const void* file, void* mem)
 {
+    printf("MetatadataReadIndexList\n");
 }
 
 void
-MetatadataReadGuid (const MetadataType* type, void* output)
+MetatadataReadGuid (const MetadataType* type, const void* file, void* mem)
 {
+    printf("MetatadataReadGuid\n");
 }
 
 uint
@@ -2538,17 +2551,19 @@ const MetadataType MetadataType_NotStored             = { "NotStored", &Metadata
 #define MetadataType_Unused             MetadataType_Unused
 //#define MetadataType_Parent           MetadataType_MemberRefParent
 
-struct MetadataTableSchemaField
+struct MetaTableStaticSchemaField
 {
     const char* name;
     const MetadataType* type; // old compilers do not allow reference here, with initialization
+    uint mem_offset;
 };
 
-struct MetadataTableSchema
+struct MetadataTableStaticSchema_t
 {
     const char *name;
-    uint count;
-    const MetadataTableSchemaField* fields;
+    uint mem_row_size;
+    uint field_count;
+    const MetaTableStaticSchemaField* fields;
     //void (*Unpack)();
 };
 
@@ -2561,224 +2576,227 @@ struct EmptyBase
 // The ordering of the tables here is important -- it assigns their enums.
 // The ordering of the fields within the tables is also important.
 // The second parameter to METADATA_FIELD can go away.
+// Rows have a strongly typed in-memory form, formed on demand,
+// an a very dynamic in-file form.
+// Rows other rows via indices, coded indices, or pointers; or lists/vectors.
 #define METADATA_TABLES                                                 \
 /* table0x00*/ METADATA_TABLE (Module, NOTHING,                         \
-    METADATA_FIELD2 (Generation, uint16) /* ignore */                  \
-    METADATA_FIELD (Name)                                              \
-    METADATA_FIELD2 (Mvid, guid)                                       \
-    METADATA_FIELD2 (EncId, guid) /* ignore */                         \
-    METADATA_FIELD2 (EncBaseId, guid)) /* ignore */                    \
+    METADATA_FIELD2 (Module, Generation, uint16) /* ignore */           \
+    METADATA_FIELD (Module, Name)                                       \
+    METADATA_FIELD2 (Module, Mvid, guid)                                \
+    METADATA_FIELD2 (Module, EncId, guid) /* ignore */                  \
+    METADATA_FIELD2 (Module, EncBaseId, guid)) /* ignore */             \
                                                                         \
 /*table0x01*/ METADATA_TABLE (TypeRef, NOTHING,                         \
-    METADATA_FIELD (ResolutionScope)                                   \
-    METADATA_FIELD (TypeName)                                          \
-    METADATA_FIELD (TypeNameSpace))                                    \
+    METADATA_FIELD (TypeRef, ResolutionScope)                           \
+    METADATA_FIELD (TypeRef, TypeName)                                  \
+    METADATA_FIELD (TypeRef, TypeNameSpace))                            \
                                                                         \
 /*table0x02*/ METADATA_TABLE (TypeDef, NOTHING,                         \
-    METADATA_FIELD3 (Flags, uint, TypeFlags)                           \
-    METADATA_FIELD (TypeName)                                          \
-    METADATA_FIELD (TypeNameSpace)                                     \
-    METADATA_FIELD (Extends)                                           \
-    METADATA_FIELD (FieldList)                                         \
-    METADATA_FIELD (MethodList))                                       \
+    METADATA_FIELD3 (TypeDef, Flags, uint, TypeFlags)                   \
+    METADATA_FIELD (TypeDef, TypeName)                                  \
+    METADATA_FIELD (TypeDef, TypeNameSpace)                             \
+    METADATA_FIELD (TypeDef, Extends)                                   \
+    METADATA_FIELD (TypeDef, FieldList)                                 \
+    METADATA_FIELD (TypeDef, MethodList))                               \
                                                                         \
 /*table0x03*/ METADATA_TABLE_UNUSED(3)                                  \
                                                                         \
 /*table0x04*/ METADATA_TABLE (Field, : Member,                          \
-    METADATA_FIELD3 (Flags, uint16, FieldFlags)                        \
-    METADATA_FIELD (Name)                                              \
-    METADATA_FIELD (signature))                                        \
+    METADATA_FIELD3 (Field, Flags, uint16, FieldFlags)                  \
+    METADATA_FIELD (Field, Name)                                        \
+    METADATA_FIELD (Field, signature))                                  \
                                                                         \
 /*table0x05*/ METADATA_TABLE_UNUSED(5) /*MethodPtr nonstandard*/        \
                                                                         \
 /*table0x06*/METADATA_TABLE (MethodDef, NOTHING,                        \
-    METADATA_FIELD2 (RVA, uint)                                        \
-    METADATA_FIELD3 (ImplFlags, uint16, MethodDefImplFlags) /* TODO higher level support */     \
-    METADATA_FIELD3 (Flags, uint16, MethodDefFlags) /* TODO higher level support */             \
-    METADATA_FIELD (Name)                                              \
-    METADATA_FIELD (signature)      /* Blob heap, 7 bit encode/decode */         \
-    METADATA_FIELD (ParamList)) /* Param table, start, until table end, or start of next MethodDef; index into Param table, 2 or 4 bytes */ \
+    METADATA_FIELD2 (MethodDef, RVA, uint)                              \
+    METADATA_FIELD3 (MethodDef, ImplFlags, uint16, MethodDefImplFlags) /* TODO higher level support */     \
+    METADATA_FIELD3 (MethodDef, Flags, uint16, MethodDefFlags) /* TODO higher level support */             \
+    METADATA_FIELD (MethodDef, Name)                                              \
+    METADATA_FIELD (MethodDef, signature)      /* Blob heap, 7 bit encode/decode */         \
+    METADATA_FIELD (MethodDef, ParamList)) /* Param table, start, until table end, or start of next MethodDef; index into Param table, 2 or 4 bytes */ \
                                                                         \
 /*table0x07*/ METADATA_TABLE_UNUSED(7) /*ParamPtr nonstandard*/         \
                                                                         \
 /*table0x08*/METADATA_TABLE (Param, NOTHING,                            \
-    METADATA_FIELD2 (Flags, uint16)                                    \
-    METADATA_FIELD2 (Sequence, uint16)                                 \
-    METADATA_FIELD (Name))                                             \
+    METADATA_FIELD2 (Param, Flags, uint16)                              \
+    METADATA_FIELD2 (Param, Sequence, uint16)                           \
+    METADATA_FIELD (Param, Name))                                       \
                                                                         \
 /*table0x09*/METADATA_TABLE (InterfaceImpl, NOTHING,                    \
-    METADATA_FIELD2 (Class, TypeDef)                                   \
-    METADATA_FIELD (Interface)) /* TypeDefOrRef or Spec */             \
-                                                                        \
-/*table0x0A*/METADATA_TABLE (MemberRef, NOTHING,                        \
-    METADATA_FIELD2 (Class, MemberRefParent)                           \
-    METADATA_FIELD (Name)       /*string*/                             \
-    METADATA_FIELD (signature)) /*blob*/                               \
-                                                                        \
-/*table0x0B*/METADATA_TABLE (Constant, NOTHING,                         \
-    METADATA_FIELD2 (Type, uint8)                                      \
-    METADATA_FIELD2 (Pad, uint8)                                       \
-    METADATA_FIELD3 (Parent, HasConstant, voidp_TODO)                  \
-    METADATA_FIELD2 (Value, blob)                                      \
-    METADATA_FIELD3 (IsNull, NotStored, bool))                         \
-                                                                        \
-/*table0x0C*/METADATA_TABLE (CustomAttribute, NOTHING,                  \
-    METADATA_FIELD2 (Parent, HasCustomAttribute)                       \
-    METADATA_FIELD2 (Type, CustomAttributeType)                        \
-    METADATA_FIELD2 (Value, blob))                                     \
-                                                                        \
-/*table0x0D*/METADATA_TABLE (FieldMarshal, NOTHING,                     \
-    METADATA_FIELD3 (Parent, HasFieldMarshal, FieldOrParam*)         \
-    METADATA_FIELD2 (NativeType, blob))                                \
-                                                                        \
-/*table0x0E*/METADATA_TABLE (DeclSecurity, NOTHING,                     \
-    METADATA_FIELD3 (Action, uint16, DeclSecurityAction)             \
-    METADATA_FIELD3 (Parent_or_Type_TODO, HasDeclSecurity, HasDeclSecurity)  \
-    METADATA_FIELD2 (PermissionSet_or_Value_TODO, blob))                       \
-                                                                        \
-/*table0x0F*/ METADATA_TABLE (ClassLayout, NOTHING,                     \
-    METADATA_FIELD2 (PackingSize, uint16)                              \
-    METADATA_FIELD2 (ClassSize, uint)                                \
-    METADATA_FIELD2 (Parent, TypeDef))                                 \
-                                                                        \
-/*table0x10*/ METADATA_TABLE (FieldLayout, NOTHING,                     \
-    METADATA_FIELD2 (Offset, uint)                                   \
-    METADATA_FIELD3 (Field, Field, FieldRow*))                          \
-                                                                        \
-/*table0x11*/ METADATA_TABLE (StandaloneSig, NOTHING,                   \
-    METADATA_FIELD2 (signature, blob))                                 \
-                                                                        \
-/*table0x12*/ METADATA_TABLE (EventMap, NOTHING,                        \
-    METADATA_FIELD2 (Parent, TypeDef)                                  \
-    METADATA_FIELD (EventList))                                        \
-                                                                        \
-/*table0x13*/ METADATA_TABLE_UNUSED(13)                                 \
-                                                                        \
-/*table0x14*/ METADATA_TABLE (Event, NOTHING,                           \
-    METADATA_FIELD3 (Flags, uint16, EventFlags)                        \
-    METADATA_FIELD2 (Name, string)                                     \
-    METADATA_FIELD2 (EventType, TypeDefOrRef))                         \
-                                                                        \
-/*table0x15*/ METADATA_TABLE (PropertyMap, NOTHING,                     \
-    METADATA_FIELD2 (Parent, TypeDef)                                  \
-    METADATA_FIELD (PropertyList))                                     \
-                                                                        \
-/*table0x16*/ METADATA_TABLE_UNUSED(16)                                 \
-                                                                        \
-/*table0x17*/ METADATA_TABLE (Property, NOTHING,                        \
-    METADATA_FIELD2 (Flags, uint16)                                    \
-    METADATA_FIELD2 (Name, string)                                     \
-    METADATA_FIELD2 (Type, blob))                                      \
-                                                                        \
-/* .property and .event                                                 \
-   Links Events and Properties to specific methods.                     \
-   For example one Event can be associated to more methods.             \
-   A property uses this table to associate get/set methods. */          \
-/*table0x18*/ METADATA_TABLE (metadata_MethodSemantics, NOTHING,        \
-    METADATA_FIELD3 (Semantics, uint16, MethodSemanticsFlags)        \
-    METADATA_FIELD3 (Method, MethodDef, MethodDefRow*) /* index into MethodDef table, 2 or 4 bytes */ \
-    METADATA_FIELD3 (Association, HasSemantics, MethodSemanticsAssociation_t)) /* Event or Property, CodedIndex */ \
-                                                                                \
-/*table0x19*/ METADATA_TABLE (MethodImpl, NOTHING,                              \
-    METADATA_FIELD3 (Class, TypeDef, Class_t*)                                 \
-    METADATA_FIELD3 (MethodBody, MethodDefOrRef, MethodBody_t*)                \
-    METADATA_FIELD3 (MethodDeclaration, MethodDefOrRef, MethodDeclarationRow*)) \
-                                                                                \
-/*table0x1A*/ METADATA_TABLE (ModuleRef, NOTHING,                               \
-    METADATA_FIELD2 (Name, string))                                            \
-                                                                                \
-/*table0x1B*/ METADATA_TABLE (TypeSpec, NOTHING,                                \
-    METADATA_FIELD2 (signature, blob))                                         \
-                                                                                \
-/*table0x1C*/ METADATA_TABLE (ImplMap, NOTHING,                                 \
-    METADATA_FIELD3 (MappingFlags, uint16, PInvokeAttributes)                  \
-    METADATA_FIELD3 (MemberForwarded, MemberForwarded, MethodDefRow*)          \
-    METADATA_FIELD2 (ImportName, string)                                       \
-    METADATA_FIELD3 (ImportScope, ModuleRef, ModuleRefRow*))                   \
-                                                                                \
-/*table0x1D*/ METADATA_TABLE (FieldRVA, NOTHING,                                \
-    METADATA_FIELD2 (RVA, uint)                                                \
-    METADATA_FIELD3 (Field, Field, FieldRow*))                                  \
-                                                                                \
-/*table0x1E*/ METADATA_TABLE_UNUSED(1E)                                         \
-                                                                                \
-/*table0x1F*/ METADATA_TABLE_UNUSED(1F)                                         \
-                                                                                \
-/*table0x20*/ METADATA_TABLE (Assembly, NOTHING,                                \
-    METADATA_FIELD2 (HashAlgId, uint)                                          \
-    METADATA_FIELD2 (MajorVersion, uint16)                                     \
-    METADATA_FIELD2 (MinorVersion, uint16)                                     \
-    METADATA_FIELD2 (BuildNumber, uint16)                                      \
-    METADATA_FIELD2 (RevisionNumber, uint16)                                   \
-    METADATA_FIELD3 (Flags, uint, AssemblyFlags)                               \
-    METADATA_FIELD2 (PublicKey, blob)                                          \
-    METADATA_FIELD2 (Name, string)                                             \
-    METADATA_FIELD2 (Culture, string))                                         \
-                                                                                \
-/*table0x21*/ METADATA_TABLE (AssemblyProcessor, NOTHING,                       \
-    METADATA_FIELD2 (Processor, uint))                                       \
-                                                                                \
-/*table0x22*/ METADATA_TABLE (AssemblyOS, NOTHING,                              \
-    METADATA_FIELD2 (OSPlatformID, uint)                                     \
-    METADATA_FIELD2 (OSMajorVersion, uint)                                   \
-    METADATA_FIELD2 (OSMinorVersion, uint))                                  \
-                                                                                \
-/*table0x23*/ METADATA_TABLE (AssemblyRef, NOTHING,                             \
-    METADATA_FIELD2 (MajorVersion, uint16)                                     \
-    METADATA_FIELD2 (MinorVersion, uint16)                                     \
-    METADATA_FIELD2 (BuildNumber, uint16)                                      \
-    METADATA_FIELD2 (RevisionNumber, uint16)                                   \
-    METADATA_FIELD3 (Flags, uint, AssemblyFlags)                             \
-    METADATA_FIELD2 (PublicKey, blob)                                          \
-    METADATA_FIELD2 (Name, string)                                             \
-    METADATA_FIELD2 (Culture, string)                                          \
-    METADATA_FIELD2 (HashValue, blob))                                         \
-                                                                                \
-/*table0x24*/ METADATA_TABLE (AssemblyRefProcessor, NOTHING,                    \
-    METADATA_FIELD2 (Processor, uint)                                        \
-    METADATA_FIELD3 (AssemblyRef, AssemblyRef, uint /* index into AssemblyRef table but ignored */)) \
-                                                                                \
-/*table0x25*/ METADATA_TABLE (AssemblyRefOS, NOTHING,                           \
-    METADATA_FIELD2 (OSPlatformID, uint)                                       \
-    METADATA_FIELD2 (OSMajorVersion, uint)                                     \
-    METADATA_FIELD2 (OSMinorVersion, uint)                                     \
-    METADATA_FIELD3 (AssemblyRef, AssemblyRef, uint))                          \
-                                                                                \
-/*table0x26*/ METADATA_TABLE (File, NOTHING,                                    \
-    METADATA_FIELD3 (Flags, uint, FileFlags)                                   \
-    METADATA_FIELD2 (Name, string)                                             \
-    METADATA_FIELD2 (HashValue, blob))                                         \
-                                                                                \
-/*table0x27*/ METADATA_TABLE (ExportedType, NOTHING,                            \
-    METADATA_FIELD3 (Flags, uint, TypeFlags)                                   \
-    METADATA_FIELD3 (TypeDefId, uint, uint)                                    \
-    METADATA_FIELD  (TypeName)                                                 \
-    METADATA_FIELD  (TypeNameSpace)                                            \
-    METADATA_FIELD3 (Implementation, Implementation, MetadataToken))           \
-                                                                                \
-/*table0x28*/ METADATA_TABLE (ManifestResource, NOTHING,                        \
-    METADATA_FIELD2 (Offset, uint)                                             \
-    METADATA_FIELD3 (Flags, uint, ManifestResourceFlags)                       \
-    METADATA_FIELD2 (Name, string)                                             \
-    METADATA_FIELD3 (Implementation, Implementation, Implementation_t*))       \
-                                                                                \
-/*table0x29*/ METADATA_TABLE (NestedClass, NOTHING,                             \
-    METADATA_FIELD2 (NestedClass, TypeDef)                                     \
-    METADATA_FIELD2 (EnclosingClass, TypeDef))                                 \
-                                                                                \
-/*table0x2A*/ METADATA_TABLE (GenericParam, NOTHING,                            \
-    METADATA_FIELD2 (Number, uint16)                                           \
-    METADATA_FIELD3 (Flags, uint16, GenericParamFlags)                         \
-    METADATA_FIELD3 (Owner, TypeOrMethodDef, TypeOrMethodDef)                  \
-    METADATA_FIELD2 (Name, string))                                            \
-                                                                                \
-/*table0x2B*/ METADATA_TABLE (MethodSpec, NOTHING,                              \
-    METADATA_FIELD3 (Method, MethodDefOrRef, Method_t*)                        \
-    METADATA_FIELD2 (Instantiation, blob))                                     \
-                                                                                \
-/*table0x2C*/ METADATA_TABLE (GenericParamConstraint, NOTHING,                  \
-    METADATA_FIELD3 (Owner, GenericParam, GenericParamRow*)                    \
-    METADATA_FIELD2 (Constraint, TypeDefOrRef))                                \
+    METADATA_FIELD2 (InterfaceImpl, Class, TypeDef)                     \
+    METADATA_FIELD (InterfaceImpl, Interface)) /* TypeDefOrRef or Spec */   \
+                                                                            \
+/*table0x0A*/METADATA_TABLE (MemberRef, NOTHING,                            \
+    METADATA_FIELD2 (MemberRef, Class, MemberRefParent)                     \
+    METADATA_FIELD (MemberRef, Name)       /*string*/                       \
+    METADATA_FIELD (MemberRef, signature)) /*blob*/                         \
+                                                                            \
+/*table0x0B*/METADATA_TABLE (Constant, NOTHING,                             \
+    METADATA_FIELD2 (Constant, Type, uint8)                                 \
+    METADATA_FIELD2 (Constant, Pad, uint8)                                  \
+    METADATA_FIELD3 (Constant, Parent, HasConstant, voidp_TODO)             \
+    METADATA_FIELD2 (Constant, Value, blob)                                 \
+    METADATA_FIELD3 (Constant, IsNull, NotStored, bool))                    \
+                                                                            \
+/*table0x0C*/METADATA_TABLE (CustomAttribute, NOTHING,                      \
+    METADATA_FIELD2 (CustomAttribute, Parent, HasCustomAttribute)           \
+    METADATA_FIELD2 (CustomAttribute, Type, CustomAttributeType)            \
+    METADATA_FIELD2 (CustomAttribute, Value, blob))                         \
+                                                                            \
+/*table0x0D*/METADATA_TABLE (FieldMarshal, NOTHING,                         \
+    METADATA_FIELD3 (FieldMarshal, Parent, HasFieldMarshal, FieldOrParam*)  \
+    METADATA_FIELD2 (FieldMarshal, NativeType, blob))                       \
+                                                                            \
+/*table0x0E*/METADATA_TABLE (DeclSecurity, NOTHING,                         \
+    METADATA_FIELD3 (DeclSecurity, Action, uint16, DeclSecurityAction)      \
+    METADATA_FIELD3 (DeclSecurity, Parent_or_Type_TODO, HasDeclSecurity, HasDeclSecurity)  \
+    METADATA_FIELD2 (DeclSecurity, PermissionSet_or_Value_TODO, blob))      \
+                                                                            \
+/*table0x0F*/ METADATA_TABLE (ClassLayout, NOTHING,                         \
+    METADATA_FIELD2 (ClassLayout, PackingSize, uint16)                      \
+    METADATA_FIELD2 (ClassLayout, ClassSize, uint)                          \
+    METADATA_FIELD2 (ClassLayout, Parent, TypeDef))                         \
+                                                                            \
+/*table0x10*/ METADATA_TABLE (FieldLayout, NOTHING,                         \
+    METADATA_FIELD2 (FieldLayout, Offset, uint)                             \
+    METADATA_FIELD3 (FieldLayout, Field, Field, FieldRow*))                 \
+                                                                            \
+/*table0x11*/ METADATA_TABLE (StandaloneSig, NOTHING,                       \
+    METADATA_FIELD2 (StandaloneSig, signature, blob))                       \
+                                                                            \
+/*table0x12*/ METADATA_TABLE (EventMap, NOTHING,                            \
+    METADATA_FIELD2 (EventMap, Parent, TypeDef)                             \
+    METADATA_FIELD (EventMap, EventList))                                   \
+                                                                            \
+/*table0x13*/ METADATA_TABLE_UNUSED(13)                                     \
+                                                                            \
+/*table0x14*/ METADATA_TABLE (Event, NOTHING,                               \
+    METADATA_FIELD3 (Event, Flags, uint16, EventFlags)                      \
+    METADATA_FIELD2 (Event, Name, string)                                   \
+    METADATA_FIELD2 (Event, EventType, TypeDefOrRef))                       \
+                                                                            \
+/*table0x15*/ METADATA_TABLE (PropertyMap, NOTHING,                         \
+    METADATA_FIELD2 (PropertyMap, Parent, TypeDef)                          \
+    METADATA_FIELD (PropertyMap, PropertyList))                             \
+                                                                            \
+/*table0x16*/ METADATA_TABLE_UNUSED(16)                                     \
+                                                                            \
+/*table0x17*/ METADATA_TABLE (Property, NOTHING,                            \
+    METADATA_FIELD2 (Property, Flags, uint16)                               \
+    METADATA_FIELD2 (Property, Name, string)                                \
+    METADATA_FIELD2 (Property, Type, blob))                                 \
+                                                                            \
+/* .property and .event                                                     \
+   Links Events and Properties to specific methods.                         \
+   For example one Event can be associated to more methods.                 \
+   A property uses this table to associate get/set methods. */              \
+/*table0x18*/ METADATA_TABLE (metadata_MethodSemantics, NOTHING,            \
+    METADATA_FIELD3 (metadata_MethodSemantics, Semantics, uint16, MethodSemanticsFlags)        \
+    METADATA_FIELD3 (metadata_MethodSemantics, Method, MethodDef, MethodDefRow*) /* index into MethodDef table, 2 or 4 bytes */ \
+    METADATA_FIELD3 (metadata_MethodSemantics, Association, HasSemantics, MethodSemanticsAssociation_t)) /* Event or Property, CodedIndex */ \
+                                                                            \
+/*table0x19*/ METADATA_TABLE (MethodImpl, NOTHING,                          \
+    METADATA_FIELD3 (MethodImpl, Class, TypeDef, Class_t*)                  \
+    METADATA_FIELD3 (MethodImpl, MethodBody, MethodDefOrRef, MethodBody_t*) \
+    METADATA_FIELD3 (MethodImpl, MethodDeclaration, MethodDefOrRef, MethodDeclarationRow*)) \
+                                                                            \
+/*table0x1A*/ METADATA_TABLE (ModuleRef, NOTHING,                           \
+    METADATA_FIELD2 (ModuleRef, Name, string))                              \
+                                                                            \
+/*table0x1B*/ METADATA_TABLE (TypeSpec, NOTHING,                            \
+    METADATA_FIELD2 (TypeSpec, signature, blob))                            \
+                                                                            \
+/*table0x1C*/ METADATA_TABLE (ImplMap, NOTHING,                             \
+    METADATA_FIELD3 (ImplMap, MappingFlags, uint16, PInvokeAttributes)      \
+    METADATA_FIELD3 (ImplMap, MemberForwarded, MemberForwarded, MethodDefRow*)          \
+    METADATA_FIELD2 (ImplMap, ImportName, string)                           \
+    METADATA_FIELD3 (ImplMap, ImportScope, ModuleRef, ModuleRefRow*))       \
+                                                                            \
+/*table0x1D*/ METADATA_TABLE (FieldRVA, NOTHING,                            \
+    METADATA_FIELD2 (FieldRVA, RVA, uint)                                   \
+    METADATA_FIELD3 (FieldRVA, Field, Field, FieldRow*))                    \
+                                                                            \
+/*table0x1E*/ METADATA_TABLE_UNUSED(1E)                                     \
+                                                                            \
+/*table0x1F*/ METADATA_TABLE_UNUSED(1F)                                     \
+                                                                            \
+/*table0x20*/ METADATA_TABLE (Assembly, NOTHING,                            \
+    METADATA_FIELD2 (Assembly, HashAlgId, uint)                             \
+    METADATA_FIELD2 (Assembly, MajorVersion, uint16)                        \
+    METADATA_FIELD2 (Assembly, MinorVersion, uint16)                        \
+    METADATA_FIELD2 (Assembly, BuildNumber, uint16)                         \
+    METADATA_FIELD2 (Assembly, RevisionNumber, uint16)                      \
+    METADATA_FIELD3 (Assembly, Flags, uint, AssemblyFlags)                  \
+    METADATA_FIELD2 (Assembly, PublicKey, blob)                             \
+    METADATA_FIELD2 (Assembly, Name, string)                                \
+    METADATA_FIELD2 (Assembly, Culture, string))                            \
+                                                                            \
+/*table0x21*/ METADATA_TABLE (AssemblyProcessor, NOTHING,                   \
+    METADATA_FIELD2 (AssemblyProcessor, Processor, uint))                   \
+                                                                            \
+/*table0x22*/ METADATA_TABLE (AssemblyOS, NOTHING,                          \
+    METADATA_FIELD2 (AssemblyOS, OSPlatformID, uint)                        \
+    METADATA_FIELD2 (AssemblyOS, OSMajorVersion, uint)                      \
+    METADATA_FIELD2 (AssemblyOS, OSMinorVersion, uint))                     \
+                                                                            \
+/*table0x23*/ METADATA_TABLE (AssemblyRef, NOTHING,                         \
+    METADATA_FIELD2 (AssemblyRef, MajorVersion, uint16)                     \
+    METADATA_FIELD2 (AssemblyRef, MinorVersion, uint16)                     \
+    METADATA_FIELD2 (AssemblyRef, BuildNumber, uint16)                      \
+    METADATA_FIELD2 (AssemblyRef, RevisionNumber, uint16)                   \
+    METADATA_FIELD3 (AssemblyRef, Flags, uint, AssemblyFlags)               \
+    METADATA_FIELD2 (AssemblyRef, PublicKey, blob)                          \
+    METADATA_FIELD2 (AssemblyRef, Name, string)                             \
+    METADATA_FIELD2 (AssemblyRef, Culture, string)                          \
+    METADATA_FIELD2 (AssemblyRef, HashValue, blob))                         \
+                                                                            \
+/*table0x24*/ METADATA_TABLE (AssemblyRefProcessor, NOTHING,                \
+    METADATA_FIELD2 (AssemblyRefProcessor, Processor, uint)                 \
+    METADATA_FIELD3 (AssemblyRefProcessor, AssemblyRef, AssemblyRef, uint /* index into AssemblyRef table but ignored */)) \
+                                                                            \
+/*table0x25*/ METADATA_TABLE (AssemblyRefOS, NOTHING,                       \
+    METADATA_FIELD2 (AssemblyRefOS, OSPlatformID, uint)                     \
+    METADATA_FIELD2 (AssemblyRefOS, OSMajorVersion, uint)                   \
+    METADATA_FIELD2 (AssemblyRefOS, OSMinorVersion, uint)                   \
+    METADATA_FIELD3 (AssemblyRefOS, AssemblyRef, AssemblyRef, uint))        \
+                                                                            \
+/*table0x26*/ METADATA_TABLE (File, NOTHING,                                \
+    METADATA_FIELD3 (File, Flags, uint, FileFlags)                          \
+    METADATA_FIELD2 (File, Name, string)                                    \
+    METADATA_FIELD2 (File, HashValue, blob))                                \
+                                                                            \
+/*table0x27*/ METADATA_TABLE (ExportedType, NOTHING,                        \
+    METADATA_FIELD3 (ExportedType, Flags, uint, TypeFlags)                  \
+    METADATA_FIELD3 (ExportedType, TypeDefId, uint, uint)                   \
+    METADATA_FIELD  (ExportedType, TypeName)                                \
+    METADATA_FIELD  (ExportedType, TypeNameSpace)                           \
+    METADATA_FIELD3 (ExportedType, Implementation, Implementation, MetadataToken))           \
+                                                                            \
+/*table0x28*/ METADATA_TABLE (ManifestResource, NOTHING,                    \
+    METADATA_FIELD2 (ManifestResource, Offset, uint)                        \
+    METADATA_FIELD3 (ManifestResource, Flags, uint, ManifestResourceFlags)  \
+    METADATA_FIELD2 (ManifestResource, Name, string)                        \
+    METADATA_FIELD3 (ManifestResource, Implementation, Implementation, Implementation_t*))       \
+                                                                            \
+/*table0x29*/ METADATA_TABLE (NestedClass, NOTHING,                         \
+    METADATA_FIELD2 (NestedClass, NestedClass, TypeDef)                     \
+    METADATA_FIELD2 (NestedClass, EnclosingClass, TypeDef))                 \
+                                                                            \
+/*table0x2A*/ METADATA_TABLE (GenericParam, NOTHING,                        \
+    METADATA_FIELD2 (GenericParam, Number, uint16)                          \
+    METADATA_FIELD3 (GenericParam, Flags, uint16, GenericParamFlags)        \
+    METADATA_FIELD3 (GenericParam, Owner, TypeOrMethodDef, TypeOrMethodDef) \
+    METADATA_FIELD2 (GenericParam, Name, string))                           \
+                                                                            \
+/*table0x2B*/ METADATA_TABLE (MethodSpec, NOTHING,                          \
+    METADATA_FIELD3 (MethodSpec, Method, MethodDefOrRef, Method_t*)         \
+    METADATA_FIELD2 (MethodSpec, Instantiation, blob))                      \
+                                                                            \
+/*table0x2C*/ METADATA_TABLE (GenericParamConstraint, NOTHING,              \
+    METADATA_FIELD3 (GenericParamConstraint, Owner, GenericParam, GenericParamRow*)                    \
+    METADATA_FIELD2 (GenericParamConstraint, Constraint, TypeDefOrRef))     \
 
 // Every table has two maybe three maybe four sets of types/data/forms.
 // 1. A very typed form. Convenient to work with. Does the most work to form.
@@ -2827,15 +2845,15 @@ struct EmptyBase
 //#define metadata_schema_TOKENED_FieldList        MetadataTokenList
 //#define metadata_schema_TOKENED_MethodList       MetadataTokenList
 
-#define METADATA_FIELD(name) METADATA_FIELD2 (name, name)
+#define METADATA_FIELD(table, name) METADATA_FIELD2 (table, name, name)
 
 // TODO generate enums
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
 #define METADATA_TABLE(name, base, fields)                         name, // TODO longer name?
-#define METADATA_FIELD2(name, type)                                /* nothing */
-#define METADATA_FIELD3(name, persistant_type, pointerful_type)    /* nothing */
+#define METADATA_FIELD2(table, name, type)                                /* nothing */
+#define METADATA_FIELD3(table, name, persistant_type, pointerful_type)    /* nothing */
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name) 0
 //BEGIN_ENUM MetadataTableIndex {
@@ -2860,16 +2878,38 @@ struct MethodDeclarationRow;
 #define METADATA_TABLE(name, base, fields)                             \
     struct name ## Row base                                             \
     {                                                                   \
-            bool operator<(const name ## Row&) const;                   \
-            bool operator==(const name ## Row&) const;                  \
-            name ##  Row ( ) { } fields                                \
+            bool operator<(const name ## Row&) const; /* old compiler/library workaround */     \
+            bool operator==(const name ## Row&) const; /* old compiler/library workaround */    \
+            name ##  Row ( ) { }                                        \
+            fields                                                     \
     };                                                                  \
-    struct name ## Table : vector<name ## Row>, IMetadataTable     \
+    struct name ## Table : vector<name ## Row>, IMetadataTable          \
     {                                                                   \
-        virtual void SetSize(size_t n) { resize(n); }                   \
+        vector<char> valid; /* for on-demand read */                    \
+                                                                        \
+        virtual void iresize(size_t n)                                  \
+        {                                                               \
+            valid.resize(n, 0);                                         \
+            resize(n);                                                  \
+        }                                                               \
+                                                                        \
+        virtual size_t isize()                                          \
+        {                                                               \
+            return size ();                                             \
+        }                                                               \
+                                                                        \
+        virtual void* ibase()                                           \
+        {                                                               \
+            return size () ? &(*this)[0] : 0;                           \
+        }                                                               \
+                                                                        \
+        virtual char* ivalidbase()                                      \
+        {                                                               \
+            return size () ? &valid[0] : 0;                             \
+        }                                                               \
     };
-#define METADATA_FIELD2(name, type) metadata_schema_TYPED_ ## type name;
-#define METADATA_FIELD3(name, persistant_type, pointerful_type) pointerful_type name;
+#define METADATA_FIELD2(table, name, type) metadata_schema_TYPED_ ## type name;
+#define METADATA_FIELD3(table, name, persistant_type, pointerful_type) pointerful_type name;
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name) /* nothing */
 METADATA_TABLES
@@ -2878,10 +2918,10 @@ METADATA_TABLES
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
 #define METADATA_TABLE(name, base, fields) \
-const MetadataTableSchemaField metadata_field_ ## name [ ] = { fields }; \
-const MetadataTableSchema metadata_row_schema_ ## name = { #name, CountOf (metadata_field_ ## name), metadata_field_ ## name };
-#define METADATA_FIELD2(name, type) { # name, &MetadataType_  ## type },
-#define METADATA_FIELD3(name, persistant_type, pointerful_type) { # name, &MetadataType_  ## persistant_type },
+const MetaTableStaticSchemaField metadata_field_ ## name [ ] = { fields }; \
+const MetadataTableStaticSchema_t metadata_row_schema_ ## name = { #name, sizeof (name ## Row), CountOf (metadata_field_ ## name), metadata_field_ ## name };
+#define METADATA_FIELD2(table, name, type)                             { # name, &MetadataType_  ## type, offsetof (table ## Row, name) },
+#define METADATA_FIELD3(table, name, persistant_type, pointerful_type) { # name, &MetadataType_  ## persistant_type, offsetof (table ## Row, name) },
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name) /* nothing */
 METADATA_TABLES
@@ -2907,16 +2947,9 @@ const uint MethodSpec = 0x2B;
 */
 
 
-struct MetadataField;
-struct DynamicTableFieldFunctions_t;
-
-struct DynamicTableFieldFunctions_t
+struct MetadataFieldDynamic
 {
-};
-
-struct MetadataField // dynamic
-{
-    MetadataField()
+    MetadataFieldDynamic()
     {
         memset (this, 0, sizeof (*this));
     }
@@ -2925,14 +2958,14 @@ struct MetadataField // dynamic
     uint offset;
 };
 
-struct MetadataTable // dynamic
+struct MetadataTableDynamic
 {
-    //MetadataTable() { memset (this, 0, sizeof (*this)); }
+    //MetadataTableDynamic() { memset (this, 0, sizeof (*this)); }
 
-    void* raw_base;
-    MetadataField* field;
+    void* file_base;
+    MetadataFieldDynamic* fields;
     uint row_count;
-    uint row_size;
+    uint file_row_size; // vs. mem_row_size which is elsewhere
     uint index_size; // 2 or 4
     uint field_count;
     bool present;
@@ -2940,12 +2973,12 @@ struct MetadataTable // dynamic
     bool name_field_valid;
 };
 
-struct Metadata // dynamic
+struct MetadataDynamicZero // dynamic, ZeroMemory compatible part
 {
     struct
     {
         union {
-            MetadataTable array[
+            MetadataTableDynamic array[
 #undef METADATA_TABLE
 #define METADATA_TABLE(name, base, fields) 1+
 #undef METADATA_TABLE_UNUSED
@@ -2956,20 +2989,20 @@ struct Metadata // dynamic
             struct
             {
 #undef METADATA_TABLE_UNUSED
-#define METADATA_TABLE_UNUSED(name) MetadataTable unused_ ## name;
+#define METADATA_TABLE_UNUSED(name) MetadataTableDynamic unused_ ## name;
 #undef METADATA_TABLE
-#define METADATA_TABLE(name, base, fields) MetadataTable name;
+#define METADATA_TABLE(name, base, fields) MetadataTableDynamic name;
 METADATA_TABLES
             } name;
         };
-    } raw;
+    } file;
 
-    MetadataField fields[
+    MetadataFieldDynamic fields[
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
-#define METADATA_FIELD2(name, type)                                1+
-#define METADATA_FIELD3(name, persistant_type, pointerful_type)    1+
+#define METADATA_FIELD2(table, name, type)                                1+
+#define METADATA_FIELD3(table, name, persistant_type, pointerful_type)    1+
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name) /* nothing */
 #define METADATA_TABLE(name, base, fields) fields
@@ -2980,24 +3013,50 @@ METADATA_TABLES
     0];
 
 #undef METADATA_TABLE_UNUSED
-#define METADATA_TABLE_UNUSED(name) MetadataTable unused_ ## name;
+#define METADATA_TABLE_UNUSED(name)
 #undef METADATA_TABLE
 #define METADATA_TABLE(name, base, fields) name ## Table name;
 METADATA_TABLES
 
-    Metadata()
+    IMetadataTable* itables[
+#undef METADATA_TABLE
+#define METADATA_TABLE(name, base, fields) 1+
+#undef METADATA_TABLE_UNUSED
+#define METADATA_TABLE_UNUSED(name) 1+
+    METADATA_TABLES
+        0];
+
+    MetadataDynamicZero()
     {
         memset (this, 0, sizeof (*this));
-        MetadataField* c = fields;
-        MetadataTable* t = raw.array;
+    }
+};
+
+struct MetadataDynamic : MetadataDynamicZero
+{
+#undef METADATA_TABLE_UNUSED
+#define METADATA_TABLE_UNUSED(name)
+#undef METADATA_TABLE
+#define METADATA_TABLE(name, base, fields) name ## Table name; // has vtables, do not memset(0)
+METADATA_TABLES
+
+    struct UnusedTable : IMetadataTable
+    {
+    } unused_table;
+
+    MetadataDynamic()
+    {
+        MetadataFieldDynamic* c = fields;
+        MetadataTableDynamic* t = file.array;
+        uint i = 0;
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
-#define METADATA_FIELD2(name, type)                                1+
-#define METADATA_FIELD3(name, persistant_type, pointerful_type)    1+
-#define METADATA_TABLE(name, base, fields) t->field = c; t->field_count = fields 0; c += fields 0; ++t;
+#define METADATA_FIELD2(table, name, type)                                1+
+#define METADATA_FIELD3(table, name, persistant_type, pointerful_type)    1+
+#define METADATA_TABLE(name, base, fields_) itables[i++] = &name; t->fields = c; t->field_count = fields_ 0; c += fields_ 0; ++t;
 #undef METADATA_TABLE_UNUSED
-#define METADATA_TABLE_UNUSED(name) ++t;
+#define METADATA_TABLE_UNUSED(name) ++t; itables[i++] = &unused_table;
 METADATA_TABLES
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
@@ -3006,7 +3065,7 @@ METADATA_TABLES
 };
 #undef METADATA_TABLE
 
-static const char * const table_name [ ] =
+static const char * const MetadataTableName [ ] =
 {
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
@@ -3017,15 +3076,15 @@ static const char * const table_name [ ] =
 METADATA_TABLES
 #undef METADATA_TABLE
 };
-#define table_name(x) table_name[x]
+#define MetadataTableName(x) MetadataTableName[x]
 
-static const MetadataTableSchema *  const table_schema [ ] =
+static const MetadataTableStaticSchema_t *  const MetadataStaticSchema[ ] =
 {
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
-#define METADATA_FIELD2(name, type)                                /* nothing */
-#define METADATA_FIELD3(name, persistant_type, pointerful_type)    /* nothing */
+#define METADATA_FIELD2(table, name, type)                                /* nothing */
+#define METADATA_FIELD3(table, name, persistant_type, pointerful_type)    /* nothing */
 #define METADATA_TABLE(name, base, fields) &metadata_row_schema_ ## name,
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name) 0,
@@ -3051,8 +3110,8 @@ struct ImageZero // zero-inited part of Image
     DosHeader* dos;
     uint8* pe;
     NtHeaders* nt;
-    OptionalHeader32_t* opt32;
-    OptionalHeader64_t* opt64;
+    OptionalHeader32* opt32;
+    OptionalHeader64* opt64;
     char* strings;
     char* guids;
     uint pe_offset;
@@ -3076,7 +3135,7 @@ struct Image : ImageZero
 
     vector<SectionHeader*> section_headers;
 
-    Metadata metadata;
+    MetadataDynamic metadata;
 
     char* GetString(uint a)
     {
@@ -3099,20 +3158,20 @@ struct Image : ImageZero
         return a + (char*)(streams.blob->offset + (char*)metadata_root);
     }
 
-    void ComputeRowSize (uint table_index)
+    void ComputeFileRowSize (uint table_index)
     {
-        const MetadataTableSchema* schema = table_schema [table_index];
+        const MetadataTableStaticSchema_t* schema = MetadataStaticSchema[table_index];
         if (!schema)
             return;
-        MetadataTable* table = &metadata.raw.array[table_index];
-        const uint count = schema->count;
+        MetadataTableDynamic* table = &metadata.file.array[table_index];
+        const uint field_count = schema->field_count;
         uint size = 0;
-        for (uint i = 0; i < count; ++i)
+        for (uint i = 0; i < field_count; ++i)
         {
-            const MetadataTableSchemaField* field = &schema->fields [i];
+            const MetaTableStaticSchemaField* field = &schema->fields [i];
             uint field_size = field->type->functions->GetSize (field->type, this);
-            table->field[i].offset = size;
-            table->field[i].size = field_size;
+            table->fields[i].offset = size;
+            table->fields[i].size = field_size;
             size += field_size;
             if (!table->name_field_valid)
             {
@@ -3127,76 +3186,87 @@ struct Image : ImageZero
                 }
             }
         }
-        printf("ComputeRowSize(%s):%X\n", table_name (table_index), size);
-        table->row_size = size;
+        printf("ComputeFileRowSize(%s):%X\n", MetadataTableName (table_index), size);
+        table->file_row_size = size;
     }
 
-    uint GetRowSize (uint table_index)
+    uint GetFileRowSize (uint table_index)
     {
-        const uint row_size = metadata.raw.array [table_index].row_size;
-        Assert(row_size);
-        return row_size;
+        const uint file_row_size = metadata.file.array [table_index].file_row_size;
+        Assert(file_row_size);
+        return file_row_size;
+    }
+
+    uint GetMemRowSize (uint table_index)
+    {
+        const uint mem_row_size = MetadataStaticSchema[table_index]->mem_row_size;
+        Assert(mem_row_size);
+        return mem_row_size;
     }
 
     void DumpRow (uint table_index, uint r, char* p)
     {
+        if (table_index)
+            return;
         stdout_stream out;
         stderr_stream err;
-        const MetadataTableSchema* schema = table_schema [table_index];
-        const MetadataTableSchemaField *fields = schema ? schema->fields : 0;
-        const uint count = schema ? schema->count : 0u;
+        const MetadataTableStaticSchema_t* schema = MetadataStaticSchema[table_index];
+        const MetaTableStaticSchemaField *fields = schema ? schema->fields : 0;
+        const uint field_count = schema ? schema->field_count : 0u;
 
-        out.printf("%s[0x%08X] ", table_name (table_index), r);
-        for (uint i = 0; i < count; ++i)
+        out.printf("%s[0x%08X] ", MetadataTableName (table_index), r);
+        for (uint i = 0; i < field_count; ++i)
         {
-            const MetadataTableSchemaField *field = &fields[i];
-            const uint field_size = metadata.raw.array[table_index].field[i].size;
+            const MetaTableStaticSchemaField *field = &fields[i];
+            const uint field_size = metadata.file.array[table_index].fields[i].size;
             out.printf("col[%X]%s:%s:", i, field->type->name, field->name);
             if (field->type->functions->Print)
                 field->type->functions->Print(field->type, this, table_index, r, i, p, field_size);
-             p += metadata.raw.array[table_index].field[i].size;
+             p += metadata.file.array[table_index].fields[i].size;
         }
         out.prints("\n");
     }
 
     void DumpRow (uint table_index, uint r)
     {
-        DumpRow (table_index, r, (char*)metadata.raw.array[table_index].raw_base + (r - 1) * GetRowSize (table_index));
+        DumpRow (table_index, r, (char*)metadata.file.array[table_index].file_base + (r - 1) * GetFileRowSize (table_index));
     }
 
     void DumpTable (uint table_index, uint r = 1)
     {
+        if (table_index)
+            return;
         stdout_stream out;
         stderr_stream err;
 
         // TODO less printf
-        string prefix = StringFormat ("table 0x%08X (%s)", table_index, table_name (table_index));
+        string prefix = StringFormat ("table 0x%08X (%s)", table_index, MetadataTableName (table_index));
         const char* prefix_cstr = prefix.c_str();
 
-        const MetadataTableSchema* schema = table_schema [table_index];
-        const MetadataTableSchemaField *fields = schema ? schema->fields : 0;
-        const uint count = schema ? schema->count : 0u;
+        const MetadataTableStaticSchema_t* schema = MetadataStaticSchema[table_index];
+        const MetaTableStaticSchemaField *fields = schema ? schema->fields : 0;
+        const uint field_count = schema ? schema->field_count : 0u;
 
         //err.printf ("%s\n", prefix_cstr);
-        err.printf ("%s raw_base:%p\n", prefix_cstr, metadata.raw.array [table_index].raw_base);
-        err.printf ("%s present:0x%08X\n", prefix_cstr, metadata.raw.array [table_index].present);
-        err.printf ("%s row_size:0x%08X\n", prefix_cstr, GetRowSize (table_index));
-        err.printf ("%s field_count:0x%08X\n", prefix_cstr, count);
-        err.printf ("%s row_count:0x%08X\n", prefix_cstr, metadata.raw.array [table_index].row_count);
+        err.printf ("%s file_base:%p\n", prefix_cstr, metadata.file.array [table_index].file_base);
+        err.printf ("%s present:0x%08X\n", prefix_cstr, metadata.file.array [table_index].present);
+        err.printf ("%s file_row_size:0x%08X\n", prefix_cstr, GetFileRowSize (table_index));
+        err.printf ("%s field_count:0x%08X\n", prefix_cstr, field_count);
+        err.printf ("%s row_count:0x%08X\n", prefix_cstr, metadata.file.array [table_index].row_count);
 
         uint i;
-        for (i = 0; i < count; ++i)
+        for (i = 0; i < field_count; ++i)
         {
-            const MetadataTableSchemaField *field = &fields[i];
-            out.printf("%s layout type:%s name:%s offset:0x%08X size:0x%08X\n", table_name (table_index), field->type->name, field->name, metadata.raw.array[table_index].field[i].offset, metadata.raw.array[table_index].field[i].size);
+            const MetaTableStaticSchemaField *field = &fields[i];
+            out.printf("%s layout type:%s name:%s offset:0x%08X size:0x%08X\n", MetadataTableName (table_index), field->type->name, field->name, metadata.file.array[table_index].fields[i].offset, metadata.file.array[table_index].fields[i].size);
         }
-        char* p = (char*)metadata.raw.array[table_index].raw_base + (r - 1) * metadata.raw.array[table_index].row_size;
-        for (;r <= metadata.raw.array [table_index].row_count; ++r)
+        char* p = (char*)metadata.file.array[table_index].file_base + (r - 1) * metadata.file.array[table_index].file_row_size;
+        for (;r <= metadata.file.array [table_index].row_count; ++r)
         {
-            out.printf("%s[0x%08X] ", table_name (table_index), r);
+            out.printf("%s[0x%08X] ", MetadataTableName (table_index), r);
             DumpRow (table_index, r, p);
-            for (i = 0; i < count; ++i)
-                p += metadata.raw.array[table_index].field[i].size;
+            for (i = 0; i < field_count; ++i)
+                p += metadata.file.array[table_index].fields[i].size;
             out.prints("\n");
         }
         out.prints("\n");
@@ -3227,8 +3297,8 @@ struct Image : ImageZero
         printf ("NumberOfSymbols:0x%08X\n", (uint)nt->file_header.NumberOfSymbols);
         printf ("SizeOfOptionalHeader:0x%08X\n", (uint)nt->file_header.SizeOfOptionalHeader);
         printf ("Characteristics:0x%08X\n", (uint)nt->file_header.Characteristics);
-        opt32 = (OptionalHeader32_t*)(&nt->OptionalHeader);
-        opt64 = (OptionalHeader64_t*)(&nt->OptionalHeader);
+        opt32 = (OptionalHeader32*)(&nt->OptionalHeader);
+        opt64 = (OptionalHeader64*)(&nt->OptionalHeader);
         uint opt_magic = Unpack(opt32->Magic);
         AssertFormat ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), ("file:%s opt_magic:%x", file_name, opt_magic));
         printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, (void*)opt32, (void*)opt64);
@@ -3331,57 +3401,92 @@ unknown_stream:
         uint* prow_count = (uint*)(metadata_tables_header + 1);
 
         // Presence and row counts.
-        for (mask = 1, i = 0; i < CountOf (metadata.raw.array); ++i, mask <<= 1)
+        for (mask = 1, i = 0; i < CountOf (metadata.file.array); ++i, mask <<= 1)
         {
             const bool present = (valid & mask) != 0;
             if (!present)
             {
-                printf ("%X(%s) not present\n", i, table_name (i));
+                printf ("%X(%s) not present\n", i, MetadataTableName (i));
                 continue;
             }
-            metadata.raw.array [i].present = true;
-            metadata.raw.array [i].row_count = *prow_count++;
+            metadata.file.array [i].present = true;
+            metadata.file.array [i].row_count = *prow_count++;
         }
 
-        for (mask = 1, i = 0; i < CountOf (metadata.raw.array); ++i, mask <<= 1)
+        for (mask = 1, i = 0; i < CountOf (metadata.file.array); ++i, mask <<= 1)
         {
             const bool present = (valid & mask) != 0;
             if (!present)
                 continue;
-            printf ("%X(%s).row_count:%X\n", i, table_name (i), metadata.raw.array [i].row_count);
+            printf ("%X(%s).row_count:%X\n", i, MetadataTableName (i), metadata.file.array [i].row_count);
         }
 
         // After row counts, coded index size and index size.
-        for (i = 0; i < CountOf (metadata.raw.array); ++i)
+        for (i = 0; i < CountOf (metadata.file.array); ++i)
             ComputeIndexSize (this, i);
 
         for (i = 0; i < CodedIndex_Count; ++i)
             ComputeCodedIndexSize (this, (CodedIndex)i);
 
         // After coded index size, row sizes and table bases.
-        char* table_base = (char*)prow_count;
+        char* table_file_base = (char*)prow_count;
 
-        for (mask = 1, i = 0; i < CountOf (metadata.raw.array); ++i, mask <<= 1)
+        for (mask = 1, i = 0; i < CountOf (metadata.file.array); ++i, mask <<= 1)
         {
             const bool present = (valid & mask) != 0;
             if (!present)
                 continue;
-            ComputeRowSize (i);
-            metadata.raw.array [i].raw_base = table_base;
-            printf ("%s at p:%p metadata_offset:%X file_offset:%X\n", table_name(i), table_base, (uint)((char*)table_base - (char*)metadata_root), (uint)((char*)table_base - (char*)base));
-            table_base += metadata.raw.array [i].row_size * metadata.raw.array [i].row_count;
+            ComputeFileRowSize (i);
+            metadata.file.array [i].file_base = table_file_base;
+            printf ("%s at p:%p metadata_offset:%X file_offset:%X\n", MetadataTableName(i), table_file_base, (uint)((char*)table_file_base - (char*)metadata_root), (uint)((char*)table_file_base - (char*)base));
+            table_file_base += metadata.file.array [i].file_row_size * metadata.file.array [i].row_count;
         }
 
-        // Allocate room for every row to point to raw metadatata and have nicely constructed metadata.
+        // TODO running should not od this, but dumping/converting probably ok.
+        // TODO A convenient efficient form, pick both? Here we are going for convenient but inefficient.
+        //
+        // Allocate room for every row to point to file metadatata and have nicely constructed metadata.
+        // Or maybe to read/reify it all.
+        for (i = 0; i < CountOf (metadata.file.array); ++i)
+            metadata.itables[i]->iresize(metadata.file.array[i].row_count);
+
+        for (i = 0; i < CountOf (metadata.file.array); ++i)
+        {
+            IMetadataTable* itable = metadata.itables[i];
+            MetadataTableDynamic* dynamic_table = &metadata.file.array [i];
+            char* mem = (char*)itable->ibase();
+            if (!mem)
+                continue;
+            MetadataFieldDynamic* dynamic_field = dynamic_table->fields;
+            uint row_count = dynamic_table->row_count;
+            Assert (itable->isize() == row_count);
+            const char* file = (char*)dynamic_table->file_base;
+            const MetadataTableStaticSchema_t* schema = MetadataStaticSchema[i];
+            const uint field_count = schema->field_count;
+            //
+            // In-memoy rows can have padding and in-file do not, so
+            // add file field at a time and memory row at a time.
+            //
+            for (uint ri = 0; ri < row_count; ++ri)
+            {
+                const MetaTableStaticSchemaField *static_field = schema->fields;
+                for (uint fi = 0; fi < field_count; ++fi, ++static_field)
+                {
+                    static_field->type->functions->Read(static_field->type, file, mem + static_field->mem_offset);
+                    file += dynamic_field->size;
+                }
+                mem += schema->mem_row_size;
+            }
+        }
 
         //if (IsDebuggerPresent()) __debugbreak();
         //if (1)
-        for (mask = 1, i = 0; i < CountOf (metadata.raw.array); ++i, mask <<= 1)
+        for (mask = 1, i = 0; i < CountOf (metadata.file.array); ++i, mask <<= 1)
         {
             bool present = (valid & mask) != 0;
             if (present)
             {
-                fprintf (stderr, "table 0x%08X (%s) has 0x%08X rows (%s)\n", i, table_name (i), metadata.raw.array [i].row_count, (sorted & mask) ? "sorted" : "unsorted");
+                fprintf (stderr, "table 0x%08X (%s) has 0x%08X rows (%s)\n", i, MetadataTableName (i), metadata.file.array [i].row_count, (sorted & mask) ? "sorted" : "unsorted");
 #if 0
                 [&]
                 {
@@ -3401,7 +3506,7 @@ unknown_stream:
             }
             else
             {
-                fprintf (stderr, "table 0x%08X (%s) is absent\n", i, table_name (i));
+                fprintf (stderr, "table 0x%08X (%s) is absent\n", i, MetadataTableName (i));
             }
         }
     }
@@ -3451,15 +3556,15 @@ PrintIndex(const MetadataType* type, Image* image, uint table, uint row, uint fi
         return;
     --index;
     uint table_index = type->table_index;
-    MetadataTable* t = &image->metadata.raw.array[table_index];
-    void* p = ((char*)t->raw_base) + t->row_size * index;
-    printf(" PrintIndex:%s[%X][%X] => %s/%p ", table_name (table), row, field, table_name (table_index), p);
+    MetadataTableDynamic* t = &image->metadata.file.array[table_index];
+    void* p = ((char*)t->file_base) + t->file_row_size * index;
+    printf(" PrintIndex:%s[%X][%X] => %s/%p ", MetadataTableName (table), row, field, MetadataTableName (table_index), p);
 
     Assert (index <= t->row_count);
 
     if (t->name_field_valid)
     {
-        //PrintStringx ("xindex", 0, image, 0, 0, 0, t->field[t->name_field].offset + (char*)p, 0);
+        //PrintStringx ("xindex", 0, image, 0, 0, 0, t->fields[t->name_field].offset + (char*)p, 0);
     }
 }
 
@@ -3485,15 +3590,15 @@ PrintCodedIndex(const MetadataType* type, Image* image, uint table, uint row, ui
 
     Assert(table_index >= 0);
 
-    MetadataTable* t = &image->metadata.raw.array[table_index];
-    void* p = ((char*)t->raw_base) + t->row_size * index;
-    printf(" PrintCodedIndex:%s[%X][%X] => %s/%p ", table_name (table), row, field, table_name ((uint)table_index), p);
+    MetadataTableDynamic* t = &image->metadata.file.array[table_index];
+    void* p = ((char*)t->file_base) + t->file_row_size * index;
+    printf(" PrintCodedIndex:%s[%X][%X] => %s/%p ", MetadataTableName (table), row, field, MetadataTableName ((uint)table_index), p);
 
     Assert (index <= t->row_count);
 
     if (t->name_field_valid)
     {
-        //PrintStringx ("xcodedindex", 0, image, 0, 0, 0, t->field[t->name_field].offset + (char*)p, 0);
+        //PrintStringx ("xcodedindex", 0, image, 0, 0, 0, t->fields[t->name_field].offset + (char*)p, 0);
     }
 }
 
@@ -3572,11 +3677,11 @@ MetadataGetGuidSize (const MetadataType* type, Image* image)
 void
 ComputeIndexSize (Image* image, uint /* todo enum */ table_index)
 {
-    const uint row_count = image->metadata.raw.array [table_index].row_count;
+    const uint row_count = image->metadata.file.array [table_index].row_count;
     uint result = (row_count <= 0xFFFFu) ? 2u : 4u;
-    const char* name = table_name (table_index);
+    const char* name = MetadataTableName (table_index);
     printf("ComputeIndexSize %X(%s) cap:%X result:%X\n", table_index, name, 0xFFFFu, result);
-    image->metadata.raw.array [table_index].index_size = result;
+    image->metadata.file.array [table_index].index_size = result;
 }
 
 void
@@ -3594,7 +3699,7 @@ ComputeCodedIndexSize (Image* image, CodedIndex coded_index)
         int m = Map [map + i];
         if (m < 0)
             continue;
-        const uint rows = image->metadata.raw.array[m].row_count;
+        const uint rows = image->metadata.file.array[m].row_count;
         printf("ComputeCodedIndexSize %X(%s) i:%X m:%X rows:%X\n", coded_index, name, i, m, rows);
         if (rows > cap)
         {
@@ -3615,7 +3720,7 @@ GetCodedIndexSize (Image* image, CodedIndex coded_index)
 uint
 ImageGetIndexSize (Image* image, uint /* todo enum */ table_index)
 {
-    uint a = image->metadata.raw.array [table_index].index_size;
+    uint a = image->metadata.file.array [table_index].index_size;
     Assert (a == 2 || a == 4);
     return a;
 }
@@ -3704,13 +3809,13 @@ X (CodedIndices.array[CodedIndex(HasCustomAttribute)].tag_size);
 X (CodedIndices.array[CodedIndex(HasFieldMarshal)].tag_size);
 X (CodedIndices.array[CodedIndex(HasDeclSecurity)].tag_size);
 #undef X
-#if 0
+#if 1
     try
 #endif
     {
         im.init (argv [1]);
     }
-#if 0
+#if 1
     catch (int er)
     {
         fprintf (stderr, "error 0x%08X\n", er);
