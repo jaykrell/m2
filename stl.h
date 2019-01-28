@@ -17,7 +17,7 @@ c:\msdev\50\VC\INCLUDE\vector(103) : error C2065: 'b' : undeclared identifier
 c:\msdev\50\VC\INCLUDE\vector(103) : error C2440: 'default argument' : cannot convert from 'int' to 'const struct a::b &'
                                                   Reason: cannot convert from 'int' to 'const struct a::b'
                                                   No constructor could take the source type, or constructor overload resolution was ambiguous
-	void resize(size_type _N, const _Ty& x = _Ty()) // 103
+	void resize(size_type _N, const T& x = T()) // 103
 
 There are two problems.
 Workaround either by not using namespaces or having local vector without that default construction.
@@ -29,7 +29,7 @@ Visual C++ 2.0 shipped without STL.
 Visual C++ 4.0?
 */
 #if !defined(_MSC_VER) || _MSC_VER >= 1100 // TODO check more versions; 4.0?
-
+// TODO msvc40 does have STL but I missed it in install.
 #include <string>
 #include <vector>
 //#include <algorithm> // TODO? remove STL dependency?
@@ -140,7 +140,6 @@ struct vector
     }
 };
 
-
 template <class T>
 struct basic_string
 {
@@ -202,11 +201,4 @@ basic_string<T> operator+(const T* c, const basic_string<T>& d)
     return d;
 }
 
-#endif
-
-
-#if defined(_MSC_VER) && _MSC_VER < 1100 // TODO test exact version, mising in 2.0/900
-typedef unsigned char bool;
-#define true  ((bool)1)
-#define false ((bool)0)
 #endif
