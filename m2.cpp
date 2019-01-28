@@ -2065,10 +2065,10 @@ struct Image;
 struct MetadataTypeFunctions
 {
     // Virtual functions, but allowing for static construction.
-    void (*Read)(const MetadataType*, const void* file, void* mem);
+    void (*Read)(const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem);
     uint (*GetSize)(const MetadataType*, Image*);
     //void (*ToString)(const MetadataType*, void*);
-    void (*Print)(const MetadataType*, Image*, uint table, uint row, uint field, void* data, uint size);
+    void (*Print)(const MetadataType*, Image*, uint table, uint row, uint field, const void* data, uint size);
 };
 
 uint64
@@ -2288,7 +2288,7 @@ struct stderr_stream : stream
 };
 
 void
-PrintFixed(const MetadataType*, Image*, uint table, uint row, uint field, void* data, uint size)
+PrintFixed(const MetadataType*, Image*, uint table, uint row, uint field, const void* data, uint size)
 {
     char buf[64];
     uint64 i = 0;
@@ -2313,7 +2313,7 @@ PrintFixed(const MetadataType*, Image*, uint table, uint row, uint field, void* 
 }
 
 void
-PrintBlob(const MetadataType* type, Image* image, uint table, uint row, uint field, void* data, uint size);
+PrintBlob(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size);
 
 struct MetadataType
 {
@@ -2335,51 +2335,50 @@ GetCodedIndexSize (Image* image, CodedIndex coded_index);
 #undef CODED_INDEX
 
 void
-MetatadataReadFixed (const MetadataType* type, const void* file, void* mem)
+MetatadataReadFixed (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    printf("MetatadataReadFixed\n");
+    memcpy (mem, file, size); // TODO endian, enum size mismatch
 }
 
 void
-MetatadataReadBlob (const MetadataType* type, const void* file, void* mem)
+MetatadataReadBlob (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    printf("MetatadataReadBlob\n");
 }
 
 void
-MetatadataReadString (const MetadataType* type, const void* file, void* mem)
+MetatadataReadString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     printf("MetatadataReadString\n");
 }
 
 void
-MetatadataReadUString (const MetadataType* type, const void* file, void* mem)
+MetatadataReadUString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     printf("MetatadataReadUString\n");
 }
 
 void
-MetadataReadCodedIndex (const MetadataType* type, const void* file, void* mem)
+MetadataReadCodedIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     printf("MetadataReadCodedIndex\n");
 }
 
 void
-MetatadataReadIndex (const MetadataType* type, const void* file, void* mem)
+MetatadataReadIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     printf("MetatadataReadIndex\n");
 }
 
 void
-MetatadataReadIndexList (const MetadataType* type, const void* file, void* mem)
+MetatadataReadIndexList (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     printf("MetatadataReadIndexList\n");
 }
 
 void
-MetatadataReadGuid (const MetadataType* type, const void* file, void* mem)
+MetatadataReadGuid (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    printf("MetatadataReadGuid\n");
+    memcpy (mem, file, 16);
 }
 
 uint
@@ -2440,23 +2439,23 @@ const MetadataTypeFunctions MetadataType_blob_functions =
 
 // TODO should format into memory
 void
-PrintString(const MetadataType* type, Image* image, uint table, uint row, uint field, void* data, uint size);
+PrintString(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size);
 
 // TODO should format into memory
 void
-PrintGuid(const MetadataType* type, Image* image, uint table, uint row, uint field, void* data, uint size);
+PrintGuid(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size);
 
 // TODO should format into memory
 void
-PrintIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, void* data, uint size);
+PrintIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size);
 
 // TODO should format into memory
 void
-PrintIndexList(const MetadataType* type, Image* image, uint table, uint row, uint field, void* data, uint size);
+PrintIndexList(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size);
 
 // TODO should format into memory
 void
-PrintCodedIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, void* data, uint size);
+PrintCodedIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size);
 
 const MetadataTypeFunctions MetadataType_string_functions =
 {
@@ -3469,10 +3468,10 @@ unknown_stream:
             //
             for (uint ri = 0; ri < row_count; ++ri)
             {
-                const MetaTableStaticSchemaField *static_field = schema->fields;
+                const MetaTableStaticSchemaField* static_field = schema->fields;
                 for (uint fi = 0; fi < field_count; ++fi, ++static_field)
                 {
-                    static_field->type->functions->Read(static_field->type, file, mem + static_field->mem_offset);
+                    static_field->type->functions->Read(static_field->type, this, i, ri, fi, dynamic_field->size, file, mem + static_field->mem_offset);
                     file += dynamic_field->size;
                 }
                 mem += schema->mem_row_size;
@@ -3532,7 +3531,7 @@ unknown_stream:
 };
 
 void
-PrintStringx(const char* x, const MetadataType* type, Image* image, uint table, uint row, uint field, void* data, uint size)
+PrintStringx(const char* x, const MetadataType* type, Image* image, uint table, uint row, uint field, const void* data, uint size)
 {
     //__debugbreak();
     uint a = Unpack2or4LE (data, image->string_size);
@@ -3541,17 +3540,17 @@ PrintStringx(const char* x, const MetadataType* type, Image* image, uint table, 
 }
 
 void
-PrintString(const MetadataType* type, Image* image, uint table, uint row, uint field, void* data, uint size)
+PrintString(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
-    PrintStringx("", type, image, table, row, field, data, size);
+    PrintStringx("", type, image, table, row, field, file_data, size);
 }
 
 // TODO should format into memory
 void
-PrintIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, void* data, uint size)
+PrintIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
     //__debugbreak();
-    uint index = Unpack2or4LE (data, size);
+    uint index = Unpack2or4LE (file_data, size);
     if (!index)
         return;
     --index;
@@ -3570,16 +3569,16 @@ PrintIndex(const MetadataType* type, Image* image, uint table, uint row, uint fi
 
 // TODO should format into memory
 void
-PrintIndexList(const MetadataType* type, Image* image, uint table, uint row, uint field, void* data, uint size)
+PrintIndexList(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
 }
 
 // TODO should format into memory
 void
-PrintCodedIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, void* data, uint size)
+PrintCodedIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
     //__debugbreak();
-    uint code = Unpack2or4LE (data, size);
+    uint code = Unpack2or4LE (file_data, size);
     CodedIndex_t const * const coded_index = &CodedIndices.array[type->coded_index];
 
     uint index = (code >> coded_index->tag_size);
@@ -3603,10 +3602,10 @@ PrintCodedIndex(const MetadataType* type, Image* image, uint table, uint row, ui
 }
 
 void
-PrintBlob(const MetadataType* type, Image* image, uint table, uint row, uint field, void* data, uint size)
+PrintBlob(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
-    printf("\nPrintBlob type:%p(%s) image:%p table:%X row:%X field:%X data:%p size:%X\n", type, type->name, image, table, row, field, data, size);
-    uint offset = Unpack2or4LE (data, size);
+    printf("\nPrintBlob type:%p(%s) image:%p table:%X row:%X field:%X file_data:%p size:%X\n", type, type->name, image, table, row, field, file_data, size);
+    uint offset = Unpack2or4LE (file_data, size);
     uint8* d = (uint8*)image->GetBlob(offset);
 
     uint s = 0;
@@ -3645,9 +3644,9 @@ PrintBlob(const MetadataType* type, Image* image, uint table, uint row, uint fie
 (g)->bytes[15] \
 
 void
-PrintGuid(const MetadataType* type, Image* image, uint table, uint row, uint field, void* data, uint size)
+PrintGuid(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
-    uint a = Unpack2or4LE (data, image->guid_size);
+    uint a = Unpack2or4LE (file_data, image->guid_size);
     if (!a)
         return;
     --a;
