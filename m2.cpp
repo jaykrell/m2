@@ -12,7 +12,7 @@
 //   std::string::data (direct sprintf into std::string) (C++17)
 //   non-static member initialization (C++11)
 //   thread safe static initializers, maybe (C++11)
-//   char16 (C++11, but could use C++98 unsigned short)
+//   char16_t (C++11, but could use C++98 unsigned short)
 //   explicit operator bool (C++11 but easy to emulate in C++98)
 //   variadic template (C++11, really needed?)
 //   variadic macros (really needed?)
@@ -36,26 +36,14 @@
 //#define _LARGEFILE64_SOURCE
 
 #ifndef HAS_TYPED_ENUM
-#if __cplusplus >= 201103L || _MSC_VER >= 1500 // TODO test more compilers
+#if 1 // __cplusplus >= 201103L || _MSC_VER >= 1500 // TODO test more compilers
 #define HAS_TYPED_ENUM 1
 #else
 #define HAS_TYPED_ENUM 0
 #endif
 #endif
 
-#ifdef _WIN32
-#ifndef WIN32
-#define WIN32
-#endif
-#endif
-
-#if defined(_MSC_VER) && _MSC_VER < 1100 // TODO test exact version, mising in 2.0/900
-typedef unsigned char bool;
-#define true  ((bool)1)
-#define false ((bool)0)
-#endif
-
-#ifdef _MSC_VER
+#if _MSC_VER
 
 #pragma warning(disable:4100) // unused parameter
 #pragma warning(disable:4505) // unused static function
@@ -129,7 +117,6 @@ using std::vector;
 #define NOMINMAX 1
 #include <io.h>
 #include <windows.h>
-#define FILE_SHARE_DELETE 0x00000004 // old SDK lacks it
 #else
 #include <unistd.h>
 #include <fcntl.h>
@@ -518,10 +505,7 @@ struct SectionHeader
 {
     // In very old images, VirtualSize is zero, in which case, use SizeOfRawData.
     char Name [8];
-    //union {
-    //    uintLE PhysicalAddress;
-        uintLE VirtualSize;
-    //} Misc;
+    uintLE VirtualSize;
     uintLE VirtualAddress;
     uintLE SizeOfRawData;
     uintLE PointerToRawData;
@@ -760,17 +744,11 @@ struct String_t
     size_t length;
 };
 
-#ifdef _WIN32
-typedef wchar_t char16;
-#else
-typedef unsigned short char16;
-#endif
-
-typedef basic_string<char16> ustring;
+typedef basic_string<char16_t> ustring;
 
 struct UString_t
 {
-    char16* chars;
+    char16_t* chars;
     uint length;
     bool ascii;
 };
@@ -792,7 +770,7 @@ struct IMetadataTable
 struct Member
 {
     string name;
-    uint64 offset;
+    uint offset;
 };
 
 union Parent // Constant table0x0B
@@ -908,8 +886,6 @@ END_ENUM(MethodDefImplFlags, uint16) // table0x06
 
 struct Method_t : Member
 {
-    bool operator<(const Method_t&) const; // support for old compiler/library
-    bool operator==(const Method_t&) const; // support for old compiler/library
 };
 
 BEGIN_ENUM(TypeFlags, uint)
@@ -983,8 +959,6 @@ END_ENUM(EventFlags, uint16)
 
 struct Event_t : Member // table0x14
 {
-    bool operator<(const Event_t&) const; // support for old compiler/library
-    bool operator==(const Event_t&) const; // support for old compiler/library
     EventFlags Flags;
     String_t Name;
     Type* EventType;
@@ -992,8 +966,6 @@ struct Event_t : Member // table0x14
 
 struct Property_t : Member
 {
-    bool operator<(const Property_t&) const; // support for old compiler/library
-    bool operator==(const Property_t&) const; // support for old compiler/library
 };
 
 BEGIN_ENUM(FieldFlags, uint16)
@@ -1054,8 +1026,6 @@ struct Interface_t
 {
     Interface_t () { }
     Interface_t (const Interface_t&) { }
-    bool operator<(const Interface_t&) const; // support for old compiler/library
-    bool operator==(const Interface_t&) const; // support for old compiler/library
 
     vector<Method_t*> methods;
 };
@@ -1358,7 +1328,7 @@ struct MetadataUnicodeString
 {
     uint offset;
     uint size;
-    const char16* pointer;
+    const char16_t* pointer;
 };
 
 struct MetadataBlob
@@ -2843,8 +2813,6 @@ struct MethodDeclarationRow;
 #define METADATA_TABLE(name, base, fields)                              \
     struct name ## Row base                                             \
     {                                                                   \
-            bool operator<(const name ## Row&) const; /* old compiler/library workaround */     \
-            bool operator==(const name ## Row&) const; /* old compiler/library workaround */    \
             name ##  Row ( ) { }                                        \
             fields                                                      \
     };                                                                  \
@@ -3696,14 +3664,14 @@ MetatadataReadUString (const MetadataType* type, Image* image, uint table, uint 
 #endif
     uint offset = Unpack2or4LE (file, size);
     Blob_t blob = MetatadataDecodeBlob ((uint8*)image->GetUString(offset));
-    //char16 data [64] = { 0 };
+    //char16_t data [64] = { 0 };
     //for (uint i = 0; i < 64 && i < blob.size / 2; ++i)
-    //    data [i] = ((char16*)blob.data) [i];
+    //    data [i] = ((char16_t*)blob.data) [i];
     //printf ("MetatadataReadUString %ls\n", data);
     UString_t* us = (UString_t*)mem;
     us->length = (blob.size - 1) >> 1;
-    us->ascii = ((char16*)blob.data) [blob.size - 1] == 0;
-    us->chars = (char16*)blob.data;
+    us->ascii = ((char16_t*)blob.data) [blob.size - 1] == 0;
+    us->chars = (char16_t*)blob.data;
 }
 
 static
