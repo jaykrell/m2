@@ -256,7 +256,7 @@ uint
 Unpack2LE (const void *a)
 {
     uint8* b = (uint8*)a;
-    return ((b [1]) << 8) | b [0];;
+    return ((b [1]) << 8) | (uint)b [0];
 }
 
 uint
@@ -761,9 +761,7 @@ struct Blob_t
 
 struct IMetadataTable
 {
-    virtual void iresize(size_t) { };
-    virtual void* ibase() { return 0; };
-    virtual size_t isize() { return 0; };
+    virtual void* iresize(size_t) { return 0; };
     virtual ~IMetadataTable() { }
 };
 
@@ -1264,7 +1262,7 @@ CODED_INDICES
 #undef CODED_INDEX
 };
 
-#define LOG_BASE2_X(a, x) (a) > (1u << x) ? (x + 1) :
+#define LOG_BASE2_X(a, x) (a) > (1u << x) ? (x + 1u) :
 #define LOG_BASE2(a)                                                                                \
   (LOG_BASE2_X(a, 31) LOG_BASE2_X(a, 30)                                                          \
    LOG_BASE2_X(a, 29) LOG_BASE2_X(a, 28) LOG_BASE2_X(a, 27) LOG_BASE2_X(a, 26) LOG_BASE2_X(a, 25) \
@@ -1297,7 +1295,7 @@ CODED_INDICES
 
 
 const CodedIndices_t CodedIndices = {{
-#define CODED_INDEX(name, count, values) {LOG_BASE2 ((uint)CountOfField (CodedIndexMap_t, name)), (uint)CountOfField(CodedIndexMap_t, name), offsetof(CodedIndexMap_t, name) },
+#define CODED_INDEX(name, count, values) {LOG_BASE2 ((uint)CountOfField (CodedIndexMap_t, name)), (uint)CountOfField(CodedIndexMap_t, name), (uint)offsetof(CodedIndexMap_t, name) },
 CODED_INDICES
 #undef CODED_INDEX
 }};
@@ -2449,19 +2447,19 @@ const MetadataType MetadataType_NotStored             = { "NotStored", &Metadata
 #define MetadataType_Unused             MetadataType_Unused
 //#define MetadataType_Parent           MetadataType_MemberRefParent
 
-struct MetaTableStaticSchemaField
+struct MetaTableStaticField
 {
     const char* name;
     const MetadataType* type; // old compilers do not allow reference here, with initialization
     uint mem_offset;
 };
 
-struct MetadataTableStaticSchema_t
+struct MetadataTableStatic_t
 {
     const char *name;
     uint mem_row_size;
     uint field_count;
-    const MetaTableStaticSchemaField* fields;
+    const MetaTableStaticField* fields;
 };
 
 struct EmptyBase
@@ -2780,27 +2778,10 @@ struct MethodDeclarationRow;
     };                                                                  \
     struct name ## Table : vector<name ## Row>, IMetadataTable          \
     {                                                                   \
-        vector<char> valid; /* for on-demand read */                    \
-                                                                        \
-        virtual void iresize(size_t n)                                  \
+        virtual void* iresize(size_t n)                                 \
         {                                                               \
-            valid.resize(n, 0);                                         \
             resize(n);                                                  \
-        }                                                               \
-                                                                        \
-        virtual size_t isize()                                          \
-        {                                                               \
-            return size ();                                             \
-        }                                                               \
-                                                                        \
-        virtual void* ibase()                                           \
-        {                                                               \
-            return size () ? &(*this) [0] : 0;                          \
-        }                                                               \
-                                                                        \
-        virtual char* ivalidbase()                                      \
-        {                                                               \
-            return size () ? &valid [0] : 0;                            \
+            return n ? &(*this) [0] : 0;                                \
         }                                                               \
     };
 #define METADATA_FIELD2(table, name, type) metadata_schema_TYPED_ ## type name;
@@ -2812,9 +2793,7 @@ METADATA_TABLES
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
-#define METADATA_TABLE(name, base, fields) \
-const MetaTableStaticSchemaField metadata_field_ ## name [ ] = { fields }; \
-const MetadataTableStaticSchema_t metadata_row_schema_ ## name = { #name, sizeof (name ## Row), (uint)CountOf (metadata_field_ ## name), metadata_field_ ## name };
+#define METADATA_TABLE(name, base, fields) static const MetaTableStaticField metadata_field_ ## name [ ] = { fields };
 #define METADATA_FIELD2(table, name, type)                             { # name, &MetadataType_  ## type, offsetof (table ## Row, name) },
 #define METADATA_FIELD3(table, name, persistant_type, pointerful_type) { # name, &MetadataType_  ## persistant_type, offsetof (table ## Row, name) },
 #undef METADATA_TABLE_UNUSED
@@ -2859,11 +2838,11 @@ struct MetadataTableDynamic
 
     const char* debug_name;
     void* file_base;
+    void* mem_base; // from iresize()
     MetadataFieldDynamic* fields;
     uint row_count;
     uint file_row_size; // vs. mem_row_size which is elsewhere
     uint index_size; // 2 or 4
-    uint field_count;
     bool present;
     int8_t name_field;
     bool name_field_valid;
@@ -2950,7 +2929,7 @@ METADATA_TABLES
 #undef METADATA_FIELD3
 #define METADATA_FIELD2(table, name, type)                                1+
 #define METADATA_FIELD3(table, name, persistant_type, pointerful_type)    1+
-#define METADATA_TABLE(name, base, fieldz) table->debug_name = #name; itables [i++] = &name; table->fields = field; table->field_count = fieldz 0; field += fieldz 0; ++table;
+#define METADATA_TABLE(name, base, fieldz) table->debug_name = #name; itables [i++] = &name; table->fields = field; field += fieldz 0; ++table;
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name) ++table; itables [i++] = &unused_table;
 METADATA_TABLES
@@ -2988,16 +2967,17 @@ METADATA_TABLES
 };
 #define MetadataTableName(x) MetadataTableName [x]
 
-static const MetadataTableStaticSchema_t * const MetadataStaticSchema [ ] =
-{
 #undef METADATA_TABLE
+#undef METADATA_TABLE_UNUSED
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
 #define METADATA_FIELD2(table, name, type)                                /* nothing */
 #define METADATA_FIELD3(table, name, persistant_type, pointerful_type)    /* nothing */
-#define METADATA_TABLE(name, base, fields) &metadata_row_schema_ ## name,
-#undef METADATA_TABLE_UNUSED
-#define METADATA_TABLE_UNUSED(name) 0,
+#define METADATA_TABLE(name, base, fields) { #name, sizeof (name ## Row), (uint)CountOf (metadata_field_ ## name), metadata_field_ ## name },
+#define METADATA_TABLE_UNUSED(name)        { 0 },
+
+static const MetadataTableStatic_t MetadataStatic [ ] =
+{
 METADATA_TABLES
 };
 
@@ -3078,11 +3058,11 @@ struct Image : ImageZero
 
     void ComputeFileRowSize (uint table_index)
     {
-        auto const schema = MetadataStaticSchema [table_index];
-        if (!schema)
+        auto const schema = &MetadataStatic [table_index];
+        auto const field_count = schema->field_count;
+        if (!field_count)
             return;
         auto const table = &metadata.file.array [table_index];
-        auto const field_count = schema->field_count;
         uint size = 0;
         for (uint i = 0; i < field_count; ++i)
         {
@@ -3110,16 +3090,12 @@ struct Image : ImageZero
 
     uint GetFileRowSize (uint table_index)
     {
-        auto const file_row_size = metadata.file.array [table_index].file_row_size;
-        Assert(file_row_size);
-        return file_row_size;
+        return metadata.file.array [table_index].file_row_size;
     }
 
     uint GetMemRowSize (uint table_index)
     {
-        auto const mem_row_size = MetadataStaticSchema [table_index]->mem_row_size;
-        Assert(mem_row_size);
-        return mem_row_size;
+        return MetadataStatic [table_index].mem_row_size;
     }
 
     void DumpRow (uint table_index, uint r, char* p)
@@ -3128,9 +3104,9 @@ struct Image : ImageZero
             return;
         stdout_stream out;
         stderr_stream err;
-        auto const schema = MetadataStaticSchema [table_index];
-        auto const fields = schema ? schema->fields : 0;
-        auto const field_count = schema ? schema->field_count : 0u;
+        auto const schema = &MetadataStatic [table_index];
+        auto const fields = schema->fields;
+        auto const field_count = schema->field_count;
 
         out.printf ("%s[0x%08X] ", MetadataTableName (table_index), r);
         for (uint i = 0; i < field_count; ++i)
@@ -3164,9 +3140,9 @@ struct Image : ImageZero
         auto const prefix = StringFormat ("table 0x%08X (%s)", table_index, MetadataTableName (table_index));
         auto const prefix_cstr = prefix.c_str();
 
-        auto const schema = MetadataStaticSchema [table_index];
-        auto const fields = schema ? schema->fields : 0;
-        auto const field_count = schema ? schema->field_count : 0u;
+        auto const schema = &MetadataStatic [table_index];
+        auto const fields = schema->fields;
+        auto const field_count = schema->field_count;
 
         //err.printf ("%s\n", prefix_cstr);
         err.printf ("%s file_base:%p\n", prefix_cstr, metadata.file.array [table_index].file_base);
@@ -3370,20 +3346,18 @@ unknown_stream:
         // Allocate room for every row to point to file metadatata and have nicely constructed metadata.
         // Or maybe to read/reify it all.
         for (i = 0; i < CountOf (metadata.file.array); ++i)
-            metadata.itables [i]->iresize(metadata.file.array [i].row_count);
+            metadata.file.array [i].mem_base = metadata.itables [i]->iresize(metadata.file.array [i].row_count);
 
         for (i = 0; i < CountOf (metadata.file.array); ++i)
         {
             printf ("reading %s\n", MetadataTableName (i));
-            IMetadataTable* itable = metadata.itables [i];
             auto const dynamic_table = &metadata.file.array [i];
-            char* mem = (char*)itable->ibase();
+            char* mem = (char*)dynamic_table->mem_base;
             if (!mem)
                 continue;
             uint row_count = dynamic_table->row_count;
-            Assert (itable->isize() == row_count);
             auto file = (char*)dynamic_table->file_base;
-            auto const schema = MetadataStaticSchema [i];
+            auto const schema = &MetadataStatic [i];
             auto const field_count = schema->field_count;
             //
             // In-memoy rows can have padding and in-file do not, so
@@ -3657,7 +3631,41 @@ static
 void
 MetatadataReadIndexList (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    //printf ("MetatadataReadIndexList\n");
+    // The size of an index list is either until the end of the referenced table, or the next element in the referring table.
+    // The in-memory form of an index list a vector of pointers to rows of a metadata table.
+    // There are no coded index lists, just index lists. Like other indices, these are 2 or 4 bytes.
+    // The table they refer to is recorded in type.
+
+    printf ("MetatadataReadIndexList\n");
+    __debugbreak();
+
+    auto const start = Unpack2or4LE (file, size);
+    Assert (start);
+    uint count = 0;
+    auto const row_count = image->metadata.file.array [table].row_count;
+    auto const file_row_size = image->metadata.file.array [table].file_row_size;
+    if (row + 1 == row_count)
+    {
+        count = row_count - start;
+        printf("index list at end of table %X\n", count);
+    }
+    else
+    {
+        count = Unpack2or4LE(file_row_size + (char*)file, size) - start;
+        printf("index list not at end of table %X\n", count);
+    }
+    assert (count);
+
+    auto const mem_typed = (vector<void*>*)mem;
+    auto const reffed_table = &image->metadata.file.array [type->table_index];
+    auto const mem_row_size = MetadataStatic [type->table_index].mem_row_size;
+    char* ref = (char*)reffed_table->mem_base + mem_row_size * start;
+    mem_typed->resize (count);
+    for (uint i = 0; i < count; ++i)
+    {
+        (*mem_typed) [i] = ref;
+        ref += mem_row_size;
+    }
 }
 
 static
