@@ -120,7 +120,6 @@ typedef unsigned char bool;
 #include <vector>
 #include <utility>
 #include <memory>
-using namespace std;
 using std::basic_string;
 using std::string;
 using std::vector;
@@ -550,10 +549,10 @@ struct Handle
     uint64 get_file_size (const char * file_name = "")
     {
         DWORD hi = 0;
-        DWORD lo = GetFileSize(h, &hi);
+        DWORD lo = GetFileSize (h, &hi);
         if (lo == INVALID_FILE_SIZE)
         {
-            DWORD err = GetLastError();
+            DWORD err = GetLastError ();
             if (err != NO_ERROR)
                 throw_Win32Error ((int)err, StringFormat ("GetFileSizeEx(%s)", file_name).c_str());
         }
@@ -747,18 +746,8 @@ enum NativeType_t
     // TODO
 };
 
-struct Param
-{
-};
-
-struct Param_t
-{
-};
-
-struct Field_t
-{
-};
-
+struct Param_t;
+struct Field_t;
 struct Property_t;
 struct TypeDef_t;
 struct MethodRef_t;
@@ -808,7 +797,7 @@ struct Member
 
 union Parent // Constant table0x0B
 {
-    Param* param;
+    Param_t* param;
     Field_t* Field;
     Property_t* Property;
 };
