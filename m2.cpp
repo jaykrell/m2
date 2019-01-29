@@ -328,7 +328,9 @@ AssertFailedFormat (const char* condition, const string& extra)
     //fputs (("AssertFailedFormat:" + string (condition) + ":" + m2::StringFormatVa (format, args) + "\n").c_str (), stderr);
     //Assert (0);
     //abort ();
+#if _WIN32
     if (IsDebuggerPresent()) DebugBreak();
+#endif
     ThrowString ("AssertFailed:" + string (condition) + ":" + extra + "\n");
 }
 
@@ -3006,7 +3008,7 @@ struct MetadataFieldDynamic
         memset (this, 0, sizeof (*this));
     }
 
-    char* name; // for debugging
+    const char* name; // for debugging
     uint size;
     uint offset;
 };
@@ -3015,7 +3017,7 @@ struct MetadataTableDynamic
 {
     //MetadataTableDynamic() { memset (this, 0, sizeof (*this)); }
 
-    char* name; // for debugging
+    const char* name; // for debugging
     void* file_base;
     MetadataFieldDynamic* fields;
     uint row_count;
@@ -3146,7 +3148,7 @@ METADATA_TABLES
 };
 #define MetadataTableName(x) MetadataTableName[x]
 
-static const MetadataTableStaticSchema_t *  const MetadataStaticSchema[ ] =
+static const MetadataTableStaticSchema_t * const MetadataStaticSchema[ ] =
 {
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
@@ -3320,12 +3322,12 @@ struct Image : ImageZero
         stderr_stream err;
 
         // TODO less printf
-        string prefix = StringFormat ("table 0x%08X (%s)", table_index, MetadataTableName (table_index));
-        const char* prefix_cstr = prefix.c_str();
+        auto const prefix = StringFormat ("table 0x%08X (%s)", table_index, MetadataTableName (table_index));
+        auto const prefix_cstr = prefix.c_str();
 
-        const MetadataTableStaticSchema_t* schema = MetadataStaticSchema[table_index];
-        const MetaTableStaticSchemaField *fields = schema ? schema->fields : 0;
-        const uint field_count = schema ? schema->field_count : 0u;
+        auto const schema = MetadataStaticSchema[table_index];
+        auto const fields = schema ? schema->fields : 0;
+        auto const field_count = schema ? schema->field_count : 0u;
 
         //err.printf ("%s\n", prefix_cstr);
         err.printf ("%s file_base:%p\n", prefix_cstr, metadata.file.array [table_index].file_base);
@@ -3337,10 +3339,10 @@ struct Image : ImageZero
         uint i;
         for (i = 0; i < field_count; ++i)
         {
-            const MetaTableStaticSchemaField *field = &fields[i];
+            auto const field = &fields[i];
             out.printf("%s layout type:%s name:%s offset:0x%08X size:0x%08X\n", MetadataTableName (table_index), field->type->name, field->name, metadata.file.array[table_index].fields[i].offset, metadata.file.array[table_index].fields[i].size);
         }
-        char* p = (char*)metadata.file.array[table_index].file_base + (r - 1) * metadata.file.array[table_index].file_row_size;
+        auto p = (char*)metadata.file.array[table_index].file_base + (r - 1) * metadata.file.array[table_index].file_row_size;
         for (;r <= metadata.file.array [table_index].row_count; ++r)
         {
             out.printf("%s[0x%08X] ", MetadataTableName (table_index), r);
@@ -3779,7 +3781,9 @@ void
 MetatadataReadUString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     // TODO range check.
+#if _WIN32
     if (IsDebuggerPresent()) DebugBreak();
+#endif
     uint offset = Unpack2or4LE (file, size);
     Blob_t blob = MetatadataDecodeBlob ((uint8*)image->GetUString(offset));
     //char16 data [64] = { 0 };
