@@ -1053,11 +1053,11 @@ struct Class_t
 {
     Class_t* base;
     string name;
-    vector<Interface_t> interfaces;
-    vector<Method_t> methods;
+    vector<Interface_t*> interfaces;
+    vector<Method_t*> methods;
     vector<Field_t*> fields;
-    vector<Event_t> events;
-    vector<Property_t> properties;
+    vector<Event_t*> events;
+    vector<Property_t*> properties;
 };
 
 class MethodBody_t
@@ -1627,7 +1627,7 @@ The flags are the same ones of the Assembly table.
 
 36 - AssemblyRefProcessor Table
 
-//This table is ignored by the CLI and shouldn't be present in an assembly.
+//This table is ignored by the CLI and should not be present in an assembly.
 
 Fields:
 
@@ -1636,7 +1636,7 @@ Fields:
 
 37 - AssemblyRefOS Table
 
-//This table is ignored by the CLI and shouldn't be present in an assembly.
+//This table is ignored by the CLI and should not be present in an assembly.
 
 Fields:
 
@@ -1662,8 +1662,8 @@ Available flags are:
 
 //I quote: "The ExportedType table holds a row for each type, defined within other modules of this Assembly,
 //that is exported out of this Assembly. In essence, it stores TypeDef row numbers of all types that are marked
-//public in other modules that this Assembly comprises.". Be careful, this doesn't mean that when an assembly
-// uses a class contained in my assembly I export that type. In fact, I haven't seen yet this table in an assembly.
+//public in other modules that this Assembly comprises.". Be careful, this does not mean that when an assembly
+// uses a class contained in my assembly I export that type. In fact, I have not seen yet this table in an assembly.
 
 Fields:
 
@@ -1705,7 +1705,7 @@ Available flags are:
 
 //A very brief description of ".resources" files format: "The first dword is a signature which has to be
 //0xBEEFCACE, otherwise the resources file has to be considered as invalid. Second dword contains the
-//number of readers for this resources file, don't worry, it's something we don't have to talk about...
+//number of readers for this resources file, do not worry, it's something we do not have to talk about...
 //Framework stuff. Third dword is the size of reader types This number is only good for us to skip
 // the string (or strings) that follows, which is something like: "System.Resources.ResourceReader,
 //mscorlibsSystem.Resources.RuntimeResourceSet, mscorlib, Version=1.0.5000.0, Culture=neutral, PublicKeyToken=b77a5c561934e089".
@@ -1717,7 +1717,7 @@ Available flags are:
 
 //To gather the additional information we need, we have to skip the resource types. For each type
 //there's a 7bit encoded integer who gives the size of the string that follows. To decode these kind of
-// integers you have to read every byte until you find one which hasn't the highest bit set and make some
+// integers you have to read every byte until you find one which has not the highest bit set and make some
 // additional operations to obtain the final value... For the moment let's just stick to the format. After
 // having skipped the types we have to align our position to an 8 byte base. Then we have a
 // dword * NumberOfResources and each dword contains the hash of a resource. Then we have the same amount of
@@ -1826,8 +1826,8 @@ Exception handling data. CorILMethod_Sect_OptILTable 0x2 Reserved, shall be 0.
 CorILMethod_Sect_FatFormat 0x40 Data format is of the fat variety, meaning there is a 3-byte length.  If not set, the header is small with a  1-byte length
 CorILMethod_Sect_MoreSects 0x80 Another data section occurs after this current section
 
-// No other types than the exception handling sections are declared (this doesn't mean
-// you shouldn't check the CorILMethod_Sect_EHTable flag). So if the section is small it will be:
+// No other types than the exception handling sections are declared (this does not mean
+// you should not check the CorILMethod_Sect_EHTable flag). So if the section is small it will be:
 
 Offset Size Field Description
 0 1 Kind Flags as described above.
@@ -2038,7 +2038,7 @@ static
 uint
 uint_to_dec(uint64 a, char* buf)
 {
-    const uint len = uint_to_dec_getlen(a);
+    auto const len = uint_to_dec_getlen(a);
     for (uint i = 0; i < len; ++i, a /= 10)
         buf [i] = "0123456789" [a % 10];
     return len;
@@ -2107,7 +2107,7 @@ static
 uint
 int_to_hex(int64 a, char *buf)
 {
-    const uint len = int_to_hex_getlen (a);
+    auto const len = int_to_hex_getlen (a);
     int_to_hexlen(a, len, buf);
     return len;
 }
@@ -2124,7 +2124,7 @@ static
 uint
 int_to_hex_getlen_atleast8 (int64 a)
 {
-    const uint len = int_to_hex_getlen (a);
+    auto const len = int_to_hex_getlen (a);
     return std::max(len, 8u);
 }
 
@@ -2132,7 +2132,7 @@ static
 uint
 uint_to_hex_getlen_atleast8 (uint64 a)
 {
-    const uint len = uint_to_hex_getlen (a);
+    auto const len = uint_to_hex_getlen (a);
     return std::max (len, 8u);
 }
 
@@ -2140,7 +2140,7 @@ static
 uint
 int_to_hex_atleast8 (int64 a, char *buf)
 {
-    const uint len = int_to_hex_getlen_atleast8 (a);
+    auto const len = int_to_hex_getlen_atleast8 (a);
     int_to_hexlen (a, len, buf);
     return len;
 }
@@ -2149,17 +2149,17 @@ static
 uint
 uint_to_hex_atleast8(uint64 a, char *buf)
 {
-    const uint len = uint_to_hex_getlen_atleast8 (a);
+    auto const len = uint_to_hex_getlen_atleast8 (a);
     uint_to_hexlen (a, len, buf);
     return len;
 }
 
 struct stream
 {
-    virtual void write(const void* bytes, size_t count) = 0;
-    void prints(const char* a) { write (a, strlen(a)); }
-    void prints(const string& a) { prints(a.c_str()); }
-    void printc(char a) { write (&a, 1); }
+    virtual void write (const void* bytes, size_t count) = 0;
+    void prints (const char* a) { write (a, strlen(a)); }
+    void prints (const string& a) { prints(a.c_str()); }
+    void printc (char a) { write (&a, 1); }
     void printf (const char* format, ...)
     {
         va_list va;
@@ -2177,9 +2177,9 @@ struct stream
 
 struct stdout_stream : stream
 {
-    virtual void write(const void* bytes, size_t count)
+    virtual void write (const void* bytes, size_t count)
     {
-        fflush(stdout);
+        fflush (stdout);
         const char* pc = (const char*)bytes;
         while (count > 0)
         {
@@ -2199,7 +2199,7 @@ struct stderr_stream : stream
 {
     virtual void write(const void* bytes, size_t count)
     {
-        fflush(stderr);
+        fflush (stderr);
         const char* pc = (const char*)bytes;
         while (count > 0)
         {
@@ -2499,7 +2499,6 @@ struct MetadataTableStaticSchema_t
     uint mem_row_size;
     uint field_count;
     const MetaTableStaticSchemaField* fields;
-    //void (*Unpack)();
 };
 
 struct EmptyBase
@@ -2903,7 +2902,7 @@ struct MetadataTableDynamic
     uint index_size; // 2 or 4
     uint field_count;
     bool present;
-    char name_field;
+    int8_t name_field;
     bool name_field_valid;
 };
 
@@ -2980,28 +2979,28 @@ METADATA_TABLES
 
     MetadataDynamic()
     {
-        MetadataFieldDynamic* c = fields;
-        MetadataTableDynamic* t = file.array;
+        auto field = fields;
+        auto table = file.array;
         uint i = 0;
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
 #define METADATA_FIELD2(table, name, type)                                1+
 #define METADATA_FIELD3(table, name, persistant_type, pointerful_type)    1+
-#define METADATA_TABLE(name, base, fieldz) t->debug_name = #name; itables [i++] = &name; t->fields = c; t->field_count = fieldz 0; c += fieldz 0; ++t;
+#define METADATA_TABLE(name, base, fieldz) table->debug_name = #name; itables [i++] = &name; table->fields = field; table->field_count = fieldz 0; field += fieldz 0; ++table;
 #undef METADATA_TABLE_UNUSED
-#define METADATA_TABLE_UNUSED(name) ++t; itables [i++] = &unused_table;
+#define METADATA_TABLE_UNUSED(name) ++table; itables [i++] = &unused_table;
 METADATA_TABLES
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
 
-        c = fields;
+        field = fields;
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
-#define METADATA_FIELD2(table, name, type)                                   (c++)->debug_name = #name;
-#define METADATA_FIELD3(table, name, persistant_type, pointerful_type)       (c++)->debug_name = #name;
+#define METADATA_FIELD2(table, name, type)                                   (field++)->debug_name = #name;
+#define METADATA_FIELD3(table, name, persistant_type, pointerful_type)       (field++)->debug_name = #name;
 #define METADATA_TABLE(name, base, fieldz)                                   fieldz
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name)
@@ -3047,7 +3046,6 @@ struct ImageZero // zero-inited part of Image
     uint64 file_size;
     struct
     {
-        MetadataStreamHeader* tables;
         MetadataStreamHeader* guid;
         MetadataStreamHeader* string; // utf8
         MetadataStreamHeader* ustring; // unicode/user strings
@@ -3117,15 +3115,15 @@ struct Image : ImageZero
 
     void ComputeFileRowSize (uint table_index)
     {
-        const MetadataTableStaticSchema_t* schema = MetadataStaticSchema [table_index];
+        auto const schema = MetadataStaticSchema [table_index];
         if (!schema)
             return;
-        MetadataTableDynamic* table = &metadata.file.array [table_index];
-        const uint field_count = schema->field_count;
+        auto const table = &metadata.file.array [table_index];
+        auto const field_count = schema->field_count;
         uint size = 0;
         for (uint i = 0; i < field_count; ++i)
         {
-            const MetaTableStaticSchemaField* field = &schema->fields [i];
+            auto const field = &schema->fields [i];
             uint field_size = field->type->functions->GetSize (field->type, this);
             table->fields [i].offset = size;
             table->fields [i].size = field_size;
@@ -3149,14 +3147,14 @@ struct Image : ImageZero
 
     uint GetFileRowSize (uint table_index)
     {
-        const uint file_row_size = metadata.file.array [table_index].file_row_size;
+        auto const file_row_size = metadata.file.array [table_index].file_row_size;
         Assert(file_row_size);
         return file_row_size;
     }
 
     uint GetMemRowSize (uint table_index)
     {
-        const uint mem_row_size = MetadataStaticSchema [table_index]->mem_row_size;
+        auto const mem_row_size = MetadataStaticSchema [table_index]->mem_row_size;
         Assert(mem_row_size);
         return mem_row_size;
     }
@@ -3304,12 +3302,13 @@ struct Image : ImageZero
         printf ("flags:0x%08X\n", *pflags);
         printf ("number_of_streams:0x%08X\n", number_of_streams);
         MetadataStreamHeader* stream = (MetadataStreamHeader*)(pnumber_of_streams + 1);
+        MetadataStreamHeader* tables = 0;
         for (i = 0; i < number_of_streams; ++i)
         {
             printf ("stream[0x%08X].Offset:0x%08X\n", i, (uint)stream->offset);
             printf ("stream[0x%08X].Size:0x%08X\n", i, (uint)stream->Size);
             AssertFormat ((stream->Size % 4) == 0, ("0x%08X", (uint)stream->Size));
-            const char* name = stream->Name;
+            auto name = stream->Name;
             size_t length = strlen (name);
             AssertFormat (length <= 32, ("0x%08X:%s", length, name));
             printf ("stream[0x%08X].Name:0x%08X:%.*s\n", i, (int)length, (int)length, name);
@@ -3317,7 +3316,7 @@ struct Image : ImageZero
             {
                 ++name;
                 if (length == 2 && name [0] == '~')
-                    streams.tables = stream;
+                    tables = stream;
                 else if (length == 5 && memcmp (name, "GUID", 4) == 0)
                     streams.guid = stream;
                 else if (length == 5 && memcmp (name, "Blob", 4) == 0)
@@ -3337,7 +3336,7 @@ unknown_stream:
             length = (length + 4) & -4;
             stream = (MetadataStreamHeader*)(stream->Name + length);
         }
-        MetadataTablesHeader* metadata_tables_header = (MetadataTablesHeader*)(streams.tables->offset + (char*)metadata_root);
+        MetadataTablesHeader* metadata_tables_header = (MetadataTablesHeader*)(tables->offset + (char*)metadata_root);
         printf ("metadata_tables_header.reserved:0x%08X\n", (uint)metadata_tables_header->reserved);
         printf ("metadata_tables_header.MajorVersion:0x%08X\n", metadata_tables_header->MajorVersion);
         printf ("metadata_tables_header.MinorVersion:0x%08X\n", metadata_tables_header->MinorVersion);
@@ -3414,23 +3413,23 @@ unknown_stream:
         {
             printf ("reading %s\n", MetadataTableName (i));
             IMetadataTable* itable = metadata.itables [i];
-            MetadataTableDynamic* dynamic_table = &metadata.file.array [i];
+            auto const dynamic_table = &metadata.file.array [i];
             char* mem = (char*)itable->ibase();
             if (!mem)
                 continue;
             uint row_count = dynamic_table->row_count;
             Assert (itable->isize() == row_count);
-            const char* file = (char*)dynamic_table->file_base;
-            const MetadataTableStaticSchema_t* schema = MetadataStaticSchema [i];
-            const uint field_count = schema->field_count;
+            auto file = (char*)dynamic_table->file_base;
+            auto const schema = MetadataStaticSchema [i];
+            auto const field_count = schema->field_count;
             //
             // In-memoy rows can have padding and in-file do not, so
             // add file field at a time and memory row at a time.
             //
             for (uint ri = 0; ri < row_count; ++ri)
             {
-                const MetaTableStaticSchemaField* static_field = schema->fields;
-                MetadataFieldDynamic* dynamic_field = dynamic_table->fields;
+                auto static_field = schema->fields;
+                auto dynamic_field = dynamic_table->fields;
                 for (uint fi = 0; fi < field_count; ++fi, ++static_field, ++dynamic_field)
                 {
                     auto const dynamic_size = dynamic_field->size;
@@ -3501,7 +3500,7 @@ unknown_stream:
 
 static
 void
-PrintStringx(const char* x, const MetadataType* type, Image* image, uint table, uint row, uint field, const void* data, uint size)
+PrintStringx (const char* x, const MetadataType* type, Image* image, uint table, uint row, uint field, const void* data, uint size)
 {
     //__debugbreak();
     uint a = Unpack2or4LE (data, image->string_size);
@@ -3511,15 +3510,15 @@ PrintStringx(const char* x, const MetadataType* type, Image* image, uint table, 
 
 static
 void
-PrintString(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
+PrintString (const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
-    PrintStringx("", type, image, table, row, field, file_data, size);
+    PrintStringx ("", type, image, table, row, field, file_data, size);
 }
 
 // TODO should format into memory
 static
 void
-PrintIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
+PrintIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
     //__debugbreak();
     uint index = Unpack2or4LE (file_data, size);
@@ -3527,7 +3526,7 @@ PrintIndex(const MetadataType* type, Image* image, uint table, uint row, uint fi
         return;
     --index;
     uint table_index = type->table_index;
-    MetadataTableDynamic* t = &image->metadata.file.array [table_index];
+    auto const t = &image->metadata.file.array [table_index];
     void* p = ((char*)t->file_base) + t->file_row_size * index;
     printf (" PrintIndex:%s[%X][%X] => %s/%p ", MetadataTableName (table), row, field, MetadataTableName (table_index), p);
 
@@ -3542,14 +3541,14 @@ PrintIndex(const MetadataType* type, Image* image, uint table, uint row, uint fi
 // TODO should format into memory
 static
 void
-PrintIndexList(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
+PrintIndexList (const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
 }
 
 // TODO should format into memory
 static
 void
-PrintCodedIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
+PrintCodedIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
     //__debugbreak();
     uint code = Unpack2or4LE (file_data, size);
@@ -3563,7 +3562,7 @@ PrintCodedIndex(const MetadataType* type, Image* image, uint table, uint row, ui
 
     Assert(table_index >= 0);
 
-    MetadataTableDynamic* t = &image->metadata.file.array [table_index];
+    auto const t = &image->metadata.file.array [table_index];
     void* p = ((char*)t->file_base) + t->file_row_size * index;
     printf (" PrintCodedIndex:%s[%X][%X] => %s/%p ", MetadataTableName (table), row, field, MetadataTableName ((uint)table_index), p);
 
@@ -3577,7 +3576,7 @@ PrintCodedIndex(const MetadataType* type, Image* image, uint table, uint row, ui
 
 static
 void
-PrintBlob(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
+PrintBlob (const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
     printf ("\nPrintBlob type:%p(%s) image:%p table:%X row:%X field:%X file_data:%p size:%X\n", type, type->name, image, table, row, field, file_data, size);
     uint offset = Unpack2or4LE (file_data, size);
@@ -3627,7 +3626,7 @@ void
 MetatadataReadBlob (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     //printf ("\nMetatadataReadBlob type:%p(%s) image:%p table:%X row:%X field:%X file:%p size:%X\n", type, type->name, image, table, row, field, file, size);
-    const uint offset = Unpack2or4LE (file, size);
+    auto const offset = Unpack2or4LE (file, size);
 
     // TODO range check.
 
@@ -3762,9 +3761,9 @@ static
 void
 ComputeIndexSize (Image* image, uint /* todo enum */ table_index)
 {
-    const uint row_count = image->metadata.file.array [table_index].row_count;
+    auto const row_count = image->metadata.file.array [table_index].row_count;
     uint result = (row_count <= 0xFFFFu) ? 2u : 4u;
-    const char* name = MetadataTableName (table_index);
+    auto const name = MetadataTableName (table_index);
     printf ("ComputeIndexSize %X(%s) cap:%X result:%X\n", table_index, name, 0xFFFFu, result);
     image->metadata.file.array [table_index].index_size = result;
 }
@@ -3773,7 +3772,7 @@ static
 void
 ComputeCodedIndexSize (Image* image, CodedIndex coded_index)
 {
-    const char* name = CodeIndexName [coded_index];
+    auto const name = CodeIndexName [coded_index];
     const CodedIndex_t* data = &CodedIndices.array [coded_index];
     uint const map = data->map;
     uint const count = data->count;
@@ -3785,7 +3784,7 @@ ComputeCodedIndexSize (Image* image, CodedIndex coded_index)
         int m = Map [map + i];
         if (m < 0)
             continue;
-        const uint rows = image->metadata.file.array [m].row_count;
+        auto const rows = image->metadata.file.array [m].row_count;
         printf ("ComputeCodedIndexSize %X(%s) i:%X m:%X rows:%X\n", coded_index, name, i, m, rows);
         if (rows > cap)
         {
