@@ -207,6 +207,9 @@ typedef unsigned long long uint64;
 #endif
 #endif
 
+extern "C"
+int __stdcall IsDebuggerPresent (void);
+
 // VMS sometimes has 32bit size_t/ptrdiff_t but 64bit pointers.
 //
 // commented out is correct, but so is the #else
@@ -323,6 +326,7 @@ AssertFailedFormat (const char* condition, const string& extra)
     //fputs (("AssertFailedFormat:" + string (condition) + ":" + m2::StringFormatVa (format, args) + "\n").c_str (), stderr);
     //Assert (0);
     //abort ();
+    if (IsDebuggerPresent()) DebugBreak();
     ThrowString ("AssertFailed:" + string (condition) + ":" + extra + "\n");
 }
 
@@ -362,35 +366,45 @@ Unpack2or4LE (const void *a, uint size)
     return ~0u;
 }
 
-template <uint N> struct uintLEn_to_native;
+template <uint N> struct uintLEn_to_native_exact;
+template <uint N> struct uintLEn_to_native_fast;
 
 #if !_MSC_VER || _MSC_VER > 1000
-template <> struct uintLEn_to_native<16> { typedef uint T; };
-template <> struct uintLEn_to_native<32> { typedef uint T; };
-template <> struct uintLEn_to_native<64> { typedef uint64 T; };
+template <> struct uintLEn_to_native_exact<16> { typedef uint16 T; };
+template <> struct uintLEn_to_native_exact<32> { typedef uint T; };
+template <> struct uintLEn_to_native_exact<64> { typedef uint64 T; };
+template <> struct uintLEn_to_native_fast<16> { typedef uint T; };
+template <> struct uintLEn_to_native_fast<32> { typedef uint T; };
+template <> struct uintLEn_to_native_fast<64> { typedef uint64 T; };
 #else
-struct uintLEn_to_native<16> { typedef uint T; };
-struct uintLEn_to_native<32> { typedef uint T; };
-struct uintLEn_to_native<64> { typedef uint64 T; };
+struct uintLEn_to_native_exact<16> { typedef uint T; };
+struct uintLEn_to_native_exact<32> { typedef uint T; };
+struct uintLEn_to_native_exact<64> { typedef uint64 T; };
+struct uintLEn_to_native_fast<16> { typedef uint T; };
+struct uintLEn_to_native_fast<32> { typedef uint T; };
+struct uintLEn_to_native_fast<64> { typedef uint64 T; };
 #endif
 
 template <uint N>
 struct uintLEn // unsigned little endian integer, size n bits
 {
-    char data[N / 8];
+    union {
+        typename uintLEn_to_native_exact<N>::T n; // for debugging
+        char data [N / 8];
+    };
 
     operator
 #if !_MSC_VER || _MSC_VER > 1000
     typename
 #endif
-    uintLEn_to_native<N>::T ()
+    uintLEn_to_native_fast<N>::T ()
     {
 #if !_MSC_VER || _MSC_VER > 1000
         typename
 #endif
-        uintLEn_to_native<N>::T a = 0;
+        uintLEn_to_native_fast<N>::T a = 0;
         for (uint i = N / 8; i; )
-            a = (a << 8) | (uint)(data[--i] & 0xFF);
+            a = (a << 8) | (uint)(data [--i] & 0xFF);
         return a;
     }
     void operator=(uint);
@@ -815,9 +829,11 @@ struct Param
 struct Param_t
 {
 };
+
 struct Field_t
 {
 };
+
 struct Property_t;
 struct TypeDef_t;
 struct MethodRef_t;
@@ -827,7 +843,7 @@ struct Assembly_t;
 struct String_t
 {
     char* chars;
-    uint length;
+    size_t length;
 };
 
 #ifdef _WIN32
@@ -856,7 +872,7 @@ struct IMetadataTable
     virtual void iresize(size_t) { };
     virtual void* ibase() { return 0; };
     virtual size_t isize() { return 0; };
-//    virtual ~IMetadataTable() { }
+    virtual ~IMetadataTable() { }
 };
 
 struct Member
@@ -1136,6 +1152,7 @@ struct FieldOrParam
 
 struct Signature
 {
+    Blob_t blob; // TODO
 };
 
 struct AssemblyRef;
@@ -1340,7 +1357,7 @@ CODED_INDEX (HasCustomAttribute, 22,                                            
        kAssemblyRef            COMMA kFile          COMMA kExportedType COMMA kManifestResource COMMA kGenericParam COMMA  /* HasCustomAttribute */ \
        kGenericParamConstraint COMMA kMethodSpec                                          })                               /* HasCustomAttribute */
 
-#define CODED_INDEX(a, n, values) CodedIndex_ ## a,
+#define CODED_INDEX(name, count, values) CodedIndex_ ## name,
 BEGIN_ENUM(CodedIndex, uint8)
 {
 CODED_INDICES
@@ -1352,31 +1369,31 @@ END_ENUM(CodedIndex, uint8)
 
 struct CodedIndexMap_t // TODO array and named
 {
-#define CODED_INDEX(a, n, values) int8 a [n];
+#define CODED_INDEX(name, count, values) int8 name [count];
 CODED_INDICES
 #undef CODED_INDEX
 };
 
 const CodedIndexMap_t CodedIndexMap = {
-#define CODED_INDEX(a, n, values) values,
+#define CODED_INDEX(name, count, values) values,
 CODED_INDICES
 #undef CODED_INDEX
 };
 
 #define LOG_BASE2_X(a, x) (a) > (1u << x) ? (x + 1) :
 #define LOG_BASE2(a)                                                                                \
-    (LOG_BASE2_X(a, 31) LOG_BASE2_X(a, 30)                                                          \
-     LOG_BASE2_X(a, 29) LOG_BASE2_X(a, 28) LOG_BASE2_X(a, 27) LOG_BASE2_X(a, 26) LOG_BASE2_X(a, 25) \
-     LOG_BASE2_X(a, 24) LOG_BASE2_X(a, 23) LOG_BASE2_X(a, 22) LOG_BASE2_X(a, 21) LOG_BASE2_X(a, 20) \
-     LOG_BASE2_X(a, 19) LOG_BASE2_X(a, 18) LOG_BASE2_X(a, 17) LOG_BASE2_X(a, 16) LOG_BASE2_X(a, 15) \
-     LOG_BASE2_X(a, 14) LOG_BASE2_X(a, 13) LOG_BASE2_X(a, 12) LOG_BASE2_X(a, 11) LOG_BASE2_X(a, 10) \
-     LOG_BASE2_X(a,  9) LOG_BASE2_X(a,  8) LOG_BASE2_X(a,  7) LOG_BASE2_X(a,  6) LOG_BASE2_X(a,  5) \
-     LOG_BASE2_X(a,  4) LOG_BASE2_X(a,  3) LOG_BASE2_X(a,  2) LOG_BASE2_X(a,  1) LOG_BASE2_X(a,  0) 0)
+  (LOG_BASE2_X(a, 31) LOG_BASE2_X(a, 30)                                                          \
+   LOG_BASE2_X(a, 29) LOG_BASE2_X(a, 28) LOG_BASE2_X(a, 27) LOG_BASE2_X(a, 26) LOG_BASE2_X(a, 25) \
+   LOG_BASE2_X(a, 24) LOG_BASE2_X(a, 23) LOG_BASE2_X(a, 22) LOG_BASE2_X(a, 21) LOG_BASE2_X(a, 20) \
+   LOG_BASE2_X(a, 19) LOG_BASE2_X(a, 18) LOG_BASE2_X(a, 17) LOG_BASE2_X(a, 16) LOG_BASE2_X(a, 15) \
+   LOG_BASE2_X(a, 14) LOG_BASE2_X(a, 13) LOG_BASE2_X(a, 12) LOG_BASE2_X(a, 11) LOG_BASE2_X(a, 10) \
+   LOG_BASE2_X(a,  9) LOG_BASE2_X(a,  8) LOG_BASE2_X(a,  7) LOG_BASE2_X(a,  6) LOG_BASE2_X(a,  5) \
+   LOG_BASE2_X(a,  4) LOG_BASE2_X(a,  3) LOG_BASE2_X(a,  2) LOG_BASE2_X(a,  1) LOG_BASE2_X(a,  0) 0)
 
 //#define CountOf(x) (std::size(x)) // C++17
 #define CountOf(x) (sizeof (x) / sizeof ((x)[0])) // TODO
 #define CountOfField(x, y) (CountOf(x().y))
-#define CODED_INDEX(a, n, values) CodedIndex_t a;
+#define CODED_INDEX(name, count, values) CodedIndex_t name;
 
 union CodedIndices_t
 {
@@ -1388,7 +1405,7 @@ CODED_INDICES
 };
 
 #undef CODED_INDEX
-#define CODED_INDEX(a, n, values) #a,
+#define CODED_INDEX(name, count, values) #name,
 const char *CodeIndexName[] = {
 CODED_INDICES
 #undef CODED_INDEX
@@ -1396,13 +1413,13 @@ CODED_INDICES
 
 
 const CodedIndices_t CodedIndices = {{
-#define CODED_INDEX(x, n, values) {LOG_BASE2 (CountOfField (CodedIndexMap_t, x)), CountOfField(CodedIndexMap_t, x), offsetof(CodedIndexMap_t, x) },
+#define CODED_INDEX(name, count, values) {LOG_BASE2 (CountOfField (CodedIndexMap_t, name)), CountOfField(CodedIndexMap_t, name), offsetof(CodedIndexMap_t, name) },
 CODED_INDICES
 #undef CODED_INDEX
 }};
 
 #undef CodedIndex
-#define CodedIndex(x) CodedIndex_ ## x
+#define CodedIndex(name) CodedIndex_ ## name
 
 struct HeapIndex
 {
@@ -2360,7 +2377,7 @@ static
 uint
 GetCodedIndexSize (Image* image, CodedIndex coded_index);
 
-//#define CODED_INDEX(x, n, values) uint metadata_size_codedindex_ ## x (MetadataType* type, Image* image) { return GetCodedIndexSize (image, type->coded_index); }
+//#define CODED_INDEX(name, count, values) uint metadata_size_codedindex_ ## name (MetadataType* type, Image* image) { return GetCodedIndexSize (image, type->coded_index); }
 //CODED_INDICES
 #undef CODED_INDEX
 
@@ -3531,7 +3548,7 @@ unknown_stream:
                 MetadataFieldDynamic* dynamic_field = dynamic_table->fields;
                 for (uint fi = 0; fi < field_count; ++fi, ++static_field, ++dynamic_field)
                 {
-                    if (dynamic_field->size)
+                    if (dynamic_field->size && static_field->type->functions->Read)
                         static_field->type->functions->Read(static_field->type, this, i, ri, fi, dynamic_field->size, file, mem + static_field->mem_offset);
                     file += dynamic_field->size;
                 }
@@ -3539,7 +3556,7 @@ unknown_stream:
             }
         }
 
-        //if (IsDebuggerPresent()) __debugbreak();
+        //if (IsDebuggerPresent()) DebugBreak();
         //if (1)
         for (mask = 1, i = 0; i < CountOf (metadata.file.array); ++i, mask <<= 1)
         {
@@ -3595,7 +3612,7 @@ static
 void
 PrintStringx(const char* x, const MetadataType* type, Image* image, uint table, uint row, uint field, const void* data, uint size)
 {
-    //__debugbreak();
+    //DebugBreak();
     uint a = Unpack2or4LE (data, image->string_size);
     //fputs(image->GetString(a), stdout);
     printf(" PrintString:x:%s %X %p %s ", x, a, image->GetString(a), image->GetString(a));
@@ -3613,7 +3630,7 @@ static
 void
 PrintIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
-    //__debugbreak();
+    //DebugBreak();
     uint index = Unpack2or4LE (file_data, size);
     if (!index)
         return;
@@ -3643,7 +3660,7 @@ static
 void
 PrintCodedIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
-    //__debugbreak();
+    //DebugBreak();
     uint code = Unpack2or4LE (file_data, size);
     CodedIndex_t const * const coded_index = &CodedIndices.array[type->coded_index];
 
@@ -3673,62 +3690,63 @@ PrintBlob(const MetadataType* type, Image* image, uint table, uint row, uint fie
 {
     printf("\nPrintBlob type:%p(%s) image:%p table:%X row:%X field:%X file_data:%p size:%X\n", type, type->name, image, table, row, field, file_data, size);
     uint offset = Unpack2or4LE (file_data, size);
-    uint8* d = (uint8*)image->GetBlob(offset);
+    uint8* data = (uint8*)image->GetBlob(offset);
 
     uint s = 0;
-    uint b2 = d[0];
+    uint b2 = data [0];
     if (!(b2 & 0x80))
         s = b2;
-    else if ((b2 & 0xC0) == 0xC0) // TODO check against file bounds (reading d and computing size)
-        s = ((b2 & 0x3F) << 8) | d[1];
-    else if ((b2 & 0xE0) == 0xE0) // TODO check against file bounds (reading d and computing size)
-        s = ((b2 & 0x1F) << 24) | (((uint)d[1]) << 16) | (((uint)d[2]) << 8) | ((uint)d[3]);
+    else if ((b2 & 0xC0) == 0xC0) // TODO check against file bounds (reading data and computing size)
+        s = ((b2 & 0x3F) << 8) | data [1];
+    else if ((b2 & 0xE0) == 0xE0) // TODO check against file bounds (reading data and computing size)
+        s = ((b2 & 0x1F) << 24) | (((uint)data [1]) << 16) | (((uint)data [2]) << 8) | ((uint)data [3]);
     else
         AssertFailed("invalid metadata (blob)");
 
-    printf("%02X:%02X%02X%02X", s, d[0], d[1], d[2]);
+    printf("%02X:%02X%02X%02X", s, data [0], data [1], data [2]);
     exit(1);
-    //__debugbreak();
+    //DebugBreak();
 }
 
 Blob_t
-MetatadataDecodeBlob (uint8* d)
+MetatadataDecodeBlob (uint8* data)
 {
-    uint size = *d++;
+    uint8* p = data;
+    uint size = *p++;
     if ((size & 0x80) == 0)
         ; // nothing
-    else if ((size & 0xC0) == 0xC0) // TODO check against file bounds (reading d and computing size)
-        size = ((size & 0x3F) << 8) | *d++;
-    else if ((size & 0xE0) == 0xE0) // TODO check against file bounds (reading d and computing size)
+    else if ((size & 0xC0) == 0x80) // TODO check against file bounds (reading data and computing size)
+        size = ((size & 0x3F) << 8) | *p++;
+    else if ((size & 0xE0) == 0xE0) // TODO check against file bounds (reading data and computing size)
     {
-        size = (((size & 0x1F) << 8) | *d++);
-        size = ((size << 8) | *d++);
-        size = ((size << 8) | *d++);
+        size = (((size & 0x1F) << 8) | *p++);
+        size = ((size << 8) | *p++);
+        size = ((size << 8) | *p++);
     }
     else
         AssertFailed("invalid metadata (blob)");
 
     Blob_t blob;
     blob.size = size;
-    blob.data = d;
+    blob.data = p;
     return blob;
 }
 
 void
 MetatadataReadBlob (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    printf("\nMetatadataReadBlob type:%p(%s) image:%p table:%X row:%X field:%X file:%p size:%X\n", type, type->name, image, table, row, field, file, size);
+    //printf("\nMetatadataReadBlob type:%p(%s) image:%p table:%X row:%X field:%X file:%p size:%X\n", type, type->name, image, table, row, field, file, size);
     const uint offset = Unpack2or4LE (file, size);
 
     // TODO range check.
 
     Blob_t* blob = (Blob_t*)mem;
-    mem = image->GetBlob(offset);
-    *blob = MetatadataDecodeBlob ((uint8*)mem);
-    uint8 data [64] = { 0 };
-    for (uint i = 0; i < 64 && i < blob->size; ++i)
-        data [i] = ((uint8*)blob->data) [i];
-    printf("ReadBlob %X:%02X%02X%02X%02X\n", blob->size, data [0], data [1], data [2], data[3]);
+    void* m = image->GetBlob(offset);
+    *blob = MetatadataDecodeBlob ((uint8*)m);
+    //uint8 data [64] = { 0 };
+    //for (uint i = 0; i < 64 && i < blob->size; ++i)
+    //  data [i] = ((uint8*)blob->data) [i];
+    //printf("ReadBlob %X:%02X%02X%02X%02X\n", blob->size, data [0], data [1], data [2], data [3]);
 }
 
 static
@@ -3739,7 +3757,7 @@ MetatadataReadString (const MetadataType* type, Image* image, uint table, uint r
     //if (IsDebuggerPresent()) DebugBreak();
     uint offset = Unpack2or4LE (file, size);
     char* s = image->GetString(offset);
-    printf("MetatadataReadString %p %s\n", s, s);
+    //printf("MetatadataReadString %p %s\n", s, s);
     String_t* st = (String_t*)mem;
     st->length = strlen (s);
     st->chars = s;
@@ -3750,13 +3768,13 @@ void
 MetatadataReadUString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     // TODO range check.
-    if (IsDebuggerPresent()) __debugbreak();
+    if (IsDebuggerPresent()) DebugBreak();
     uint offset = Unpack2or4LE (file, size);
     Blob_t blob = MetatadataDecodeBlob ((uint8*)image->GetUString(offset));
-    char16 data[64] = { 0 };
-    for (uint i = 0; i < 64 && i < blob.size / 2; ++i)
-        data [i] = ((char16*)blob.data) [i];
-    printf("MetatadataReadUString %ls\n", data);
+    //char16 data [64] = { 0 };
+    //for (uint i = 0; i < 64 && i < blob.size / 2; ++i)
+    //    data [i] = ((char16*)blob.data) [i];
+    //printf("MetatadataReadUString %ls\n", data);
     UString_t* us = (UString_t*)mem;
     us->length = (blob.size - 1) >> 1;
     us->ascii = ((char16*)blob.data) [blob.size - 1] == 0;
@@ -3768,8 +3786,8 @@ void
 MetadataReadCodedIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     // TODO range check.
-    printf("MetadataReadCodedIndex\n");
-    if (IsDebuggerPresent()) __debugbreak();
+    //printf("MetadataReadCodedIndex\n");
+    //if (IsDebuggerPresent()) DebugBreak();
 }
 
 static
@@ -3777,21 +3795,21 @@ void
 MetatadataReadIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     // TODO range check.
-    printf("MetatadataReadIndex\n");
+    //printf("MetatadataReadIndex\n");
 }
 
 static
 void
 MetatadataReadIndexList (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    printf("MetatadataReadIndexList\n");
+    //printf("MetatadataReadIndexList\n");
 }
 
 static
 void
 MetatadataReadGuid (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    memcpy (mem, file, 16);
+    //memcpy (mem, file, 16);
 }
 
 #define GUID_FORMAT "{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}"
