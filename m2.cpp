@@ -35,9 +35,6 @@
 //#define _LARGEFILE_SOURCE
 //#define _LARGEFILE64_SOURCE
 
-#define _cpp_max max // old compiler/library compat
-#define _cpp_min min // old compiler/library compat
-
 #ifndef HAS_TYPED_ENUM
 #if __cplusplus >= 201103L || _MSC_VER >= 1500 // TODO test more compilers
 #define HAS_TYPED_ENUM 1
@@ -60,55 +57,56 @@ typedef unsigned char bool;
 
 #ifdef _MSC_VER
 
-#pragma warning(disable:4616) // not a valid warning (depends on compiler version)
-// We have to include yvals.h early because it breaks warnings.
+#pragma warning(disable:4100) // unused parameter
+#pragma warning(disable:4505) // unused static function
+#pragma warning(disable:4514) // unused function
+#pragma warning(disable:4706) // assignment within conditional
+#pragma warning(disable:4710) // function not inlined
 #pragma warning(disable:4820) // padding
+
+#pragma warning(push)
+
+//#pragma warning(disable:4616) // not a valid warning (depends on compiler version)
+// We have to include yvals.h early because it breaks warnings.
 #if _MSC_VER == 1100 // TODO test more, but yvals.h not present in 900
 #include <yvals.h>
 #endif
 // TODO These warnings are in standard headers and not in our code.
 #if _MSC_VER <= 1100 // TODO test more compilers/libraries
-#pragma warning(disable:4018) // unsigned/signed mismatch
-#pragma warning(disable:4365) // unsigned/signed mismatch
-#pragma warning(disable:4244) // integer conversion
+//#pragma warning(disable:4018) // unsigned/signed mismatch
+//#pragma warning(disable:4244) // integer conversion
+//#pragma warning(disable:4365) // unsigned/signed mismatch
 #endif
-#pragma warning(disable:4615) // not a valid warning (depends on compiler version)
-#pragma warning(disable:4619) // not a valid warning (depends on compiler version)
-#pragma warning(disable:4663) // c:\msdev\50\VC\INCLUDE\iosfwd(132) : warning C4663: C++ language change: to explicitly specialize class template 'char_traits' use the following syntax:
+//#pragma warning(disable:4615) // not a valid warning (depends on compiler version)
+//#pragma warning(disable:4619) // not a valid warning (depends on compiler version)
+//#pragma warning(disable:4663) // c:\msdev\50\VC\INCLUDE\iosfwd(132) : warning C4663: C++ language change: to explicitly specialize class template 'char_traits' use the following syntax:
                               // template<> struct char_traits<unsigned short>
-#pragma warning(disable:4097) // typedef-name 'string' used as synonym for class-name 'basic_string<char>'
-#pragma warning(disable:4100) // unused parameter
-#pragma warning(disable:4146) // unary minus unsigned is still unsigned (xlocnum)
-#pragma warning(disable:4201) // non standard extension : nameless struct/union (windows.h)
-#pragma warning(disable:4238) // non standard extension : class rvalue as lvalue (utility)
-#pragma warning(disable:4480) // non standard extension : typed enums
-#pragma warning(disable:4505) // unused static function
-#pragma warning(disable:4510) // function could not be generated
-#pragma warning(disable:4511) // function could not be generated
-#pragma warning(disable:4512) // function could not be generated
-#pragma warning(disable:4513) // function could not be generated
-#pragma warning(disable:4514) // unused function
-#pragma warning(disable:4610) // cannot be instantiated
-#pragma warning(disable:4616) // not a valid warning
-#pragma warning(disable:4623) // default constructor deleted
+//#pragma warning(disable:4097) // typedef-name 'string' used as synonym for class-name 'basic_string<char>'
+//#pragma warning(disable:4146) // unary minus unsigned is still unsigned (xlocnum)
+//#pragma warning(disable:4201) // non standard extension : nameless struct/union (windows.h)
+//#pragma warning(disable:4238) // non standard extension : class rvalue as lvalue (utility)
+//#pragma warning(disable:4480) // non standard extension : typed enums
+//#pragma warning(disable:4510) // function could not be generated
+//#pragma warning(disable:4511) // function could not be generated
+//#pragma warning(disable:4512) // function could not be generated
+//#pragma warning(disable:4513) // function could not be generated
+//#pragma warning(disable:4610) // cannot be instantiated
+//#pragma warning(disable:4616) // not a valid warning
+//#pragma warning(disable:4623) // default constructor deleted
 #pragma warning(disable:4626) // assignment implicitly deleted
-#pragma warning(disable:4706) // assignment within conditional
-#pragma warning(disable:4710) // function not inlined
 #pragma warning(disable:5027) // move assignment implicitly deleted
-#if _MSC_VER > 1100 // TODO test more compilers
-#pragma warning(push)
-#endif
-#pragma warning(disable:4480) // specifying enum type
+//#pragma warning(disable:4480) // specifying enum type
 #pragma warning(disable:4571) // catch(...)
 #pragma warning(disable:4625) // copy constructor implicitly deleted
-#pragma warning(disable:4668) // #if not_defined is #if 0
+#pragma warning(disable:4668) // //#if not_defined is //#if 0
 #pragma warning(disable:4774) // printf used without constant format
 #pragma warning(disable:5026) // move constructor implicitly deleted
 #pragma warning(disable:5039) // exception handling and function pointers
 #endif
 
-#ifdef __clang__
+#if __GNUC__ || __clang__
 #pragma GCC diagnostic ignored "-Wunused-const-variable"
+#pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 #include <assert.h>
 #include <errno.h>
@@ -118,25 +116,15 @@ typedef unsigned char bool;
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#if !defined(_MSC_VER) || _MSC_VER >= 1100 // TODO check more versions; 4.0?
 #include <string>
 #include <vector>
 #include <utility>
 #include <memory>
-#if _MSC_VER == 1100
 using namespace std;
-#else
 using std::basic_string;
 using std::string;
 using std::vector;
-#endif
-//#include <algorithm> // TODO? remove STL dependency?
-#else
-#include "stl.h"
-#endif
-// Portable mini/max.
-template<class T> inline const T& Max(const T& x, const T& y) {return x < y ? y : x; }
-template<class T> inline const T& Min(const T& x, const T& y) {return y < x ? y : x; }
+#include <algorithm> // TODO? remove STL dependency?
 
 #ifdef _WIN32
 #define NOMINMAX 1
@@ -151,86 +139,19 @@ template<class T> inline const T& Min(const T& x, const T& y) {return y < x ? y 
 #endif
 #if _MSC_VER
 #include <malloc.h> // for _alloca
-#endif
-
-#if _MSC_VER > 1100 // TODO test more compilers
 #pragma warning(pop)
 #endif
 
-//#if !defined(PRIX64)
-//#if defined(_WIN32)
-//#define PRIX64 "I64X"
-//#elif defined(_ILP64) || defined(__LP64__)
-//#define PRIX64 "lX"
-//#else
-//#define PRIX64 "llX"
-//#endif
-//#endif
+using int8 = int8_t;
+using uint8 = uint8_t;
+using int16 = int16_t;
+using uint16 = uint16_t;
+using uint = uint32_t;
+using int64 = int64_t;
+using uint64 = uint64_t;
 
-// integral typedefs from Modula-3 m3core.h.
-#if UCHAR_MAX == 0x0FFUL
-typedef   signed char        int8;
-typedef unsigned char       uint8;
-#else
-#error unable to find 8bit integer
-#endif
-#if USHRT_MAX == 0x0FFFFUL
-typedef unsigned short     uint16;
-#else
-#error unable to find 16bit integer
-#endif
-#if UINT_MAX == 0x0FFFFFFFFUL
-typedef unsigned int       uint;
-#elif ULONG_MAX == 0x0FFFFFFFFUL
-typedef unsigned long      uint;
-#else
-#error unable to find 32bit integer
-#endif
-
-#ifdef _MSC_VER
-#if _MSC_VER >= 1100 // TODO check more versions
-#pragma warning(push)
-#endif
-#pragma warning(disable:4668) // #if not_defined is #if 0
-#endif
-
-#if defined (__LP64__) || defined (_LP64) || __BITS_PER_LONG == 64 || __WORDSIZE == 64
-typedef          long  int64;
-typedef unsigned long uint64;
-#else
-#if defined (_MSC_VER) || defined (__DECC) || defined (__DECCXX) || defined (__int64)
-typedef          __int64    int64;
-typedef unsigned __int64   uint64;
-#else
-typedef          long long  int64;
-typedef unsigned long long uint64;
-#endif
-#endif
-
-// Workaround old headers or #if'ed out.
-#ifdef _WIN32
-extern "C" WINBASEAPI BOOL WINAPI IsDebuggerPresent (VOID);
-#endif
-
-// VMS sometimes has 32bit size_t/ptrdiff_t but 64bit pointers.
-//
-// commented out is correct, but so is the #else
-#if defined (_WIN64) || __INITIAL_POINTER_SIZE == 64 || defined (__LP64__) || defined (_LP64)
-//typedef int64 intptr;
-//typedef uint64 uintptr;
-#else
-//typedef ptrdiff_t intptr;
-//typedef size_t uintptr;
-#endif
-
-#if _MSC_VER >= 1100 // TODO check more versions
-#pragma warning(pop)
-#endif
-
-#if !_MSC_VER || _MSC_VER > 1100 // workaround compiler bugs
 namespace m2
 {
-#endif
 
 
 // Portable to old (and new) Visual C++ runtime.
@@ -393,7 +314,7 @@ template <uint N>
 struct uintLEn // unsigned little endian integer, size n bits
 {
     union {
-        typename uintLEn_to_native_exact<N>::T n; // for debugging
+        typename uintLEn_to_native_exact<N>::T debug_n;
         char data [N / 8];
     };
 
@@ -2141,7 +2062,7 @@ int_get_precision(int64 a)
 {
     // How many bits needed to represent.
     // i.e. so leading bit is extendible sign bit, or 64
-    return Min(64u, 1 + uint_get_precision (int_split_sign_magnitude_t(a).u));
+    return std::min(64u, 1 + uint_get_precision (int_split_sign_magnitude_t(a).u));
 }
 
 static
@@ -2245,7 +2166,7 @@ uint
 int_to_hex_getlen_atleast8 (int64 a)
 {
     const uint len = int_to_hex_getlen (a);
-    return Max(len, 8u);
+    return std::max(len, 8u);
 }
 
 static
@@ -2253,7 +2174,7 @@ uint
 uint_to_hex_getlen_atleast8 (uint64 a)
 {
     const uint len = uint_to_hex_getlen (a);
-    return Max (len, 8u);
+    return std::max (len, 8u);
 }
 
 static
@@ -2303,7 +2224,7 @@ struct stdout_stream : stream
         const char* pc = (const char*)bytes;
         while (count > 0)
         {
-            uint const n = (uint)Min(count, ((size_t)1024) * 1024 * 1024);
+            uint const n = (uint)std::min(count, ((size_t)1024) * 1024 * 1024);
 #if _MSC_VER
             ::_write(_fileno(stdout), pc, n);
 #else
@@ -2323,7 +2244,7 @@ struct stderr_stream : stream
         const char* pc = (const char*)bytes;
         while (count > 0)
         {
-            uint const n = (uint)Min(count, ((size_t)1024) * 1024 * 1024);
+            uint const n = (uint)std::min(count, ((size_t)1024) * 1024 * 1024);
 #if _MSC_VER
             ::_write(_fileno(stderr), pc, n);
 #else
@@ -3008,7 +2929,7 @@ struct MetadataFieldDynamic
         memset (this, 0, sizeof (*this));
     }
 
-    const char* name; // for debugging
+    const char* debug_name;
     uint size;
     uint offset;
 };
@@ -3017,7 +2938,7 @@ struct MetadataTableDynamic
 {
     //MetadataTableDynamic() { memset (this, 0, sizeof (*this)); }
 
-    const char* name; // for debugging
+    const char* debug_name;
     void* file_base;
     MetadataFieldDynamic* fields;
     uint row_count;
@@ -3025,7 +2946,7 @@ struct MetadataTableDynamic
     uint index_size; // 2 or 4
     uint field_count;
     bool present;
-    int name_field;
+    char name_field;
     bool name_field_valid;
 };
 
@@ -3110,7 +3031,7 @@ METADATA_TABLES
 #undef METADATA_FIELD3
 #define METADATA_FIELD2(table, name, type)                                1+
 #define METADATA_FIELD3(table, name, persistant_type, pointerful_type)    1+
-#define METADATA_TABLE(nam, base, fieldz) t->name = #nam; itables[i++] = &nam; t->fields = c; t->field_count = fieldz 0; c += fieldz 0; ++t;
+#define METADATA_TABLE(name, base, fieldz) t->debug_name = #name; itables[i++] = &name; t->fields = c; t->field_count = fieldz 0; c += fieldz 0; ++t;
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name) ++t; itables[i++] = &unused_table;
 METADATA_TABLES
@@ -3122,9 +3043,9 @@ METADATA_TABLES
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
-#define METADATA_FIELD2(table, nam, type)                                   (c++)->name = #nam;
-#define METADATA_FIELD3(table, nam, persistant_type, pointerful_type)       (c++)->name = #nam;
-#define METADATA_TABLE(nam, base, fieldz)                                   fieldz
+#define METADATA_FIELD2(table, name, type)                                   (c++)->debug_name = #name;
+#define METADATA_FIELD3(table, name, persistant_type, pointerful_type)       (c++)->debug_name = #name;
+#define METADATA_TABLE(name, base, fieldz)                                   fieldz
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name)
 METADATA_TABLES
@@ -3935,11 +3856,9 @@ ImageGetIndexSize (Image* image, uint /* todo enum */ table_index)
     return a;
 }
 
-#if !_MSC_VER || _MSC_VER > 1100 // workaround compiler bugs
 }
 
 using namespace m2;
-#endif
 
 int
 main (int argc, char** argv)

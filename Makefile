@@ -139,19 +139,19 @@ clean:
 	$(RM_F) mac win32 win32.exe win64 win64.exe win win.exe cyg cyg.exe *.ilk lin
 
 mac: m2.cpp
-	g++ -g m2.cpp -o $@
+	g++ -std=c++0x -g m2.cpp -o $@
 
 cyg: m2.cpp
-	g++ -g m2.cpp -o $@
+	g++ -std=c++0x -g m2.cpp -o $@
 
 lin: m2.cpp
-	g++ -Wall -g m2.cpp -o $@
+	g++ -std=c++0x  -Wall -g m2.cpp -o $@
 
 win32.exe: m2.cpp
-	i686-w64-mingw32-g++ -g m2.cpp -o $@
+	i686-w64-mingw32-g++ -std=c++0x -g m2.cpp -o $@
 
 win64.exe: m2.cpp
-	x86_64-w64-mingw32-g++ -g m2.cpp -o $@
+	x86_64-w64-mingw32-g++ -std=c++0x -g m2.cpp -o $@
 
 endif
 !endif :
