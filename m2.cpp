@@ -824,8 +824,10 @@ struct MethodRef_t;
 struct MethodDef_t;
 struct Assembly_t;
 
-struct String : string
+struct String_t
 {
+    char* chars;
+    uint length;
 };
 
 #ifdef _WIN32
@@ -836,8 +838,11 @@ typedef unsigned short char16;
 
 typedef basic_string<char16> ustring;
 
-struct UString : ustring
+struct UString_t
 {
+    char16* chars;
+    uint length;
+    bool ascii;
 };
 
 struct Blob_t
@@ -1051,7 +1056,7 @@ struct Event_t : Member // table0x14
     bool operator<(const Event_t&) const; // support for old compiler/library
     bool operator==(const Event_t&) const; // support for old compiler/library
     EventFlags Flags;
-    String Name;
+    String_t Name;
     Type* EventType;
 };
 
@@ -1573,7 +1578,7 @@ Each row represents an event.
 Fields:
 
 - EventFlags (a 2-byte bitmask of type EventAttribute)
-- Name (index into String heap)
+- Name (index into String_t heap)
 - EventType (index into TypeDef, TypeRef or TypeSpec tables; more precisely, a TypeDefOrRef coded index) [this corresponds to the Type of the Event; it is not the Type that owns this event]
 
 Available flags are:
@@ -1594,7 +1599,7 @@ Each row represents a property.
 Fields:
 
 - Flags (a 2-byte bitmask of type PropertyAttributes)
-- Name (index into String heap)
+- Name (index into String_t heap)
 - Type (index into Blob heap) [the name of this field is misleading. It does not index a TypeDef or TypeRef table – instead it indexes the signature in the Blob heap of the Property)
 
 Available flags are:
@@ -1617,7 +1622,7 @@ Each row represents a reference to an external module.
 
 Fields:
 
-- Name (index into String heap)
+- Name (index into String_t heap)
 
 27 - TypeSpec Table
 
@@ -1638,7 +1643,7 @@ Fields:
 // - MappingFlags (a 2-byte bitmask of type PInvokeAttributes)
 // - MemberForwarded (index into the Field or MethodDef table; more precisely, a MemberForwarded coded index.
 //  However, it only ever indexes the MethodDef table, since Field export is not supported)
-// - ImportName (index into the String heap)
+// - ImportName (index into the String_t heap)
 // - ImportScope (index into the ModuleRef table)
 
 Available flags are:
@@ -1697,8 +1702,8 @@ Fields:
 - MajorVersion, MinorVersion, BuildNumber, RevisionNumber (2-byte constants)
 - Flags (a 4-byte bitmask of type AssemblyFlags)
 - PublicKey (index into Blob heap)
-- Name (index into String heap)
-- Culture (index into String heap)
+- Name (index into String_t heap)
+- Culture (index into String_t heap)
 
 Available flags are:
 
@@ -1713,8 +1718,8 @@ Fields:
 - MajorVersion, MinorVersion, BuildNumber, RevisionNumber (2-byte constants)
 - Flags (a 4-byte bitmask of type AssemblyFlags)
 - PublicKeyOrToken (index into Blob heap – the public key or token that identifies the author of this Assembly)
-- Name (index into String heap)
-- Culture (index into String heap)
+- Name (index into String_t heap)
+- Culture (index into String_t heap)
 - HashValue (index into Blob heap)
 
 The flags are the same ones of the Assembly table.
@@ -1746,7 +1751,7 @@ Each row references an external file.
 Fields:
 
 - Flags (a 4-byte bitmask of type FileAttributes)
-- Name (index into String heap)
+- Name (index into String_t heap)
 - HashValue (index into Blob heap)
 
 Available flags are:
@@ -1765,8 +1770,8 @@ Fields:
 - TypeDefId (4-byte index into a TypeDef table of another module in this Assembly). This field is used as a
 // hint only. If the entry in the target TypeDef table matches the TypeName and TypeNamespace entries in
 //this table, resolution has succeeded. But if there is a mismatch, the CLI shall fall back to a search of the target TypeDef table
-- TypeName (index into the String heap)
-- TypeNamespace (index into the String heap)
+- TypeName (index into the String_t heap)
+- TypeNamespace (index into the String_t heap)
 - Implementation. This can be an index (more precisely, an Implementation coded index) into one of 2 tables, as follows:
         o File table, where that entry says which module in the current assembly holds the TypeDef
         o ExportedType table, where that entry is the enclosing Type of the current nested Type
@@ -1781,7 +1786,7 @@ Fields:
 
 - Offset (a 4-byte constant)
 - Flags (a 4-byte bitmask of type ManifestResourceAttributes)
-- Name (index into the String heap)
+- Name (index into the String_t heap)
 - Implementation (index into File table, or AssemblyRef table, or null; more precisely, an Implementation coded index)
 
 Available flags are:
@@ -1835,7 +1840,7 @@ Fields:
 - Number (the 2-byte index of the generic parameter, numbered left-to-right, from zero)
 - Flags (a 2-byte bitmask of type GenericParamAttributes)
 - Owner (an index into the TypeDef or MethodDef table, specifying the Type or Method to which this generic parameter applies; more precisely, a TypeOrMethodDef coded index)
-- Name (a non-null index into the String heap, giving the name for the generic parameter. This is purely descriptive and is used only by source language compilers and by Reflection)
+- Name (a non-null index into the String_t heap, giving the name for the generic parameter. This is purely descriptive and is used only by source language compilers and by Reflection)
 
 Available flags are:
 
@@ -2372,45 +2377,27 @@ MetatadataReadBlob (const MetadataType* type, Image* image, uint table, uint row
 
 static
 void
-MetatadataReadString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
-{
-    printf("MetatadataReadString\n");
-}
+MetatadataReadString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem);
 
 static
 void
-MetatadataReadUString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
-{
-    printf("MetatadataReadUString\n");
-}
+MetatadataReadUString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem);
 
 static
 void
-MetadataReadCodedIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
-{
-    printf("MetadataReadCodedIndex\n");
-}
+MetadataReadCodedIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem);
 
 static
 void
-MetatadataReadIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
-{
-    printf("MetatadataReadIndex\n");
-}
+MetatadataReadIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem);
 
 static
 void
-MetatadataReadIndexList (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
-{
-    printf("MetatadataReadIndexList\n");
-}
+MetatadataReadIndexList (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem);
 
 static
 void
-MetatadataReadGuid (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
-{
-    memcpy (mem, file, 16);
-}
+MetatadataReadGuid (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem);
 
 static
 uint
@@ -2535,7 +2522,7 @@ const MetadataTypeFunctions MetadataType_Index =
 const MetadataTypeFunctions MetadataType_IndexList =
 {
     MetatadataReadIndexList,
-    MetadataGetIndexSize, // TODO?
+    MetadataGetIndexSize,
     PrintIndexList,
 };
 
@@ -2855,7 +2842,7 @@ struct EmptyBase
 //    this is simply correctly sized arrays of size/offset and maybe link to form 3.
 #define metadata_schema_TYPED_blob              Blob_t
 #define metadata_schema_TYPED_guid              Guid
-#define metadata_schema_TYPED_string            String
+#define metadata_schema_TYPED_string            String_t
 #define metadata_schema_TYPED_uint16            uint16
 #define metadata_schema_TYPED_uint              uint
 #define metadata_schema_TYPED_uint8             uint8
@@ -2865,7 +2852,7 @@ struct EmptyBase
 #define metadata_schema_TYPED_Interface         Interface_t*
 #define metadata_schema_TYPED_MemberRefParent   Parent
 #define metadata_schema_TYPED_MethodList        vector<Method_t*>
-#define metadata_schema_TYPED_Name              String
+#define metadata_schema_TYPED_Name              String_t
 #define metadata_schema_TYPED_ParamList         vector<Param_t*>
 #define metadata_schema_TYPED_PropertyList      vector<Property_t*>
 //#define metadata_schema_TYPED_Parent            Parent
@@ -2875,8 +2862,8 @@ struct EmptyBase
 #define metadata_schema_TYPED_signature         Signature
 #define metadata_schema_TYPED_TypeDef           Type*
 #define metadata_schema_TYPED_TypeDefOrRef      voidp_TODO /* union? */
-#define metadata_schema_TYPED_TypeName          String
-#define metadata_schema_TYPED_TypeNameSpace     String
+#define metadata_schema_TYPED_TypeName          String_t
+#define metadata_schema_TYPED_TypeNameSpace     String_t
 #define metadata_schema_TYPED_Unused            Unused_t
 #define metadata_schema_TYPED_NotStored         Unused_t
 #define metadata_schema_TYPED_CustomAttributeType CustomAttributeType
@@ -3000,6 +2987,7 @@ struct MetadataFieldDynamic
         memset (this, 0, sizeof (*this));
     }
 
+    char* name; // for debugging
     uint size;
     uint offset;
 };
@@ -3008,6 +2996,7 @@ struct MetadataTableDynamic
 {
     //MetadataTableDynamic() { memset (this, 0, sizeof (*this)); }
 
+    char* name; // for debugging
     void* file_base;
     MetadataFieldDynamic* fields;
     uint row_count;
@@ -3100,9 +3089,23 @@ METADATA_TABLES
 #undef METADATA_FIELD3
 #define METADATA_FIELD2(table, name, type)                                1+
 #define METADATA_FIELD3(table, name, persistant_type, pointerful_type)    1+
-#define METADATA_TABLE(name, base, fields_) itables[i++] = &name; t->fields = c; t->field_count = fields_ 0; c += fields_ 0; ++t;
+#define METADATA_TABLE(nam, base, fieldz) t->name = #nam; itables[i++] = &nam; t->fields = c; t->field_count = fieldz 0; c += fieldz 0; ++t;
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name) ++t; itables[i++] = &unused_table;
+METADATA_TABLES
+#undef METADATA_TABLE
+#undef METADATA_FIELD2
+#undef METADATA_FIELD3
+
+        c = fields;
+#undef METADATA_TABLE
+#undef METADATA_FIELD2
+#undef METADATA_FIELD3
+#define METADATA_FIELD2(table, nam, type)                                   (c++)->name = #nam;
+#define METADATA_FIELD3(table, nam, persistant_type, pointerful_type)       (c++)->name = #nam;
+#define METADATA_TABLE(nam, base, fieldz)                                   fieldz
+#undef METADATA_TABLE_UNUSED
+#define METADATA_TABLE_UNUSED(name)
 METADATA_TABLES
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
@@ -3190,6 +3193,13 @@ struct Image : ImageZero
         Assert (streams.string);
         Assert (a <= streams.string->Size);
         return streams.string->offset + a + (char*)metadata_root;
+    }
+
+    char* GetUString(uint a)
+    {
+        Assert (streams.string);
+        Assert (a <= streams.string->Size);
+        return streams.ustring->offset + a + (char*)metadata_root;
     }
 
     Guid* GetGuid(uint a)
@@ -3500,12 +3510,12 @@ unknown_stream:
 
         for (i = 0; i < CountOf (metadata.file.array); ++i)
         {
+            printf ("reading %s\n", MetadataTableName (i));
             IMetadataTable* itable = metadata.itables[i];
             MetadataTableDynamic* dynamic_table = &metadata.file.array [i];
             char* mem = (char*)itable->ibase();
             if (!mem)
                 continue;
-            MetadataFieldDynamic* dynamic_field = dynamic_table->fields;
             uint row_count = dynamic_table->row_count;
             Assert (itable->isize() == row_count);
             const char* file = (char*)dynamic_table->file_base;
@@ -3518,9 +3528,11 @@ unknown_stream:
             for (uint ri = 0; ri < row_count; ++ri)
             {
                 const MetaTableStaticSchemaField* static_field = schema->fields;
-                for (uint fi = 0; fi < field_count; ++fi, ++static_field)
+                MetadataFieldDynamic* dynamic_field = dynamic_table->fields;
+                for (uint fi = 0; fi < field_count; ++fi, ++static_field, ++dynamic_field)
                 {
-                    static_field->type->functions->Read(static_field->type, this, i, ri, fi, dynamic_field->size, file, mem + static_field->mem_offset);
+                    if (dynamic_field->size)
+                        static_field->type->functions->Read(static_field->type, this, i, ri, fi, dynamic_field->size, file, mem + static_field->mem_offset);
                     file += dynamic_field->size;
                 }
                 mem += schema->mem_row_size;
@@ -3679,14 +3691,10 @@ PrintBlob(const MetadataType* type, Image* image, uint table, uint row, uint fie
     //__debugbreak();
 }
 
-void
-MetatadataReadBlob (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
+Blob_t
+MetatadataDecodeBlob (uint8* d)
 {
-    printf("\nPrintBlob type:%p(%s) image:%p table:%X row:%X field:%X file:%p size:%X\n", type, type->name, image, table, row, field, file, size);
-    const uint offset = Unpack2or4LE (file, size);
-    uint8* d = (uint8*)image->GetBlob(offset);
-
-    size = *d++;
+    uint size = *d++;
     if ((size & 0x80) == 0)
         ; // nothing
     else if ((size & 0xC0) == 0xC0) // TODO check against file bounds (reading d and computing size)
@@ -3700,11 +3708,89 @@ MetatadataReadBlob (const MetadataType* type, Image* image, uint table, uint row
     else
         AssertFailed("invalid metadata (blob)");
 
-    Blob_t* blob = (Blob_t*)mem;
-    blob->size = size;
-    blob->data = d;
+    Blob_t blob;
+    blob.size = size;
+    blob.data = d;
+    return blob;
+}
 
-    printf("ReadBlob %X:%02X%02X%02X", size, d[0], d[1], d[2]);
+void
+MetatadataReadBlob (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
+{
+    printf("\nPrintBlob type:%p(%s) image:%p table:%X row:%X field:%X file:%p size:%X\n", type, type->name, image, table, row, field, file, size);
+    const uint offset = Unpack2or4LE (file, size);
+
+    // TODO range check.
+
+    Blob_t* blob = (Blob_t*)mem;
+    *blob = MetatadataDecodeBlob ((uint8*)image->GetBlob(offset));
+    uint8 data[4] = { 0 };
+    for (uint i = 0; i < 4 && i < blob->size; ++i)
+        data [i] = ((uint8*)blob->data) [i];
+    printf("ReadBlob %X:%02X%02X%02X%02X\n", blob->size, data [0], data [1], data [2], data[3]);
+}
+
+static
+void
+MetatadataReadString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
+{
+    // TODO range check.
+    //if (IsDebuggerPresent()) DebugBreak();
+    uint offset = Unpack2or4LE (file, size);
+    char* s = image->GetString(offset);
+    printf("MetatadataReadString %p %s\n", s, s);
+    String_t* st = (String_t*)mem;
+    st->length = strlen (s);
+    st->chars = s;
+}
+
+static
+void
+MetatadataReadUString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
+{
+    // TODO range check.
+    if (IsDebuggerPresent()) __debugbreak();
+    uint offset = Unpack2or4LE (file, size);
+    Blob_t blob = MetatadataDecodeBlob ((uint8*)image->GetUString(offset));
+    char16 data[64] = { 0 };
+    for (uint i = 0; i < 64 && i < blob.size / 2; ++i)
+        data [i] = ((char16*)blob.data) [i];
+    printf("MetatadataReadUString %ls\n", data);
+    UString_t* us = (UString_t*)mem;
+    us->length = (blob.size - 1) >> 1;
+    us->ascii = ((char16*)blob.data) [blob.size - 1] == 0;
+    us->chars = (char16*)blob.data;
+}
+
+static
+void
+MetadataReadCodedIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
+{
+    // TODO range check.
+    printf("MetadataReadCodedIndex\n");
+    if (IsDebuggerPresent()) __debugbreak();
+}
+
+static
+void
+MetatadataReadIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
+{
+    // TODO range check.
+    printf("MetatadataReadIndex\n");
+}
+
+static
+void
+MetatadataReadIndexList (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
+{
+    printf("MetatadataReadIndexList\n");
+}
+
+static
+void
+MetatadataReadGuid (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
+{
+    memcpy (mem, file, 16);
 }
 
 #define GUID_FORMAT "{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}"
