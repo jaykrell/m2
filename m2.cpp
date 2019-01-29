@@ -256,7 +256,7 @@ uint
 Unpack2LE (const void *a)
 {
     uint8* b = (uint8*)a;
-    return (((uint)b [1]) << 8) | b [0];;
+    return ((b [1]) << 8) | b [0];;
 }
 
 uint
@@ -301,7 +301,7 @@ struct uintLEn // unsigned little endian integer, size n bits
 {
     union {
         typename uintLEn_to_native_exact<N>::T debug_n;
-        char data [N / 8];
+        unsigned char data [N / 8];
     };
 
     operator
@@ -315,7 +315,7 @@ struct uintLEn // unsigned little endian integer, size n bits
 #endif
         uintLEn_to_native_fast<N>::T a = 0;
         for (uint i = N / 8; i; )
-            a = (a << 8) | (uint)(data [--i] & 0xFF);
+            a = (a << 8) | data [--i];
         return a;
     }
     void operator=(uint);
@@ -1274,8 +1274,8 @@ CODED_INDICES
    LOG_BASE2_X(a,  9) LOG_BASE2_X(a,  8) LOG_BASE2_X(a,  7) LOG_BASE2_X(a,  6) LOG_BASE2_X(a,  5) \
    LOG_BASE2_X(a,  4) LOG_BASE2_X(a,  3) LOG_BASE2_X(a,  2) LOG_BASE2_X(a,  1) LOG_BASE2_X(a,  0) 0)
 
-//#define CountOf(x) (std::size(x)) // C++17
-#define CountOf(x) (sizeof (x) / sizeof ((x) [0])) // TODO
+#define CountOf(x) (std::size(x)) // C++17
+//#define CountOf(x) (sizeof (x) / sizeof ((x) [0])) // TODO
 #define CountOfField(x, y) (CountOf(x().y))
 #define CODED_INDEX(name, count, values) CodedIndex_t name;
 
@@ -1297,7 +1297,7 @@ CODED_INDICES
 
 
 const CodedIndices_t CodedIndices = {{
-#define CODED_INDEX(name, count, values) {LOG_BASE2 (CountOfField (CodedIndexMap_t, name)), CountOfField(CodedIndexMap_t, name), offsetof(CodedIndexMap_t, name) },
+#define CODED_INDEX(name, count, values) {LOG_BASE2 ((uint)CountOfField (CodedIndexMap_t, name)), (uint)CountOfField(CodedIndexMap_t, name), offsetof(CodedIndexMap_t, name) },
 CODED_INDICES
 #undef CODED_INDEX
 }};
@@ -1353,16 +1353,16 @@ struct MetadataTokenList
 
 struct MetadataTablesHeader // tilde stream
 {
-    uintLE reserved;    // 0
+    uintLE reserved;        // 0
     uint8 MajorVersion;
     uint8 MinorVersion;
     union {
         uint8 HeapOffsetSizes;
         uint8 HeapSizes;
     };
-    uint8 reserved2;    // 1
-    uintLE64 Valid;       // metadata_typedef etc.
-    uintLE64 Sorted;      // metadata_typedef etc.
+    uint8 reserved2;        // 1
+    uintLE64 Valid;         // metadata_typedef etc.
+    uintLE64 Sorted;        // metadata_typedef etc.
     // uintLE NumberOfRows [];
 };
 
@@ -2851,7 +2851,7 @@ METADATA_TABLES
 #undef METADATA_FIELD3
 #define METADATA_TABLE(name, base, fields) \
 const MetaTableStaticSchemaField metadata_field_ ## name [ ] = { fields }; \
-const MetadataTableStaticSchema_t metadata_row_schema_ ## name = { #name, sizeof (name ## Row), CountOf (metadata_field_ ## name), metadata_field_ ## name };
+const MetadataTableStaticSchema_t metadata_row_schema_ ## name = { #name, sizeof (name ## Row), (uint)CountOf (metadata_field_ ## name), metadata_field_ ## name };
 #define METADATA_FIELD2(table, name, type)                             { # name, &MetadataType_  ## type, offsetof (table ## Row, name) },
 #define METADATA_FIELD3(table, name, persistant_type, pointerful_type) { # name, &MetadataType_  ## persistant_type, offsetof (table ## Row, name) },
 #undef METADATA_TABLE_UNUSED
@@ -3564,7 +3564,7 @@ PrintCodedIndex (const MetadataType* type, Image* image, uint table, uint row, u
 
     auto const t = &image->metadata.file.array [table_index];
     void* p = ((char*)t->file_base) + t->file_row_size * index;
-    printf (" PrintCodedIndex:%s[%X][%X] => %s/%p ", MetadataTableName (table), row, field, MetadataTableName ((uint)table_index), p);
+    printf (" PrintCodedIndex:%s[%X][%X] => %s/%p ", MetadataTableName (table), row, field, MetadataTableName (table_index), p);
 
     Assert (index <= t->row_count);
 
@@ -3589,7 +3589,7 @@ PrintBlob (const MetadataType* type, Image* image, uint table, uint row, uint fi
     else if ((b2 & 0xC0) == 0xC0) // TODO check against file bounds (reading data and computing size)
         s = ((b2 & 0x3F) << 8) | data [1];
     else if ((b2 & 0xE0) == 0xE0) // TODO check against file bounds (reading data and computing size)
-        s = ((b2 & 0x1F) << 24) | (((uint)data [1]) << 16) | (((uint)data [2]) << 8) | ((uint)data [3]);
+        s = ((b2 & 0x1F) << 24) | ((data [1]) << 16) | ((data [2]) << 8) | (data [3]);
     else
         AssertFailed("invalid metadata (blob)");
 
