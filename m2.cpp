@@ -794,9 +794,9 @@ typedef struct _Unused_t { } *Unused_t;
 struct HasDeclSecurity
 {
     //union
-    TypeDef_t* TypeDef;
-    MethodDef_t* MethodDef;
-    Assembly_t *Assembly;
+    //TypeDef_t* TypeDef;
+    //MethodDef_t* MethodDef;
+    //Assembly_t *Assembly;
 };
 
 union HasCustomAttribute
@@ -1305,43 +1305,10 @@ CODED_INDICES
 #undef CodedIndex
 #define CodedIndex(name) CodedIndex_ ## name
 
-struct HeapIndex
-{
-    const char *heap_name; // string, guid, etc.
-    uint8 heap_index; // dynamic?
-};
-
-struct MetadataGuid
-{
-    uint index;
-    const char* pointer;
-};
-
-struct MetadataString
-{
-    uint offset;
-    uint size;
-    const char* pointer;
-};
-
-struct MetadataUnicodeString
-{
-    uint offset;
-    uint size;
-    const char16_t* pointer;
-};
-
-struct MetadataBlob
-{
-    uint offset;
-    uint size;
-    const void* pointer;
-};
-
 struct MetadataToken
 {
-    uint8 table;
-    uint index; // uint24
+    uint table : 8;
+    uint index : 24;
 };
 
 struct MetadataTokenList
@@ -2260,10 +2227,6 @@ struct MetadataType
 static
 uint
 GetCodedIndexSize (Image* image, CodedIndex coded_index);
-
-//#define CODED_INDEX(name, count, values) uint metadata_size_codedindex_ ## name (MetadataType* type, Image* image) { return GetCodedIndexSize (image, type->coded_index); }
-//CODED_INDICES
-#undef CODED_INDEX
 
 static
 void
