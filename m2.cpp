@@ -207,8 +207,10 @@ typedef unsigned long long uint64;
 #endif
 #endif
 
-extern "C"
-int __stdcall IsDebuggerPresent (void);
+// Workaround old headers or #if'ed out.
+#ifdef _WIN32
+extern "C" WINBASEAPI BOOL WINAPI IsDebuggerPresent (VOID);
+#endif
 
 // VMS sometimes has 32bit size_t/ptrdiff_t but 64bit pointers.
 //
@@ -3285,19 +3287,22 @@ struct Image : ImageZero
             return;
         stdout_stream out;
         stderr_stream err;
-        const MetadataTableStaticSchema_t* schema = MetadataStaticSchema[table_index];
-        const MetaTableStaticSchemaField *fields = schema ? schema->fields : 0;
-        const uint field_count = schema ? schema->field_count : 0u;
+        auto const schema = MetadataStaticSchema[table_index];
+        auto const fields = schema ? schema->fields : 0;
+        auto const field_count = schema ? schema->field_count : 0u;
 
         out.printf("%s[0x%08X] ", MetadataTableName (table_index), r);
         for (uint i = 0; i < field_count; ++i)
         {
-            const MetaTableStaticSchemaField *field = &fields[i];
-            const uint field_size = metadata.file.array[table_index].fields[i].size;
-            out.printf("col[%X]%s:%s:", i, field->type->name, field->name);
-            if (field->type->functions->Print)
-                field->type->functions->Print(field->type, this, table_index, r, i, p, field_size);
-             p += metadata.file.array[table_index].fields[i].size;
+            auto const field = &fields[i];
+            auto const table = &metadata.file.array[table_index];
+            auto const field_size = table->fields[i].size;
+            auto const type = field->type;
+            out.printf("col[%X]%s:%s:", i, type->name, field->name);
+            auto const print = type->functions->Print;
+            if (print)
+                print(type, this, table_index, r, i, p, field_size);
+             p += field_size;
         }
         out.prints("\n");
     }
@@ -3548,8 +3553,14 @@ unknown_stream:
                 MetadataFieldDynamic* dynamic_field = dynamic_table->fields;
                 for (uint fi = 0; fi < field_count; ++fi, ++static_field, ++dynamic_field)
                 {
-                    if (dynamic_field->size && static_field->type->functions->Read)
-                        static_field->type->functions->Read(static_field->type, this, i, ri, fi, dynamic_field->size, file, mem + static_field->mem_offset);
+                    auto const dynamic_size = dynamic_field->size;
+                    if (dynamic_size)
+                    {
+                        auto const type = static_field->type;
+                        auto const read = type->functions->Read;
+                        if (read)
+                            type->functions->Read(type, this, i, ri, fi, dynamic_size, file, mem + static_field->mem_offset);
+                    }
                     file += dynamic_field->size;
                 }
                 mem += schema->mem_row_size;
