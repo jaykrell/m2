@@ -3717,15 +3717,16 @@ MetatadataDecodeBlob (uint8* d)
 void
 MetatadataReadBlob (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    printf("\nPrintBlob type:%p(%s) image:%p table:%X row:%X field:%X file:%p size:%X\n", type, type->name, image, table, row, field, file, size);
+    printf("\nMetatadataReadBlob type:%p(%s) image:%p table:%X row:%X field:%X file:%p size:%X\n", type, type->name, image, table, row, field, file, size);
     const uint offset = Unpack2or4LE (file, size);
 
     // TODO range check.
 
     Blob_t* blob = (Blob_t*)mem;
-    *blob = MetatadataDecodeBlob ((uint8*)image->GetBlob(offset));
-    uint8 data[4] = { 0 };
-    for (uint i = 0; i < 4 && i < blob->size; ++i)
+    mem = image->GetBlob(offset);
+    *blob = MetatadataDecodeBlob ((uint8*)mem);
+    uint8 data [64] = { 0 };
+    for (uint i = 0; i < 64 && i < blob->size; ++i)
         data [i] = ((uint8*)blob->data) [i];
     printf("ReadBlob %X:%02X%02X%02X%02X\n", blob->size, data [0], data [1], data [2], data[3]);
 }
