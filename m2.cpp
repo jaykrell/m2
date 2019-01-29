@@ -82,6 +82,7 @@ typedef unsigned char bool;
 #pragma warning(disable:4201) // non standard extension : nameless struct/union (windows.h)
 #pragma warning(disable:4238) // non standard extension : class rvalue as lvalue (utility)
 #pragma warning(disable:4480) // non standard extension : typed enums
+#pragma warning(disable:4505) // unused static function
 #pragma warning(disable:4510) // function could not be generated
 #pragma warning(disable:4511) // function could not be generated
 #pragma warning(disable:4512) // function could not be generated
@@ -149,7 +150,7 @@ template<class T> inline const T& Min(const T& x, const T& y) {return y < x ? y 
 #include <sys/stat.h>
 #endif
 #if _MSC_VER
-#include <malloc.h>
+#include <malloc.h> // for _alloca
 #endif
 
 #if _MSC_VER > 1100 // TODO test more compilers
@@ -1962,9 +1963,13 @@ Available flags are:
 
 Flag Value Description
 
+static
 const uint COR_ILEXCEPTION_CLAUSE_EXCEPTION = 0; // A typed exception clause
+static
 const uint COR_ILEXCEPTION_CLAUSE_FILTER = 1; // An exception filter and handler clause
+static
 const uint COR_ILEXCEPTION_CLAUSE_FINALLY = 2; // A finally clause
+static
 const uint COR_ILEXCEPTION_CLAUSE_FAULT = 4; // Fault clause (finally that is called on exception only)
 
 //The #Blob Stream
@@ -2071,6 +2076,7 @@ struct MetadataTypeFunctions
     void (*Print)(const MetadataType*, Image*, uint table, uint row, uint field, const void* data, uint size);
 };
 
+static
 uint64
 sign_extend(uint64 value, uint bits)
 {
@@ -2093,6 +2099,7 @@ struct int_split_sign_magnitude_t
     uint64 u;
 };
 
+static
 uint
 uint_get_precision(uint64 a)
 {
@@ -2102,6 +2109,7 @@ uint_get_precision(uint64 a)
     return len;
 }
 
+static
 uint
 int_get_precision(int64 a)
 {
@@ -2110,6 +2118,7 @@ int_get_precision(int64 a)
     return Min(64u, 1 + uint_get_precision (int_split_sign_magnitude_t(a).u));
 }
 
+static
 uint
 uint_to_dec_getlen(uint64 b)
 {
@@ -2119,6 +2128,7 @@ uint_to_dec_getlen(uint64 b)
     return len;
 }
 
+static
 uint
 uint_to_dec(uint64 a, char* buf)
 {
@@ -2128,6 +2138,7 @@ uint_to_dec(uint64 a, char* buf)
     return len;
 }
 
+static
 uint
 int_to_dec(int64 a, char* buf)
 {
@@ -2137,6 +2148,7 @@ int_to_dec(int64 a, char* buf)
     return split.neg + uint_to_dec(split.u, buf);
 }
 
+static
 uint
 int_to_dec_getlen(int64 a)
 {
@@ -2144,6 +2156,7 @@ int_to_dec_getlen(int64 a)
     return split.neg + uint_to_dec_getlen(split.u);
 }
 
+static
 uint
 uint_to_hex_getlen (uint64 b)
 {
@@ -2153,6 +2166,7 @@ uint_to_hex_getlen (uint64 b)
     return len;
 }
 
+static
 uint
 int_to_hex_getlen(int64 a)
 {
@@ -2167,6 +2181,7 @@ int_to_hex_getlen(int64 a)
     return len + (a < 0 && most_significant < 8);
 }
 
+static
 void
 uint_to_hexlen(uint64 a, uint len, char *buf)
 {
@@ -2175,12 +2190,14 @@ uint_to_hexlen(uint64 a, uint len, char *buf)
         *--buf = "0123456789ABCDEF"[a & 0xF];
 }
 
+static
 void
 int_to_hexlen(int64 a, uint len, char *buf)
 {
     uint_to_hexlen((uint64)a, len, buf);
 }
 
+static
 uint
 int_to_hex(int64 a, char *buf)
 {
@@ -2189,6 +2206,7 @@ int_to_hex(int64 a, char *buf)
     return len;
 }
 
+static
 uint
 int_to_hex8(int64 a, char *buf)
 {
@@ -2196,6 +2214,7 @@ int_to_hex8(int64 a, char *buf)
     return 8;
 }
 
+static
 uint
 int_to_hex_getlen_atleast8 (int64 a)
 {
@@ -2203,6 +2222,7 @@ int_to_hex_getlen_atleast8 (int64 a)
     return Max(len, 8u);
 }
 
+static
 uint
 uint_to_hex_getlen_atleast8 (uint64 a)
 {
@@ -2210,6 +2230,7 @@ uint_to_hex_getlen_atleast8 (uint64 a)
     return Max (len, 8u);
 }
 
+static
 uint
 int_to_hex_atleast8 (int64 a, char *buf)
 {
@@ -2218,6 +2239,7 @@ int_to_hex_atleast8 (int64 a, char *buf)
     return len;
 }
 
+static
 uint
 uint_to_hex_atleast8(uint64 a, char *buf)
 {
@@ -2287,6 +2309,7 @@ struct stderr_stream : stream
     }
 };
 
+static
 void
 PrintFixed(const MetadataType*, Image*, uint table, uint row, uint field, const void* data, uint size)
 {
@@ -2312,6 +2335,7 @@ PrintFixed(const MetadataType*, Image*, uint table, uint row, uint field, const 
     fputs(buf, stdout);
 }
 
+static
 void
 PrintBlob(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size);
 
@@ -2327,6 +2351,7 @@ struct MetadataType
    };
 };
 
+static
 uint
 GetCodedIndexSize (Image* image, CodedIndex coded_index);
 
@@ -2334,95 +2359,111 @@ GetCodedIndexSize (Image* image, CodedIndex coded_index);
 //CODED_INDICES
 #undef CODED_INDEX
 
+static
 void
 MetatadataReadFixed (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     memcpy (mem, file, size); // TODO endian, enum size mismatch
 }
 
+static
 void
-MetatadataReadBlob (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
-{
-}
+MetatadataReadBlob (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem);
 
+static
 void
 MetatadataReadString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     printf("MetatadataReadString\n");
 }
 
+static
 void
 MetatadataReadUString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     printf("MetatadataReadUString\n");
 }
 
+static
 void
 MetadataReadCodedIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     printf("MetadataReadCodedIndex\n");
 }
 
+static
 void
 MetatadataReadIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     printf("MetatadataReadIndex\n");
 }
 
+static
 void
 MetatadataReadIndexList (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     printf("MetatadataReadIndexList\n");
 }
 
+static
 void
 MetatadataReadGuid (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     memcpy (mem, file, 16);
 }
 
+static
 uint
 MetadataGetFixedSize (const MetadataType* type, Image* image)
 {
     return type->fixed_size; // TODO? change from int8 to uint8? or uint to int?
 }
 
+static
 uint
 MetadataGetBlobSize (const MetadataType* type, Image* image);
 
+static
 uint
 MetadataGetStringSize (const MetadataType* type, Image* image);
 
+static
 uint
 MetadataGetUStringSize (const MetadataType* type, Image* image)
 {
     return 4u;
 }
 
+static
 uint
 MetadataGetCodedIndexSize (const MetadataType* type, Image* image)
 {
     return GetCodedIndexSize (image, type->coded_index);
 }
 
+static
 uint
 ImageGetIndexSize (Image* image, uint /* todo enum */ table_index);
 
+static
 uint
 MetadataGetIndexSize (const MetadataType* type, Image* image)
 {
     return ImageGetIndexSize (image, type->table_index);
 }
 
+static
 uint
 MetadataGetIndexListSize (const MetadataType* type, Image* image)
 {
     return MetadataGetIndexSize (type, image);
 }
 
+static
 uint
 MetadataGetGuidSize (const MetadataType* type, Image* image);
 
+static
 const MetadataTypeFunctions MetadataType_Fixed =
 {
     MetatadataReadFixed,
@@ -2430,6 +2471,7 @@ const MetadataTypeFunctions MetadataType_Fixed =
     PrintFixed,
 };
 
+static
 const MetadataTypeFunctions MetadataType_blob_functions =
 {
     MetatadataReadBlob,
@@ -2438,25 +2480,31 @@ const MetadataTypeFunctions MetadataType_blob_functions =
 };
 
 // TODO should format into memory
+static
 void
 PrintString(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size);
 
 // TODO should format into memory
+static
 void
 PrintGuid(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size);
 
 // TODO should format into memory
+static
 void
 PrintIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size);
 
 // TODO should format into memory
+static
 void
 PrintIndexList(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size);
 
 // TODO should format into memory
+static
 void
 PrintCodedIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size);
 
+static
 const MetadataTypeFunctions MetadataType_string_functions =
 {
     MetatadataReadString,
@@ -2578,53 +2626,53 @@ struct EmptyBase
 // Rows have a strongly typed in-memory form, formed on demand,
 // an a very dynamic in-file form.
 // Rows other rows via indices, coded indices, or pointers; or lists/vectors.
-#define METADATA_TABLES                                                 \
-/* table0x00*/ METADATA_TABLE (Module, NOTHING,                         \
-    METADATA_FIELD2 (Module, Generation, uint16) /* ignore */           \
-    METADATA_FIELD (Module, Name)                                       \
-    METADATA_FIELD2 (Module, Mvid, guid)                                \
-    METADATA_FIELD2 (Module, EncId, guid) /* ignore */                  \
-    METADATA_FIELD2 (Module, EncBaseId, guid)) /* ignore */             \
-                                                                        \
-/*table0x01*/ METADATA_TABLE (TypeRef, NOTHING,                         \
-    METADATA_FIELD (TypeRef, ResolutionScope)                           \
-    METADATA_FIELD (TypeRef, TypeName)                                  \
-    METADATA_FIELD (TypeRef, TypeNameSpace))                            \
-                                                                        \
-/*table0x02*/ METADATA_TABLE (TypeDef, NOTHING,                         \
-    METADATA_FIELD3 (TypeDef, Flags, uint, TypeFlags)                   \
-    METADATA_FIELD (TypeDef, TypeName)                                  \
-    METADATA_FIELD (TypeDef, TypeNameSpace)                             \
-    METADATA_FIELD (TypeDef, Extends)                                   \
-    METADATA_FIELD (TypeDef, FieldList)                                 \
-    METADATA_FIELD (TypeDef, MethodList))                               \
-                                                                        \
-/*table0x03*/ METADATA_TABLE_UNUSED(3)                                  \
-                                                                        \
-/*table0x04*/ METADATA_TABLE (Field, : Member,                          \
-    METADATA_FIELD3 (Field, Flags, uint16, FieldFlags)                  \
-    METADATA_FIELD (Field, Name)                                        \
-    METADATA_FIELD (Field, signature))                                  \
-                                                                        \
-/*table0x05*/ METADATA_TABLE_UNUSED(5) /*MethodPtr nonstandard*/        \
-                                                                        \
-/*table0x06*/METADATA_TABLE (MethodDef, NOTHING,                        \
-    METADATA_FIELD2 (MethodDef, RVA, uint)                              \
+#define METADATA_TABLES                                                     \
+/* table0x00*/ METADATA_TABLE (Module, NOTHING,                             \
+    METADATA_FIELD2 (Module, Generation, uint16) /* ignore */               \
+    METADATA_FIELD (Module, Name)                                           \
+    METADATA_FIELD2 (Module, Mvid, guid)                                    \
+    METADATA_FIELD2 (Module, EncId, guid) /* ignore */                      \
+    METADATA_FIELD2 (Module, EncBaseId, guid)) /* ignore */                 \
+                                                                            \
+/*table0x01*/ METADATA_TABLE (TypeRef, NOTHING,                             \
+    METADATA_FIELD (TypeRef, ResolutionScope)                               \
+    METADATA_FIELD (TypeRef, TypeName)                                      \
+    METADATA_FIELD (TypeRef, TypeNameSpace))                                \
+                                                                            \
+/*table0x02*/ METADATA_TABLE (TypeDef, NOTHING,                             \
+    METADATA_FIELD3 (TypeDef, Flags, uint, TypeFlags)                       \
+    METADATA_FIELD (TypeDef, TypeName)                                      \
+    METADATA_FIELD (TypeDef, TypeNameSpace)                                 \
+    METADATA_FIELD (TypeDef, Extends)                                       \
+    METADATA_FIELD (TypeDef, FieldList)                                     \
+    METADATA_FIELD (TypeDef, MethodList))                                   \
+                                                                            \
+/*table0x03*/ METADATA_TABLE_UNUSED(3)                                      \
+                                                                            \
+/*table0x04*/ METADATA_TABLE (Field, NOTHING /* : Member */,                \
+    METADATA_FIELD3 (Field, Flags, uint16, FieldFlags)                      \
+    METADATA_FIELD (Field, Name)                                            \
+    METADATA_FIELD (Field, signature))                                      \
+                                                                            \
+/*table0x05*/ METADATA_TABLE_UNUSED(5) /*MethodPtr nonstandard*/            \
+                                                                            \
+/*table0x06*/METADATA_TABLE (MethodDef, NOTHING,                            \
+    METADATA_FIELD2 (MethodDef, RVA, uint)                                  \
     METADATA_FIELD3 (MethodDef, ImplFlags, uint16, MethodDefImplFlags) /* TODO higher level support */     \
     METADATA_FIELD3 (MethodDef, Flags, uint16, MethodDefFlags) /* TODO higher level support */             \
-    METADATA_FIELD (MethodDef, Name)                                              \
-    METADATA_FIELD (MethodDef, signature)      /* Blob heap, 7 bit encode/decode */         \
+    METADATA_FIELD (MethodDef, Name)                                        \
+    METADATA_FIELD (MethodDef, signature)      /* Blob heap, 7 bit encode/decode */ \
     METADATA_FIELD (MethodDef, ParamList)) /* Param table, start, until table end, or start of next MethodDef; index into Param table, 2 or 4 bytes */ \
-                                                                        \
-/*table0x07*/ METADATA_TABLE_UNUSED(7) /*ParamPtr nonstandard*/         \
-                                                                        \
-/*table0x08*/METADATA_TABLE (Param, NOTHING,                            \
-    METADATA_FIELD2 (Param, Flags, uint16)                              \
-    METADATA_FIELD2 (Param, Sequence, uint16)                           \
-    METADATA_FIELD (Param, Name))                                       \
-                                                                        \
-/*table0x09*/METADATA_TABLE (InterfaceImpl, NOTHING,                    \
-    METADATA_FIELD2 (InterfaceImpl, Class, TypeDef)                     \
+                                                                            \
+/*table0x07*/ METADATA_TABLE_UNUSED(7) /*ParamPtr nonstandard*/             \
+                                                                            \
+/*table0x08*/METADATA_TABLE (Param, NOTHING,                                \
+    METADATA_FIELD2 (Param, Flags, uint16)                                  \
+    METADATA_FIELD2 (Param, Sequence, uint16)                               \
+    METADATA_FIELD (Param, Name))                                           \
+                                                                            \
+/*table0x09*/METADATA_TABLE (InterfaceImpl, NOTHING,                        \
+    METADATA_FIELD2 (InterfaceImpl, Class, TypeDef)                         \
     METADATA_FIELD (InterfaceImpl, Interface)) /* TypeDefOrRef or Spec */   \
                                                                             \
 /*table0x0A*/METADATA_TABLE (MemberRef, NOTHING,                            \
@@ -2771,13 +2819,13 @@ struct EmptyBase
     METADATA_FIELD3 (ExportedType, TypeDefId, uint, uint)                   \
     METADATA_FIELD  (ExportedType, TypeName)                                \
     METADATA_FIELD  (ExportedType, TypeNameSpace)                           \
-    METADATA_FIELD3 (ExportedType, Implementation, Implementation, MetadataToken))           \
+    METADATA_FIELD3 (ExportedType, Implementation, Implementation, MetadataToken)) \
                                                                             \
 /*table0x28*/ METADATA_TABLE (ManifestResource, NOTHING,                    \
     METADATA_FIELD2 (ManifestResource, Offset, uint)                        \
     METADATA_FIELD3 (ManifestResource, Flags, uint, ManifestResourceFlags)  \
     METADATA_FIELD2 (ManifestResource, Name, string)                        \
-    METADATA_FIELD3 (ManifestResource, Implementation, Implementation, Implementation_t*))       \
+    METADATA_FIELD3 (ManifestResource, Implementation, Implementation, Implementation_t*))  \
                                                                             \
 /*table0x29*/ METADATA_TABLE (NestedClass, NOTHING,                         \
     METADATA_FIELD2 (NestedClass, NestedClass, TypeDef)                     \
@@ -2794,7 +2842,7 @@ struct EmptyBase
     METADATA_FIELD2 (MethodSpec, Instantiation, blob))                      \
                                                                             \
 /*table0x2C*/ METADATA_TABLE (GenericParamConstraint, NOTHING,              \
-    METADATA_FIELD3 (GenericParamConstraint, Owner, GenericParam, GenericParamRow*)                    \
+    METADATA_FIELD3 (GenericParamConstraint, Owner, GenericParam, GenericParamRow*) \
     METADATA_FIELD2 (GenericParamConstraint, Constraint, TypeDefOrRef))     \
 
 // Every table has two maybe three maybe four sets of types/data/forms.
@@ -2874,13 +2922,13 @@ struct MethodDeclarationRow;
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
-#define METADATA_TABLE(name, base, fields)                             \
+#define METADATA_TABLE(name, base, fields)                              \
     struct name ## Row base                                             \
     {                                                                   \
             bool operator<(const name ## Row&) const; /* old compiler/library workaround */     \
             bool operator==(const name ## Row&) const; /* old compiler/library workaround */    \
             name ##  Row ( ) { }                                        \
-            fields                                                     \
+            fields                                                      \
     };                                                                  \
     struct name ## Table : vector<name ## Row>, IMetadataTable          \
     {                                                                   \
@@ -2944,7 +2992,6 @@ const uint AssemblyRefProcessor = 36;
 const uint AssemblyRefOS = 37;
 const uint MethodSpec = 0x2B;
 */
-
 
 struct MetadataFieldDynamic
 {
@@ -3122,9 +3169,11 @@ struct ImageZero // zero-inited part of Image
     uint guid_size; // 2 or 4
 };
 
+static
 void
 ComputeCodedIndexSize (Image* image, CodedIndex coded_index);
 
+static
 void
 ComputeIndexSize (Image* image, uint /* todo enum */ table_index);
 
@@ -3530,6 +3579,7 @@ unknown_stream:
     }
 };
 
+static
 void
 PrintStringx(const char* x, const MetadataType* type, Image* image, uint table, uint row, uint field, const void* data, uint size)
 {
@@ -3539,6 +3589,7 @@ PrintStringx(const char* x, const MetadataType* type, Image* image, uint table, 
     printf(" PrintString:x:%s %X %p %s ", x, a, image->GetString(a), image->GetString(a));
 }
 
+static
 void
 PrintString(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
@@ -3546,6 +3597,7 @@ PrintString(const MetadataType* type, Image* image, uint table, uint row, uint f
 }
 
 // TODO should format into memory
+static
 void
 PrintIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
@@ -3568,12 +3620,14 @@ PrintIndex(const MetadataType* type, Image* image, uint table, uint row, uint fi
 }
 
 // TODO should format into memory
+static
 void
 PrintIndexList(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
 }
 
 // TODO should format into memory
+static
 void
 PrintCodedIndex(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
@@ -3601,6 +3655,7 @@ PrintCodedIndex(const MetadataType* type, Image* image, uint table, uint row, ui
     }
 }
 
+static
 void
 PrintBlob(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
@@ -3624,6 +3679,34 @@ PrintBlob(const MetadataType* type, Image* image, uint table, uint row, uint fie
     //__debugbreak();
 }
 
+void
+MetatadataReadBlob (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
+{
+    printf("\nPrintBlob type:%p(%s) image:%p table:%X row:%X field:%X file:%p size:%X\n", type, type->name, image, table, row, field, file, size);
+    const uint offset = Unpack2or4LE (file, size);
+    uint8* d = (uint8*)image->GetBlob(offset);
+
+    size = *d++;
+    if ((size & 0x80) == 0)
+        ; // nothing
+    else if ((size & 0xC0) == 0xC0) // TODO check against file bounds (reading d and computing size)
+        size = ((size & 0x3F) << 8) | *d++;
+    else if ((size & 0xE0) == 0xE0) // TODO check against file bounds (reading d and computing size)
+    {
+        size = (((size & 0x1F) << 8) | *d++);
+        size = ((size << 8) | *d++);
+        size = ((size << 8) | *d++);
+    }
+    else
+        AssertFailed("invalid metadata (blob)");
+
+    Blob_t* blob = (Blob_t*)mem;
+    blob->size = size;
+    blob->data = d;
+
+    printf("ReadBlob %X:%02X%02X%02X", size, d[0], d[1], d[2]);
+}
+
 #define GUID_FORMAT "{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}"
 #define GUID_BYTES(g) \
 (g)->bytes[ 3], \
@@ -3643,6 +3726,7 @@ PrintBlob(const MetadataType* type, Image* image, uint table, uint row, uint fie
 (g)->bytes[14], \
 (g)->bytes[15] \
 
+static
 void
 PrintGuid(const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
@@ -3655,24 +3739,28 @@ PrintGuid(const MetadataType* type, Image* image, uint table, uint row, uint fie
     printf("PrintGuid:%X %p " GUID_FORMAT, a, b, GUID_BYTES(b));
 }
 
+static
 uint
 MetadataGetBlobSize (const MetadataType* type, Image* image)
 {
     return image->blob_size;
 }
 
+static
 uint
 MetadataGetStringSize (const MetadataType* type, Image* image)
 {
     return image->string_size;
 }
 
+static
 uint
 MetadataGetGuidSize (const MetadataType* type, Image* image)
 {
     return image->guid_size;
 }
 
+static
 void
 ComputeIndexSize (Image* image, uint /* todo enum */ table_index)
 {
@@ -3683,6 +3771,7 @@ ComputeIndexSize (Image* image, uint /* todo enum */ table_index)
     image->metadata.file.array [table_index].index_size = result;
 }
 
+static
 void
 ComputeCodedIndexSize (Image* image, CodedIndex coded_index)
 {
@@ -3710,12 +3799,14 @@ ComputeCodedIndexSize (Image* image, CodedIndex coded_index)
     image->coded_index_size [coded_index] = result;
 }
 
+static
 uint
 GetCodedIndexSize (Image* image, CodedIndex coded_index)
 {
     return image->coded_index_size [coded_index];
 }
 
+static
 uint
 ImageGetIndexSize (Image* image, uint /* todo enum */ table_index)
 {
