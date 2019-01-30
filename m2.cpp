@@ -356,7 +356,7 @@ struct DosHeader
     uintLE pe;
 
     bool CheckSignature () { return mz [0] == 'M' && mz [1] == 'Z'; }
-    unsigned GetPE () { return Unpack (pe); }
+    uint GetPE () { return Unpack (pe); }
 };
 
 struct FileHeader
@@ -2780,12 +2780,12 @@ struct MethodDeclarationRow;
     {                                                                   \
         virtual void* iresize(size_t n)                                 \
         {                                                               \
-            resize(n);                                                  \
+            resize(n, { });                                             \
             return n ? &(*this) [0] : 0;                                \
         }                                                               \
     };
-#define METADATA_FIELD2(table, name, type) metadata_schema_TYPED_ ## type name;
-#define METADATA_FIELD3(table, name, persistant_type, pointerful_type) pointerful_type name;
+#define METADATA_FIELD2(table, name, type) metadata_schema_TYPED_ ## type name = { };
+#define METADATA_FIELD3(table, name, persistant_type, pointerful_type) pointerful_type name = { };
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name) /* nothing */
 METADATA_TABLES
@@ -3636,31 +3636,32 @@ MetatadataReadIndexList (const MetadataType* type, Image* image, uint table, uin
     // There are no coded index lists, just index lists. Like other indices, these are 2 or 4 bytes.
     // The table they refer to is recorded in type.
 
-    printf ("MetatadataReadIndexList\n");
-    __debugbreak();
+    //printf ("MetatadataReadIndexList\n");
 
-    auto const start = Unpack2or4LE (file, size);
-    Assert (start);
+    auto start = Unpack2or4LE (file, size);
+    if (!start)
+        return;
+    --start;
     uint count = 0;
     auto const row_count = image->metadata.file.array [table].row_count;
     auto const file_row_size = image->metadata.file.array [table].file_row_size;
-    if (row + 1 == row_count)
-    {
-        count = row_count - start;
-        printf("index list at end of table %X\n", count);
-    }
-    else
-    {
-        count = Unpack2or4LE(file_row_size + (char*)file, size) - start;
-        printf("index list not at end of table %X\n", count);
-    }
-    assert (count);
-
     auto const mem_typed = (vector<void*>*)mem;
     auto const reffed_table = &image->metadata.file.array [type->table_index];
     auto const mem_row_size = MetadataStatic [type->table_index].mem_row_size;
+
+    if (row + 1 == row_count)
+    {
+        count = reffed_table->row_count - start + 1;
+        //printf ("index list at end of table %X\n", count);
+    }
+    else
+    {
+        count = Unpack2or4LE (file_row_size + (char*)file, size) - start;
+        //printf ("index list not at end of table %X\n", count);
+    }
+
     char* ref = (char*)reffed_table->mem_base + mem_row_size * start;
-    mem_typed->resize (count);
+    mem_typed->resize (count, { });
     for (uint i = 0; i < count; ++i)
     {
         (*mem_typed) [i] = ref;
