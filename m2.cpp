@@ -3452,7 +3452,6 @@ static
 void
 PrintIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
-    //__debugbreak();
     uint index = Unpack2or4LE (file_data, size);
     if (!index)
         return;
@@ -3463,11 +3462,6 @@ PrintIndex (const MetadataType* type, Image* image, uint table, uint row, uint f
     printf (" PrintIndex:%s[%X][%X] => %s/%p ", MetadataTableName (table), row, field, MetadataTableName (table_index), p);
 
     Assert (index <= t->row_count);
-
-    if (t->name_field_valid)
-    {
-        //PrintStringx ("xindex", 0, image, 0, 0, 0, t->fields [t->name_field].offset + (char*)p, 0);
-    }
 }
 
 // TODO should format into memory
@@ -3482,7 +3476,6 @@ static
 void
 PrintCodedIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, const void* file_data, uint size)
 {
-    //__debugbreak();
     uint code = Unpack2or4LE (file_data, size);
     CodedIndex_t const * const coded_index = &CodedIndices.array [type->coded_index];
 
@@ -3527,7 +3520,6 @@ PrintBlob (const MetadataType* type, Image* image, uint table, uint row, uint fi
 
     printf ("%02X:%02X%02X%02X", s, data [0], data [1], data [2]);
     exit(1);
-    //__debugbreak();
 }
 
 Blob_t
@@ -3549,7 +3541,7 @@ MetatadataDecodeBlob (uint8* data)
         AssertFailed("invalid metadata (blob)");
 
     Blob_t blob;
-    blob.size = size;
+    blob.size = size; // TODO range check
     blob.data = p;
     return blob;
 }
@@ -3557,31 +3549,21 @@ MetatadataDecodeBlob (uint8* data)
 void
 MetatadataReadBlob (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    //printf ("\nMetatadataReadBlob type:%p(%s) image:%p table:%X row:%X field:%X file:%p size:%X\n", type, type->name, image, table, row, field, file, size);
     auto const offset = Unpack2or4LE (file, size);
-
-    // TODO range check.
 
     Blob_t* blob = (Blob_t*)mem;
     void* m = image->GetBlob(offset);
     *blob = MetatadataDecodeBlob ((uint8*)m);
-    //uint8 data [64] = { 0 };
-    //for (uint i = 0; i < 64 && i < blob->size; ++i)
-    //  data [i] = ((uint8*)blob->data) [i];
-    //printf ("ReadBlob %X:%02X%02X%02X%02X\n", blob->size, data [0], data [1], data [2], data [3]);
 }
 
 static
 void
 MetatadataReadString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    // TODO range check.
-    //if (IsDebuggerPresent ()) __debugbreak ();
     uint offset = Unpack2or4LE (file, size);
     char* s = image->GetString(offset);
-    //printf ("MetatadataReadString %p %s\n", s, s);
     String_t* st = (String_t*)mem;
-    st->length = strlen (s);
+    st->length = strlen (s); // TODO range check (do not call strlen)
     st->chars = s;
 }
 
@@ -3589,14 +3571,8 @@ static
 void
 MetatadataReadUString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    // TODO range check.
-    if (IsDebuggerPresent ()) __debugbreak ();
     uint offset = Unpack2or4LE (file, size);
     Blob_t blob = MetatadataDecodeBlob ((uint8*)image->GetUString(offset));
-    //char16_t data [64] = { 0 };
-    //for (uint i = 0; i < 64 && i < blob.size / 2; ++i)
-    //    data [i] = ((char16_t*)blob.data) [i];
-    //printf ("MetatadataReadUString %ls\n", data);
     UString_t* us = (UString_t*)mem;
     us->length = (blob.size - 1) >> 1;
     us->ascii = ((char16_t*)blob.data) [blob.size - 1] == 0;
@@ -3692,22 +3668,22 @@ MetatadataReadGuid (const MetadataType* type, Image* image, uint table, uint row
 
 #define GUID_FORMAT "{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}"
 #define GUID_BYTES(g) \
-(g)->bytes [ 3], \
-(g)->bytes [ 2], \
-(g)->bytes [ 1], \
-(g)->bytes [ 0], \
-(g)->bytes [ 5], \
-(g)->bytes [ 4], \
-(g)->bytes [ 7], \
-(g)->bytes [ 6], \
-(g)->bytes [ 8], \
-(g)->bytes [ 9], \
-(g)->bytes [10], \
-(g)->bytes [11], \
-(g)->bytes [12], \
-(g)->bytes [13], \
-(g)->bytes [14], \
-(g)->bytes [15] \
+    (g)->bytes [ 3], \
+    (g)->bytes [ 2], \
+    (g)->bytes [ 1], \
+    (g)->bytes [ 0], \
+    (g)->bytes [ 5], \
+    (g)->bytes [ 4], \
+    (g)->bytes [ 7], \
+    (g)->bytes [ 6], \
+    (g)->bytes [ 8], \
+    (g)->bytes [ 9], \
+    (g)->bytes [10], \
+    (g)->bytes [11], \
+    (g)->bytes [12], \
+    (g)->bytes [13], \
+    (g)->bytes [14], \
+    (g)->bytes [15] \
 
 static
 void
@@ -3717,7 +3693,6 @@ PrintGuid(const MetadataType* type, Image* image, uint table, uint row, uint fie
     if (!a)
         return;
     --a;
-    //fputs(image->PrintGuid(a), stdout);
     Guid* b = image->GetGuid(a);
     printf ("PrintGuid:%X %p " GUID_FORMAT, a, b, GUID_BYTES(b));
 }
