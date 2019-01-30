@@ -113,7 +113,7 @@ using std::string;
 using std::vector;
 #include <algorithm> // TODO? remove STL dependency?
 
-#ifdef _WIN32
+#if _WIN32
 #define NOMINMAX 1
 #include <io.h>
 #include <windows.h>
@@ -214,7 +214,7 @@ ThrowErrno (const char* a = "")
     ThrowInt (errno, a);
 }
 
-#ifdef _WIN32
+#if _WIN32
 void
 throw_Win32Error (int err, const char* a = "")
 {
@@ -525,7 +525,7 @@ struct explicit_operator_bool
 
 typedef void (explicit_operator_bool::*bool_type) () const;
 
-#ifdef _WIN32
+#if _WIN32
 struct Handle
 {
     // TODO Handle vs. win32file_t, etc.
@@ -608,7 +608,7 @@ struct Fd
 #ifndef _WIN32
     uint64 get_file_size (const char * file_name = "")
     {
-#ifdef __CYGWIN__
+#if __CYGWIN__
         struct stat st = { 0 }; // TODO test more systems
         if (fstat (fd, &st))
 #else
@@ -639,7 +639,7 @@ struct Fd
     static void static_cleanup (int fd)
     {
         if (!static_valid (fd)) return;
-#ifdef _WIN32
+#if _WIN32
         _close (fd);
 #else
         close (fd);
@@ -680,7 +680,7 @@ struct MemoryMappedFile
 // TODO allow for systems that must read, not mmap
     void * base;
     size_t size;
-#ifdef _WIN32
+#if _WIN32
     Handle file;
 #else
     Fd file;
@@ -690,7 +690,7 @@ struct MemoryMappedFile
     ~MemoryMappedFile ()
     {
         if (!base) return;
-#ifdef _WIN32
+#if _WIN32
         UnmapViewOfFile (base);
 #else
         munmap (base, size);
@@ -699,7 +699,7 @@ struct MemoryMappedFile
     }
     void read (const char* a)
     {
-#ifdef _WIN32
+#if _WIN32
         file = CreateFileA (a, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
         if (!file) throw_GetLastError (StringFormat ("CreateFileA(%s)", a).c_str ());
         // FIXME check for size==0 and >4GB.
@@ -2702,7 +2702,7 @@ struct EmptyBase
 //    with form 3. While a row of all fixed size/offset type is possible,
 //    this is simply correctly sized arrays of size/offset and maybe link to form 3.
 #define metadata_schema_TYPED_blob              Blob_t
-#define metadata_schema_TYPED_guid              Guid
+#define metadata_schema_TYPED_guid              Guid*
 #define metadata_schema_TYPED_string            String_t
 #define metadata_schema_TYPED_uint16            uint16
 #define metadata_schema_TYPED_uint              uint
@@ -3648,15 +3648,19 @@ MetatadataReadIndexList (const MetadataType* type, Image* image, uint table, uin
     auto const mem_typed = (vector<void*>*)mem;
     auto const reffed_table = &image->metadata.file.array [type->table_index];
     auto const mem_row_size = MetadataStatic [type->table_index].mem_row_size;
+    auto const reffed_row_count = reffed_table->row_count;
+    Assert (start <= reffed_row_count);
 
     if (row + 1 == row_count)
     {
-        count = reffed_table->row_count - start + 1;
+        count = reffed_row_count - start + 1;
         //printf ("index list at end of table %X\n", count);
     }
     else
     {
-        count = Unpack2or4LE (file_row_size + (char*)file, size) - start;
+        auto const next = Unpack2or4LE (file_row_size + (char*)file, size) - 1;
+        Assert (next <= reffed_row_count);
+        count = next - start;
         //printf ("index list not at end of table %X\n", count);
     }
 
@@ -3673,7 +3677,7 @@ static
 void
 MetatadataReadGuid (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    //memcpy (mem, file, 16);
+    *(const void**)mem = file;
 }
 
 #define GUID_FORMAT "{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}"
