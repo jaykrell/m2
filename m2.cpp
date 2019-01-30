@@ -1047,9 +1047,18 @@ struct Implementation_t
     File* file;
 };
 
-struct Class_t
+class RowBase_t
 {
-    Class_t* base;
+public:
+    RowBase_t() { }
+    RowBase_t(const RowBase_t&) = default;
+    virtual ~RowBase_t () { }
+};
+
+#if 0
+struct xClass_t
+{
+//    Class_t* base;
     string name;
     vector<Interface_t*> interfaces;
     vector<Method_t*> methods;
@@ -1057,10 +1066,7 @@ struct Class_t
     vector<Event_t*> events;
     vector<Property_t*> properties;
 };
-
-class MethodBody_t
-{
-};
+#endif
 
 class MethodDeclaration
 {
@@ -1307,13 +1313,6 @@ struct MetadataToken
 {
     uint table : 8;
     uint index : 24;
-};
-
-struct MetadataTokenList
-{
-    uint8 table;
-    uint count;
-    uint index;
 };
 
 struct MetadataTablesHeader // tilde stream
@@ -2230,7 +2229,8 @@ static
 void
 MetatadataReadFixed (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    memcpy (mem, file, size); // TODO endian, enum size mismatch
+//    if (size)
+        memcpy (mem, file, size); // TODO endian, enum size mismatch
 }
 
 static
@@ -2593,8 +2593,8 @@ struct EmptyBase
     METADATA_FIELD3 (metadata_MethodSemantics, Association, HasSemantics, MethodSemanticsAssociation_t)) /* Event or Property, CodedIndex */ \
                                                                             \
 /*table0x19*/ METADATA_TABLE (MethodImpl, NOTHING,                          \
-    METADATA_FIELD3 (MethodImpl, Class, TypeDef, Class_t*)                  \
-    METADATA_FIELD3 (MethodImpl, MethodBody, MethodDefOrRef, MethodBody_t*) \
+    METADATA_FIELD2 (MethodImpl, Class, TypeDef)                            \
+    METADATA_FIELD3 (MethodImpl, MethodBody, MethodDefOrRef, RowBase_t*)    \
     METADATA_FIELD3 (MethodImpl, MethodDeclaration, MethodDefOrRef, MethodDeclarationRow*)) \
                                                                             \
 /*table0x1A*/ METADATA_TABLE (ModuleRef, NOTHING,                           \
@@ -2731,15 +2731,6 @@ struct EmptyBase
 #define metadata_schema_TYPED_HasCustomAttribute HasCustomAttribute
 #define metadata_schema_TYPED_EventList         vector<Event_t*>
 
-// needed?
-//#define metadata_schema_TOKENED_string           MetadataString
-//#define metadata_schema_TOKENED_uint16           uint16
-//#define metadata_schema_TOKENED_guid             Guid
-//#define metadata_schema_TOKENED_ResolutionScope  MetadataToken /* TODO */
-//#define metadata_schema_TOKENED_TypeDefOrRef     MetadataToken /* TODO */
-//#define metadata_schema_TOKENED_FieldList        MetadataTokenList
-//#define metadata_schema_TOKENED_MethodList       MetadataTokenList
-
 #define METADATA_FIELD(table, name) METADATA_FIELD2 (table, name, name)
 
 // TODO generate enums
@@ -2758,7 +2749,6 @@ struct EmptyBase
 
 // TODO remove these
 struct ClassRow;
-struct MethodBodyRow;
 struct MethodDeclarationRow;
 
 #undef METADATA_TABLE_UNUSED
@@ -2771,9 +2761,11 @@ struct MethodDeclarationRow;
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
 #define METADATA_TABLE(name, base, fields)                              \
-    struct name ## Row base                                             \
+    struct name ## Row : RowBase_t                                      \
     {                                                                   \
+            virtual ~name ## Row ( ) { }                                \
             name ##  Row ( ) { }                                        \
+            name ##  Row (const name ##  Row&) = default;               \
             fields                                                      \
     };                                                                  \
     struct name ## Table : vector<name ## Row>, IMetadataTable          \
@@ -3376,8 +3368,8 @@ unknown_stream:
                         auto const read = type->functions->Read;
                         if (read)
                             type->functions->Read(type, this, i, ri, fi, dynamic_size, file, mem + static_field->mem_offset);
+                        file += dynamic_field->size;
                     }
-                    file += dynamic_field->size;
                 }
                 mem += schema->mem_row_size;
             }
