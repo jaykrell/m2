@@ -118,6 +118,8 @@ using std::vector;
 #include <io.h>
 #include <windows.h>
 #else
+#define IsDebuggerPresent() 0
+#define __debugbreak() 0
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -235,9 +237,7 @@ AssertFailedFormat (const char* condition, const string& extra)
     //fputs (("AssertFailedFormat:" + string (condition) + ":" + m2::StringFormatVa (format, args) + "\n").c_str (), stderr);
     //Assert (0);
     //abort ();
-#if _WIN32
     if (IsDebuggerPresent ()) __debugbreak ();
-#endif
     ThrowString ("AssertFailed:" + string (condition) + ":" + extra + "\n");
 }
 
@@ -252,6 +252,7 @@ AssertFailed (const char * expr)
 #define Assert(x)         ((x) || ( AssertFailed (#x), (int)0))
 #define AssertFormat(x, extra) ((x) || (AssertFailedFormat (#x, StringFormat extra), 0))
 
+static
 uint
 Unpack2LE (const void *a)
 {
@@ -259,12 +260,14 @@ Unpack2LE (const void *a)
     return ((b [1]) << 8) | (uint)b [0];
 }
 
+static
 uint
 Unpack4LE (const void *a)
 {
     return (Unpack2LE ((char*)a + 2) << 16) | Unpack2LE (a);
 }
 
+static
 uint
 Unpack2or4LE (const void *a, uint size)
 {
@@ -2708,7 +2711,7 @@ struct EmptyBase
 #define metadata_schema_TYPED_uint              uint
 #define metadata_schema_TYPED_uint8             uint8
 #define metadata_schema_TYPED_Class             Class_t*
-#define metadata_schema_TYPED_Extends           voidp_TODO /* union? */
+#define metadata_schema_TYPED_Extends           RowBase_t*
 #define metadata_schema_TYPED_FieldList         vector<Field_t*>
 #define metadata_schema_TYPED_Interface         Interface_t*
 #define metadata_schema_TYPED_MemberRefParent   Parent
@@ -2718,11 +2721,11 @@ struct EmptyBase
 #define metadata_schema_TYPED_PropertyList      vector<Property_t*>
 //#define metadata_schema_TYPED_Parent            Parent
 #define metadata_schema_TYPED_RVA               uint
-#define metadata_schema_TYPED_ResolutionScope   voidp_TODO /* union? */
+#define metadata_schema_TYPED_ResolutionScope   RowBase_t*
 #define metadata_schema_TYPED_Sequence          uint16
 #define metadata_schema_TYPED_signature         Signature
 #define metadata_schema_TYPED_TypeDef           Type*
-#define metadata_schema_TYPED_TypeDefOrRef      voidp_TODO /* union? */
+#define metadata_schema_TYPED_TypeDefOrRef      RowBase_t*
 #define metadata_schema_TYPED_TypeName          String_t
 #define metadata_schema_TYPED_TypeNameSpace     String_t
 #define metadata_schema_TYPED_Unused            Unused_t
@@ -3587,9 +3590,7 @@ void
 MetatadataReadUString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
     // TODO range check.
-#if _WIN32
     if (IsDebuggerPresent ()) __debugbreak ();
-#endif
     uint offset = Unpack2or4LE (file, size);
     Blob_t blob = MetatadataDecodeBlob ((uint8*)image->GetUString(offset));
     //char16_t data [64] = { 0 };
@@ -3604,19 +3605,41 @@ MetatadataReadUString (const MetadataType* type, Image* image, uint table, uint 
 
 static
 void
+MetadataReadIndexCommon (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem,
+                         uint index, uint table_index)
+{
+    if (!index)
+        return;
+    --index;
+
+    auto const reffed_table = &image->metadata.file.array [table_index];
+    Assert (index <= reffed_table->row_count);
+
+    auto const mem_row_size = MetadataStatic [type->table_index].mem_row_size;
+
+    char* ref = (char*)reffed_table->mem_base + mem_row_size * index;
+    *(RowBase_t**)mem = (RowBase_t*)ref;
+}
+
+static
+void
 MetadataReadCodedIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    // TODO range check.
-    //printf ("MetadataReadCodedIndex\n");
-    //if (IsDebuggerPresent ()) __debugbreak ();
+    const uint code = Unpack2or4LE (file, size);
+    CodedIndex_t const * const coded_index = &CodedIndices.array [type->coded_index];
+
+    const uint index = (code >> coded_index->tag_size);
+    const int table_index = ((int8*)&CodedIndexMap) [coded_index->map + (code & ~(~0u << coded_index->tag_size))]; // TODO precompute
+    Assert (table_index >= 0);
+
+    MetadataReadIndexCommon (type, image, table, row, field, size, file, mem, index, (uint)table_index);
 }
 
 static
 void
 MetatadataReadIndex (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    // TODO range check.
-    //printf ("MetatadataReadIndex\n");
+    MetadataReadIndexCommon (type, image, table, row, field, size, file, mem, Unpack2or4LE (file, size), type->table_index);
 }
 
 static
@@ -3627,9 +3650,6 @@ MetatadataReadIndexList (const MetadataType* type, Image* image, uint table, uin
     // The in-memory form of an index list a vector of pointers to rows of a metadata table.
     // There are no coded index lists, just index lists. Like other indices, these are 2 or 4 bytes.
     // The table they refer to is recorded in type.
-
-    //printf ("MetatadataReadIndexList\n");
-
     auto start = Unpack2or4LE (file, size);
     if (!start)
         return;
@@ -3646,14 +3666,12 @@ MetatadataReadIndexList (const MetadataType* type, Image* image, uint table, uin
     if (row + 1 == row_count)
     {
         count = reffed_row_count - start + 1;
-        //printf ("index list at end of table %X\n", count);
     }
     else
     {
         auto const next = Unpack2or4LE (file_row_size + (char*)file, size) - 1;
         Assert (next <= reffed_row_count);
         count = next - start;
-        //printf ("index list not at end of table %X\n", count);
     }
 
     char* ref = (char*)reffed_table->mem_base + mem_row_size * start;
