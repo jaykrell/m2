@@ -2838,14 +2838,6 @@ struct ImageZero // zero-inited part of Image
     uint guid_size; // 2 or 4
 };
 
-static
-void
-ComputeCodedIndexSize (Image* image, CodedIndex coded_index);
-
-static
-void
-ComputeIndexSize (Image* image, uint /* todo enum */ table_index);
-
 struct Image : ImageZero
 {
     MemoryMappedFile mmf;
@@ -2922,6 +2914,38 @@ struct Image : ImageZero
     uint GetMemRowSize (uint table_index)
     {
         return MetadataStatic [table_index].mem_row_size;
+    }
+
+    void
+    ComputeIndexSize (uint /* todo enum */ table_index)
+    {
+        uint const row_count = metadata.file.array [table_index].row_count;
+        uint result = (row_count <= 0xFFFFu) ? 2u : 4u;
+        metadata.file.array [table_index].index_size = result;
+    }
+
+    void
+    ComputeCodedIndexSize (CodedIndex coded_index)
+    {
+        const CodedIndex_t* data = &CodedIndices.array [coded_index];
+        uint const map = data->map;
+        uint const count = data->count;
+        int8* Map = (int8*)&CodedIndexMap;
+        uint result = 2;
+        uint cap = 0xFFFFu >> data->tag_size;
+        for (uint i = 0; i < count; ++i)
+        {
+            int m = Map [map + i];
+            if (m < 0)
+                continue;
+            auto const rows = metadata.file.array [m].row_count;
+            if (rows > cap)
+            {
+                result = 4;
+                break;
+            }
+        }
+        coded_index_size [coded_index] = result;
     }
 
     void init (const char *file_name)
@@ -3076,10 +3100,10 @@ unknown_stream:
 
         // After row counts, coded index size and index size.
         for (i = 0; i < CountOf (metadata.file.array); ++i)
-            ComputeIndexSize (this, i);
+            ComputeIndexSize (i);
 
         for (i = 0; i < CodedIndex_Count; ++i)
-            ComputeCodedIndexSize (this, (CodedIndex)i);
+            ComputeCodedIndexSize ((CodedIndex)i);
 
         // After coded index size, row sizes and table bases.
         char* table_file_base = (char*)prow_count;
@@ -3372,40 +3396,6 @@ uint
 MetadataGetGuidSize (const MetadataType* type, Image* image)
 {
     return image->guid_size;
-}
-
-static
-void
-ComputeIndexSize (Image* image, uint /* todo enum */ table_index)
-{
-    uint const row_count = image->metadata.file.array [table_index].row_count;
-    uint result = (row_count <= 0xFFFFu) ? 2u : 4u;
-    image->metadata.file.array [table_index].index_size = result;
-}
-
-static
-void
-ComputeCodedIndexSize (Image* image, CodedIndex coded_index)
-{
-    const CodedIndex_t* data = &CodedIndices.array [coded_index];
-    uint const map = data->map;
-    uint const count = data->count;
-    int8* Map = (int8*)&CodedIndexMap;
-    uint result = 2;
-    uint cap = 0xFFFFu >> data->tag_size;
-    for (uint i = 0; i < count; ++i)
-    {
-        int m = Map [map + i];
-        if (m < 0)
-            continue;
-        auto const rows = image->metadata.file.array [m].row_count;
-        if (rows > cap)
-        {
-            result = 4;
-            break;
-        }
-    }
-    image->coded_index_size [coded_index] = result;
 }
 
 static
