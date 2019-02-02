@@ -382,34 +382,36 @@ struct DataDirectory_t
 struct OptionalHeader32
 {
     uintLE16 Magic;
-    uint8  MajorLinkerVersion;
-    uint8  MinorLinkerVersion;
-    uintLE SizeOfCode;
-    uintLE SizeOfInitializedData;
-    uintLE SizeOfUninitializedData;
-    uintLE AddressOfEntryPoint;
-    uintLE BaseOfCode;
-    uintLE BaseOfData;
-    uintLE ImageBase;
-    uintLE SectionAlignment;
-    uintLE FileAlignment;
-    uintLE16 MajorOperatingSystemVersion;
-    uintLE16 MinorOperatingSystemVersion;
-    uintLE16 MajorImageVersion;
-    uintLE16 MinorImageVersion;
-    uintLE16 MajorSubsystemVersion;
-    uintLE16 MinorSubsystemVersion;
-    uintLE Win32VersionValue;
-    uintLE SizeOfImage;
-    uintLE SizeOfHeaders;
-    uintLE CheckSum;
-    uintLE16 Subsystem;
-    uintLE16 DllCharacteristics;
-    uintLE SizeOfStackReserve;
-    uintLE SizeOfStackCommit;
-    uintLE SizeOfHeapReserve;
-    uintLE SizeOfHeapCommit;
-    uintLE LoaderFlags;
+
+    uint8  unused_MajorLinkerVersion;
+    uint8  unused_MinorLinkerVersion;
+    uintLE unused_SizeOfCode;
+    uintLE unused_SizeOfInitializedData;
+    uintLE unused_SizeOfUninitializedData;
+    uintLE unused_AddressOfEntryPoint;
+    uintLE unused_BaseOfCode;
+    uintLE unused_BaseOfData;
+    uintLE unused_ImageBase;
+    uintLE unused_SectionAlignment;
+    uintLE unused_FileAlignment;
+    uintLE16 unused_MajorOperatingSystemVersion;
+    uintLE16 unused_MinorOperatingSystemVersion;
+    uintLE16 unused_MajorImageVersion;
+    uintLE16 unused_MinorImageVersion;
+    uintLE16 unused_MajorSubsystemVersion;
+    uintLE16 unused_MinorSubsystemVersion;
+    uintLE unused_Win32VersionValue;
+    uintLE unused_SizeOfImage;
+    uintLE unused_SizeOfHeaders;
+    uintLE unused_CheckSum;
+    uintLE16 unused_Subsystem;
+    uintLE16 unused_DllCharacteristics;
+    uintLE unused_SizeOfStackReserve;
+    uintLE unused_SizeOfStackCommit;
+    uintLE unused_SizeOfHeapReserve;
+    uintLE unused_SizeOfHeapCommit;
+    uintLE unused_LoaderFlags;
+
     uintLE NumberOfRvaAndSizes;
     //DataDirectory_t DataDirectory_t [NumberOfRvaAndSizes];
 };
@@ -417,33 +419,35 @@ struct OptionalHeader32
 struct OptionalHeader64
 {
     uintLE16 Magic;
-    uint8  MajorLinkerVersion;
-    uint8  MinorLinkerVersion;
-    uintLE SizeOfCode;
-    uintLE SizeOfInitializedData;
-    uintLE SizeOfUninitializedData;
-    uintLE AddressOfEntryPoint;
-    uintLE BaseOfCode;
-    uintLE64 ImageBase;
-    uintLE SectionAlignment;
-    uintLE FileAlignment;
-    uintLE16 MajorOperatingSystemVersion;
-    uintLE16 MinorOperatingSystemVersion;
-    uintLE16 MajorImageVersion;
-    uintLE16 MinorImageVersion;
-    uintLE16 MajorSubsystemVersion;
-    uintLE16 MinorSubsystemVersion;
-    uintLE Win32VersionValue;
-    uintLE SizeOfImage;
-    uintLE SizeOfHeaders;
-    uintLE CheckSum;
-    uintLE16 Subsystem;
-    uintLE16 DllCharacteristics;
-    uintLE64 SizeOfStackReserve;
-    uintLE64 SizeOfStackCommit;
-    uintLE64 SizeOfHeapReserve;
-    uintLE64 SizeOfHeapCommit;
-    uintLE LoaderFlags;
+
+    uint8  unused_MajorLinkerVersion;
+    uint8  unused_MinorLinkerVersion;
+    uintLE unused_SizeOfCode;
+    uintLE unused_SizeOfInitializedData;
+    uintLE unused_SizeOfUninitializedData;
+    uintLE unused_AddressOfEntryPoint;
+    uintLE unused_BaseOfCode;
+    uintLE64 unused_ImageBase;
+    uintLE unused_SectionAlignment;
+    uintLE unused_FileAlignment;
+    uintLE16 unused_MajorOperatingSystemVersion;
+    uintLE16 unused_MinorOperatingSystemVersion;
+    uintLE16 unused_MajorImageVersion;
+    uintLE16 unused_MinorImageVersion;
+    uintLE16 unused_MajorSubsystemVersion;
+    uintLE16 unused_MinorSubsystemVersion;
+    uintLE unused_Win32VersionValue;
+    uintLE unused_SizeOfImage;
+    uintLE unused_SizeOfHeaders;
+    uintLE unused_CheckSum;
+    uintLE16 unused_Subsystem;
+    uintLE16 unused_DllCharacteristics;
+    uintLE64 unused_SizeOfStackReserve;
+    uintLE64 unused_SizeOfStackCommit;
+    uintLE64 unused_SizeOfHeapReserve;
+    uintLE64 unused_SizeOfHeapCommit;
+    uintLE unused_LoaderFlags;
+
     uintLE NumberOfRvaAndSizes;
     //DataDirectory_t DataDirectory_t [NumberOfRvaAndSizes];
 };
@@ -461,11 +465,11 @@ const uint kDataDirectory_Tls = 9;
 const uint kDataDirectory_LoadConfig = 10;
 const uint kDataDirectory_BoundImport = 11;
 const uint kDataDirectory_Iat = 12;
-const uint kDataDirectory_DelayImport= 13;
+const uint kDataDirectory_DelayImport = 13;
 const uint kDataDirectory_Com = 14;
 
 static
-const char* DataDirectoryName(uint a)
+const char* DataDirectoryName (uint a)
 {
     switch (a) {
 #define X(x) case kDataDirectory_ ## x: return "kDataDirectory_" #x;
@@ -495,7 +499,7 @@ struct NtHeaders
 {
     uintLE signature;
     FileHeader file_header;
-    uintLE16 OptionalHeader;
+    uintLE16 OptionalHeader; // magic value
 
     SectionHeader*
     GetFirstSectionHeader ()
@@ -735,19 +739,12 @@ enum NativeType_t
 
 struct Param_t;
 struct Field_t;
-struct Property_t;
-struct TypeDef_t;
-struct MethodRef_t;
-struct MethodDef_t;
-struct Assembly_t;
 
 struct String_t
 {
     char* chars;
     size_t length;
 };
-
-typedef basic_string<char16_t> ustring;
 
 struct UString_t
 {
@@ -771,18 +768,11 @@ struct IMetadataTable
 
 struct Member
 {
-    string name;
+    //String_t
+    //string name;
     uint offset;
 };
 
-union Parent // Constant table0x0B
-{
-    Param_t* param;
-    Field_t* Field;
-    Property_t* Property;
-};
-
-typedef void *voidp;
 typedef struct _Unused_t { } *Unused_t;
 
 #if HAS_TYPED_ENUM
@@ -941,8 +931,9 @@ END_ENUM(EventFlags, uint16)
 // tables.
 struct MetadataRow
 {
-    MetadataRow() { }
-    MetadataRow(const MetadataRow&) = default;
+    int8 table_index = -1;
+    MetadataRow () { }
+    MetadataRow (const MetadataRow&) = default;
     virtual ~MetadataRow () { }
 };
 
@@ -1012,9 +1003,6 @@ END_ENUM(DeclSecurityAction, uint16) // TODO get the values
 
 struct Interface_t
 {
-    Interface_t () { }
-    Interface_t (const Interface_t&) { }
-
     vector<Method_t*> methods;
 };
 
@@ -1147,7 +1135,7 @@ struct MethodHeaderFat
     METADATA_FIELD3 (InterfaceImpl, Interface, TypeDefOrRef, MetadataRow*)) \
                                                                             \
 /*table0x0A*/METADATA_TABLE (MemberRef, NOTHING, /* FieldRef */             \
-    METADATA_FIELD2 (MemberRef, Class, MemberRefParent)                     \
+    METADATA_FIELD3 (MemberRef, Class, MemberRefParent, MetadataRow*)       \
     METADATA_FIELD (MemberRef, Name)       /*string*/                       \
     METADATA_FIELD (MemberRef, signature)) /*blob*/                         \
                                                                             \
@@ -1334,12 +1322,10 @@ struct MethodHeaderFat
 #define metadata_schema_TYPED_Extends           MetadataRow*
 #define metadata_schema_TYPED_FieldList         vector<Field_t*>
 #define metadata_schema_TYPED_Interface         Interface_t*
-#define metadata_schema_TYPED_MemberRefParent   Parent
 #define metadata_schema_TYPED_MethodList        vector<Method_t*>
 #define metadata_schema_TYPED_Name              String_t
 #define metadata_schema_TYPED_ParamList         vector<Param_t*>
 #define metadata_schema_TYPED_PropertyList      vector<Property_t*>
-//#define metadata_schema_TYPED_Parent            Parent
 #define metadata_schema_TYPED_RVA               uint
 #define metadata_schema_TYPED_ResolutionScope   MetadataRow*
 #define metadata_schema_TYPED_Sequence          uint16
@@ -1472,7 +1458,6 @@ CODED_INDICES
 #undef CODED_INDEX
 };
 
-
 const CodedIndices_t CodedIndices = {{
 #define CODED_INDEX(name, count, values) {LOG_BASE2 ((uint)CountOfField (CodedIndexMap_t, name)), (uint)CountOfField(CodedIndexMap_t, name), (uint)offsetof(CodedIndexMap_t, name) },
 CODED_INDICES
@@ -1493,10 +1478,7 @@ struct MetadataTablesHeader // tilde stream
     uintLE reserved;        // 0
     uint8 MajorVersion;
     uint8 MinorVersion;
-    union {
-        uint8 HeapOffsetSizes;
-        uint8 HeapSizes;
-    };
+    uint8 HeapSizes;
     uint8 reserved2;        // 1
     uintLE64 Valid;         // metadata_typedef etc.
     uintLE64 Sorted;        // metadata_typedef etc.
@@ -2103,7 +2085,6 @@ struct ImageClrHeader // data_directory [15]
 };
 
 struct MetadataType;
-
 struct Image;
 
 struct MetadataTypeFunctions // Virtual functions, but allowing for static construction.
@@ -2115,7 +2096,7 @@ struct MetadataTypeFunctions // Virtual functions, but allowing for static const
 
 static
 uint64
-sign_extend(uint64 value, uint bits)
+SignExtend (uint64 value, uint bits)
 {
     // Extract lower bits from value and signextend.
     // From detour_sign_extend.
@@ -2138,7 +2119,7 @@ struct int_split_sign_magnitude_t
 
 static
 uint
-uint_get_precision(uint64 a)
+UIntGetPrecision (uint64 a)
 {
     // How many bits needed to represent.
     uint len = 1;
@@ -2148,16 +2129,16 @@ uint_get_precision(uint64 a)
 
 static
 uint
-int_get_precision(int64 a)
+IntGetPrecision (int64 a)
 {
     // How many bits needed to represent.
     // i.e. so leading bit is extendible sign bit, or 64
-    return std::min(64u, 1 + uint_get_precision (int_split_sign_magnitude_t(a).u));
+    return std::min(64u, 1 + UIntGetPrecision (int_split_sign_magnitude_t(a).u));
 }
 
 static
 uint
-uint_to_dec_getlen(uint64 b)
+uint_to_dec_getlen (uint64 b)
 {
     uint len = 0;
     do ++len;
@@ -2167,7 +2148,7 @@ uint_to_dec_getlen(uint64 b)
 
 static
 uint
-uint_to_dec(uint64 a, char* buf)
+uint_to_dec (uint64 a, char* buf)
 {
     auto const len = uint_to_dec_getlen(a);
     for (uint i = 0; i < len; ++i, a /= 10)
@@ -2177,7 +2158,7 @@ uint_to_dec(uint64 a, char* buf)
 
 static
 uint
-int_to_dec(int64 a, char* buf)
+IntToDec (int64 a, char* buf)
 {
     const int_split_sign_magnitude_t split(a);
     if (split.neg)
@@ -2187,7 +2168,7 @@ int_to_dec(int64 a, char* buf)
 
 static
 uint
-int_to_dec_getlen(int64 a)
+IntToDec_GetLength (int64 a)
 {
     const int_split_sign_magnitude_t split(a);
     return split.neg + uint_to_dec_getlen(split.u);
@@ -2195,7 +2176,7 @@ int_to_dec_getlen(int64 a)
 
 static
 uint
-uint_to_hex_getlen (uint64 b)
+UIntToHex_GetLength (uint64 b)
 {
     uint len = 0;
     do ++len;
@@ -2205,7 +2186,7 @@ uint_to_hex_getlen (uint64 b)
 
 static
 uint
-int_to_hex_getlen(int64 a)
+IntToHex_GetLength (int64 a)
 {
     // If negative and first digit is <8, add one to induce leading 8-F
     // so that sign extension of most significant bit will work.
@@ -2220,7 +2201,7 @@ int_to_hex_getlen(int64 a)
 
 static
 void
-uint_to_hexlen(uint64 a, uint len, char *buf)
+UIntToHexLength (uint64 a, uint len, char *buf)
 {
     buf += len;
     for (uint i = 0; i < len; ++i, a >>= 4)
@@ -2229,59 +2210,59 @@ uint_to_hexlen(uint64 a, uint len, char *buf)
 
 static
 void
-int_to_hexlen(int64 a, uint len, char *buf)
+IntToHexLength (int64 a, uint len, char *buf)
 {
-    uint_to_hexlen((uint64)a, len, buf);
+    UIntToHexLength((uint64)a, len, buf);
 }
 
 static
 uint
-int_to_hex(int64 a, char *buf)
+IntToHex (int64 a, char *buf)
 {
-    auto const len = int_to_hex_getlen (a);
-    int_to_hexlen(a, len, buf);
+    auto const len = IntToHex_GetLength (a);
+    IntToHexLength(a, len, buf);
     return len;
 }
 
 static
 uint
-int_to_hex8(int64 a, char *buf)
+IntToHex8 (int64 a, char *buf)
 {
-    int_to_hexlen(a, 8, buf);
+    IntToHexLength(a, 8, buf);
     return 8;
 }
 
 static
 uint
-int_to_hex_getlen_atleast8 (int64 a)
+IntToHex_GetLength_AtLeast8 (int64 a)
 {
-    auto const len = int_to_hex_getlen (a);
+    auto const len = IntToHex_GetLength (a);
     return std::max(len, 8u);
 }
 
 static
 uint
-uint_to_hex_getlen_atleast8 (uint64 a)
+UIntToHex_GetLength_AtLeast8 (uint64 a)
 {
-    auto const len = uint_to_hex_getlen (a);
+    auto const len = UIntToHex_GetLength (a);
     return std::max (len, 8u);
 }
 
 static
 uint
-int_to_hex_atleast8 (int64 a, char *buf)
+IntToHex_AtLeast8 (int64 a, char *buf)
 {
-    auto const len = int_to_hex_getlen_atleast8 (a);
-    int_to_hexlen (a, len, buf);
+    auto const len = IntToHex_GetLength_AtLeast8 (a);
+    IntToHexLength (a, len, buf);
     return len;
 }
 
 static
 uint
-uint_to_hex_atleast8(uint64 a, char *buf)
+UIntToHex_AtLeast8 (uint64 a, char *buf)
 {
-    auto const len = uint_to_hex_getlen_atleast8 (a);
-    uint_to_hexlen (a, len, buf);
+    auto const len = UIntToHex_GetLength_AtLeast8 (a);
+    UIntToHexLength (a, len, buf);
     return len;
 }
 
@@ -2366,6 +2347,7 @@ static
 void
 MetatadataReadFixed (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
+    Assert (size);
 //    if (size)
         memcpy (mem, file, size); // TODO endian, enum size mismatch
 }
@@ -2495,7 +2477,6 @@ const MetadataTypeFunctions MetadataType_CodedIndex =
 {
     MetadataReadCodedIndex,
     MetadataGetCodedIndexSize,
-//    MetadataPrintCodedIndex,
 };
 
 const MetadataType MetadataType_uint8 = { "uint8", &MetadataType_Fixed, {1} };
@@ -2548,7 +2529,6 @@ const MetadataType MetadataType_NotStored             = { "NotStored", &Metadata
 #define MetadataType_TypeName           MetadataType_string
 #define MetadataType_TypeNameSpace      MetadataType_string
 #define MetadataType_Unused             MetadataType_Unused
-//#define MetadataType_Parent           MetadataType_MemberRefParent
 
 struct MetaTableStaticField
 {
@@ -2776,7 +2756,7 @@ struct ImageZero // zero-inited part of Image
     ImageZero() { memset (this, 0, sizeof (*this)); }
 
     uint coded_index_size [CodedIndex_Count]; // 2 or 4
-    uint64 file_size;
+    uint64 file_size; // TODO Use this more.
     struct
     {
         MetadataStreamHeader* guid;
@@ -2786,9 +2766,7 @@ struct ImageZero // zero-inited part of Image
     } streams;
     MetadataRoot* metadata_root;
     void* base;
-    uint8* pe;
     NtHeaders* nt;
-    uint NumberOfRvaAndSizes;
     uint number_of_sections;
     uint blob_size; // 2 or 4
     uint string_size; // 2 or 4
@@ -2798,9 +2776,6 @@ struct ImageZero // zero-inited part of Image
 struct Image : ImageZero
 {
     MemoryMappedFile mmf;
-
-    vector<SectionHeader*> section_headers;
-
     MetadataDynamic metadata;
 
     char* GetString (uint a)
@@ -2868,6 +2843,7 @@ struct Image : ImageZero
         return metadata.file.array [table_index].file_row_size;
     }
 
+    static
     uint GetMemRowSize (uint table_index)
     {
         return MetadataStatic [table_index].mem_row_size;
@@ -2905,7 +2881,7 @@ struct Image : ImageZero
         coded_index_size [coded_index] = result;
     }
 
-    void init (const char *file_name)
+    void read (const char *file_name)
     {
         mmf.read (file_name);
         base = mmf.base;
@@ -2917,7 +2893,7 @@ struct Image : ImageZero
         printf ("mz: %c%c\n", ((char*)dos) [0], ((char*)dos) [1]);
         uint pe_offset = dos->GetPE ();
         printf ("pe_offset: %#x\n", pe_offset);
-        pe = (pe_offset + (uint8*)base);
+        uint8* pe = (pe_offset + (uint8*)base);
         printf ("pe: %02x%02x%02x%02x\n", pe [0], pe [1], pe [2], pe [3]);
         if (memcmp (pe, "PE\0\0", 4))
             ThrowString (StringFormat ("incorrect PE00 signature %s", file_name));
@@ -2935,7 +2911,7 @@ struct Image : ImageZero
         uint opt_magic = Unpack(opt32->Magic);
         AssertFormat ((opt_magic == 0x10b && !(opt64 = 0)) || (opt_magic == 0x20b && !(opt32 = 0)), ("file:%s opt_magic:%x", file_name, opt_magic));
         printf ("opt.magic:%x opt32:%p opt64:%p\n", opt_magic, (void*)opt32, (void*)opt64);
-        NumberOfRvaAndSizes = Unpack(opt32 ? &opt32->NumberOfRvaAndSizes : &opt64->NumberOfRvaAndSizes);
+        uint NumberOfRvaAndSizes = Unpack(opt32 ? &opt32->NumberOfRvaAndSizes : &opt64->NumberOfRvaAndSizes);
         printf ("opt.rvas:0x%08X\n", NumberOfRvaAndSizes);
         number_of_sections = nt->file_header.NumberOfSections;
         printf ("number_of_sections:0x%08X\n", number_of_sections);
@@ -2951,7 +2927,7 @@ struct Image : ImageZero
         }
         AssertFormat (dataDirectory [14].VirtualAddress, ("Not a .NET image? %x", dataDirectory [14].VirtualAddress));
         AssertFormat (dataDirectory [14].Size, ("Not a .NET image? %x", dataDirectory [14].Size));
-        ImageClrHeader* clr = (ImageClrHeader*)rva_to_p(dataDirectory [14].VirtualAddress);
+        ImageClrHeader* clr = RvaToPointer<ImageClrHeader>(dataDirectory [14].VirtualAddress);
         printf ("clr.cb:0x%08X\n", (uint)clr->cb);
         printf ("clr.MajorRuntimeVersion:0x%08X\n", (uint)clr->MajorRuntimeVersion);
         printf ("clr.MinorRuntimeVersion:0x%08X\n", (uint)clr->MinorRuntimeVersion);
@@ -2959,7 +2935,7 @@ struct Image : ImageZero
         printf ("clr.MetaData.Size:0x%08X\n", (uint)clr->MetaData.Size);
         AssertFormat (clr->MetaData.Size, ("0x%08X", clr->MetaData.Size));
         AssertFormat (clr->cb >= sizeof (ImageClrHeader), ("0x%08X 0x%08X", clr->cb, (uint)sizeof (ImageClrHeader)));
-        metadata_root = (MetadataRoot*)rva_to_p(clr->MetaData.VirtualAddress);
+        metadata_root = RvaToPointer<MetadataRoot>(clr->MetaData.VirtualAddress);
         printf ("metadata_root_ptr:%p metadata_root_fileofffset:%X\n", metadata_root, (uint)((char*)metadata_root - (char*)base));
         printf ("metadata_root.signature:0x%08X\n", (uint)metadata_root->signature);
         printf ("metadata_root.MajorVersion:0x%08X\n", (uint)metadata_root->MajorVersion);
@@ -3129,40 +3105,39 @@ unknown_stream:
 
         for (auto& t: metadata.TypeDef)
         {
-            const char* dot = (t.TypeNameSpace.length && t.TypeName.length) ? "." : "";
-            printf("// type { 0x%X, %s%s%s .. }\n",
-                t.Flags,
-                t.TypeNameSpace.chars,
-                dot,
-                t.TypeName.chars);
-            printf("extends:");
+            //const char* dot = (t.TypeNameSpace.length && t.TypeName.length) ? "." : "";
+            //printf("// type { 0x%X, %s%s%s .. }\n", t.Flags, t.TypeNameSpace.chars, dot, t.TypeName.chars);
+            //printf("extends:");
             if (TypeDefRow* row = dynamic_cast<TypeDefRow*>(t.Extends))
             {
-                // TODO clean up
+                /*
                 dot = (row->TypeNameSpace.length && row->TypeName.length) ? "." : "";
                 printf(" type { 0x%X, %s%s%s .. }\n",
                     row->Flags,
                     row->TypeNameSpace.chars,
                     dot,
                     row->TypeName.chars);
-            }
-            /*
-            else if (t.Extends && typeid(*t.Extends) == typeid(TypeRefRow))
-                printf("TypeRef\n");
-            else if (t.Extends && typeid(*t.Extends) == typeid(TypeSpecRow))
-                printf("TypeSpec\n");
                 */
-
+            }
+            else if (t.Extends && typeid(*t.Extends) == typeid (TypeRefRow))
+            {
+                printf("TypeRef\n");
+            }
+            else if (t.Extends && typeid(*t.Extends) == typeid (TypeSpecRow))
+            {
+                printf("TypeSpec\n");
+            }
         }
     }
 
-    void* rva_to_p (uint rva)
+    template <typename T>
+    T* RvaToPointer (uint rva)
     {
-        rva = rva_to_file_offset (rva);
-        return rva ? (((char*)base) + rva) : 0;
+        rva = RvaToFileOffset (rva);
+        return rva ? reinterpret_cast<T*>(((char*)base) + rva) : 0;
     }
 
-    uint rva_to_file_offset (uint rva)
+    uint RvaToFileOffset (uint rva)
     {
         // TODO binary search and/or cache
         SectionHeader* section_header = nt->GetFirstSectionHeader ();
@@ -3176,6 +3151,7 @@ unknown_stream:
     }
 };
 
+static
 Blob_t
 MetatadataDecodeBlob (uint8* data)
 {
@@ -3205,7 +3181,7 @@ MetatadataReadBlob (const MetadataType* type, Image* image, uint table, uint row
 {
     auto const offset = Unpack (file, size);
     auto const blob = (Blob_t*)mem;
-    auto const m = image->GetBlob(offset);
+    auto const m = image->GetBlob (offset);
     *blob = MetatadataDecodeBlob ((uint8*)m);
 }
 
@@ -3384,60 +3360,60 @@ main (int argc, char** argv)
 #define Xd(x) printf ("%s %I64d\n", #x, x);
 #define Xx(x) printf ("%s %I64x\n", #x, x);
 #define Xs(x) len = x; buf [len] = 0; printf ("%s %s\n", #x, buf);
-    Xd(uint_get_precision(0));
-    Xd(uint_get_precision(1));
-    Xd(uint_get_precision(0x2));
-    Xd(uint_get_precision(0x2));
-    Xd(uint_get_precision(0x7));
-    Xd(uint_get_precision(0x8));
-    Xd(int_get_precision(0));
-    Xd(int_get_precision(1));
-    Xd(int_get_precision(0x2));
-    Xd(int_get_precision(0x2));
-    Xd(int_get_precision(0x7));
-    Xd(int_get_precision(0x8));
-    Xd(int_get_precision(0));
-    Xd(int_get_precision(-1));
-    Xd(int_get_precision(-0x2));
-    Xd(int_get_precision(-0x2));
-    Xd(int_get_precision(-0x7));
-    Xd(int_get_precision(-0x8));
-    Xd(int_to_dec_getlen(0))
-    Xd(int_to_dec_getlen(1))
-    Xd(int_to_dec_getlen(2))
-    Xd(int_to_dec_getlen(300))
-    Xd(int_to_dec_getlen(-1))
-    Xx(sign_extend(0xf, 0));
-    Xx(sign_extend(0xf, 1));
-    Xx(sign_extend(0xf, 2));
-    Xx(sign_extend(0xf, 3));
-    Xx(sign_extend(0xf, 4));
-    Xx(sign_extend(0xf, 5));
-    Xd(int_to_hex_getlen(0xffffffffa65304e4));
-    Xd(int_to_hex_getlen(0xfffffffa65304e4));
-    Xd(int_to_hex_getlen(-1));
-    Xd(int_to_hex_getlen(-1ui64>>4));
-    Xd(int_to_hex_getlen(0xf));
-    Xd(int_to_hex_getlen(32767));
-    Xd(int_to_hex_getlen(-32767));
-    Xs(int_to_hex(32767, buf));
-    Xs(int_to_hex(-32767, buf));
-    Xs(int_to_hex8(0x123, buf));
-    Xs(int_to_hex8(0xffffffffa65304e4, buf));
-    Xs(int_to_hex8(-1, buf));
-    Xs(int_to_hex(0x1, buf));
-    Xs(int_to_hex(0x12, buf));
-    Xs(int_to_hex(0x123, buf));
-    Xs(int_to_hex(0x12345678, buf));
-    Xs(int_to_hex(-1, buf));
-    Xd(int_to_hex_getlen(0x1));
-    Xd(int_to_hex_getlen(0x12));
-    Xd(int_to_hex_getlen(0x12345678));
-    Xd(int_to_hex_getlen(0x01234567));
-    Xd(int_to_hex_getlen(-1));
-    Xd(int_to_hex_getlen(~0u >> 1));
-    Xd(int_to_hex_getlen(~0u >> 2));
-    Xd(int_to_hex_getlen(~0u >> 4));
+    Xd (UIntGetPrecision(0));
+    Xd (UIntGetPrecision(1));
+    Xd (UIntGetPrecision(0x2));
+    Xd (UIntGetPrecision(0x2));
+    Xd (UIntGetPrecision(0x7));
+    Xd (UIntGetPrecision(0x8));
+    Xd (IntGetPrecision(0));
+    Xd (IntGetPrecision(1));
+    Xd (IntGetPrecision(0x2));
+    Xd (IntGetPrecision(0x2));
+    Xd (IntGetPrecision(0x7));
+    Xd (IntGetPrecision(0x8));
+    Xd (IntGetPrecision(0));
+    Xd (IntGetPrecision(-1));
+    Xd (IntGetPrecision(-0x2));
+    Xd (IntGetPrecision(-0x2));
+    Xd (IntGetPrecision(-0x7));
+    Xd (IntGetPrecision(-0x8));
+    Xd (IntToDec_GetLength(0))
+    Xd (IntToDec_GetLength(1))
+    Xd (IntToDec_GetLength(2))
+    Xd (IntToDec_GetLength(300))
+    Xd (IntToDec_GetLength(-1))
+    Xx (SignExtend (0xf, 0));
+    Xx (SignExtend (0xf, 1));
+    Xx (SignExtend (0xf, 2));
+    Xx (SignExtend (0xf, 3));
+    Xx (SignExtend (0xf, 4));
+    Xx (SignExtend (0xf, 5));
+    Xd (IntToHex_GetLength (0xffffffffa65304e4));
+    Xd (IntToHex_GetLength (0xfffffffa65304e4));
+    Xd (IntToHex_GetLength (-1));
+    Xd (IntToHex_GetLength (-1ui64>>4));
+    Xd (IntToHex_GetLength (0xf));
+    Xd (IntToHex_GetLength (32767));
+    Xd (IntToHex_GetLength (-32767));
+    Xs (IntToHex (32767, buf));
+    Xs (IntToHex (-32767, buf));
+    Xs (IntToHex8 (0x123, buf));
+    Xs (IntToHex8 (0xffffffffa65304e4, buf));
+    Xs (IntToHex8 (-1, buf));
+    Xs (IntToHex (0x1, buf));
+    Xs (IntToHex (0x12, buf));
+    Xs (IntToHex (0x123, buf));
+    Xs (IntToHex (0x12345678, buf));
+    Xs (IntToHex (-1, buf));
+    Xd (IntToHex_GetLength (0x1));
+    Xd (IntToHex_GetLength (0x12));
+    Xd (IntToHex_GetLength (0x12345678));
+    Xd (IntToHex_GetLength (0x01234567));
+    Xd (IntToHex_GetLength (-1));
+    Xd (IntToHex_GetLength (~0u >> 1));
+    Xd (IntToHex_GetLength (~0u >> 2));
+    Xd (IntToHex_GetLength (~0u >> 4));
     exit(0);
 #endif
     Image im;
@@ -3457,7 +3433,7 @@ X (CodedIndices.array [CodedIndex(HasDeclSecurity)].tag_size);
     try
 #endif
     {
-        im.init (argv [1]);
+        im.read (argv [1]);
     }
 #if 1
     catch (int er)
