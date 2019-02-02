@@ -25,7 +25,6 @@
 // Goals: clarity, simplicity, portability, size, interpreter, compile to C++, and maybe
 // later some JIT
 
-
 #ifdef METADATA_TABLE
 
 // Metadata or other multi-evaluation macro tables must be first in the file.
@@ -63,14 +62,14 @@
     METADATA_FIELD (TypeDef, FieldList)
     METADATA_FIELD (TypeDef, MethodList))
 
-/*table0x03*/ METADATA_TABLE_UNUSED(3) /* FieldPtr nonstandard */
+/*table0x03*/ METADATA_TABLE_UNUSED(Unused3) /* FieldPtr nonstandard */
 
 /*table0x04*/ METADATA_TABLE (Field, NOTHING /* : Member */,
     METADATA_FIELD3 (Field, Flags, uint16, FieldFlags)
     METADATA_FIELD (Field, Name)
     METADATA_FIELD (Field, signature))
 
-/*table0x05*/ METADATA_TABLE_UNUSED(5) /*MethodPtr nonstandard*/
+/*table0x05*/ METADATA_TABLE_UNUSED(Unused5) /*MethodPtr nonstandard*/
 
 /*table0x06*/METADATA_TABLE (MethodDef, NOTHING,
     METADATA_FIELD2 (MethodDef, RVA, uint)
@@ -80,7 +79,7 @@
     METADATA_FIELD (MethodDef, signature)      /* Blob heap, 7 bit encode/decode */
     METADATA_FIELD (MethodDef, ParamList)) /* Param table, start, until table end, or start of next MethodDef; index into Param table, 2 or 4 bytes */
 
-/*table0x07*/ METADATA_TABLE_UNUSED(7) /*ParamPtr nonstandard*/
+/*table0x07*/ METADATA_TABLE_UNUSED(Unused7) /*ParamPtr nonstandard*/
 
 /*table0x08*/METADATA_TABLE (Param, NOTHING,
     METADATA_FIELD2 (Param, Flags, uint16)
@@ -133,7 +132,7 @@
     METADATA_FIELD2 (EventMap, Parent, TypeDef)
     METADATA_FIELD (EventMap, EventList))
 
-/*table0x13*/ METADATA_TABLE_UNUSED(13) /* EventPtr nonstandard */
+/*table0x13*/ METADATA_TABLE_UNUSED(Unused13) /* EventPtr nonstandard */
 
 /*table0x14*/ METADATA_TABLE (Event, NOTHING,
     METADATA_FIELD3 (Event, Flags, uint16, EventFlags)
@@ -144,7 +143,7 @@
     METADATA_FIELD2 (PropertyMap, Parent, TypeDef)
     METADATA_FIELD (PropertyMap, PropertyList))
 
-/*table0x16*/ METADATA_TABLE_UNUSED(16) /* PropertyPtr */
+/*table0x16*/ METADATA_TABLE_UNUSED(Unused16) /* PropertyPtr */
 
 /*table0x17*/ METADATA_TABLE (Property, NOTHING,
     METADATA_FIELD2 (Property, Flags, uint16)
@@ -181,9 +180,9 @@
     METADATA_FIELD2 (FieldRVA, RVA, uint)
     METADATA_FIELD3 (FieldRVA, Field, Field, FieldRow*))
 
-/*table0x1E*/ METADATA_TABLE_UNUSED(1E) /* ENCLog */
+/*table0x1E*/ METADATA_TABLE_UNUSED(Unused1E) /* ENCLog */
 
-/*table0x1F*/ METADATA_TABLE_UNUSED(1F) /* ENDMap */
+/*table0x1F*/ METADATA_TABLE_UNUSED(Unused1F) /* ENDMap */
 
 /*table0x20*/ METADATA_TABLE (Assembly, NOTHING,
     METADATA_FIELD2 (Assembly, HashAlgId, uint)
@@ -254,7 +253,7 @@
     METADATA_FIELD2 (GenericParam, Name, string))
 
 /*table0x2B*/ METADATA_TABLE (MethodSpec, NOTHING,
-    METADATA_FIELD3 (MethodSpec, Method, MethodDefOrRef, Method_t*)
+    METADATA_FIELD3 (MethodSpec, Method, MethodDefOrRef, MetadataRow*)
     METADATA_FIELD2 (MethodSpec, Instantiation, blob))
 
 /*table0x2C*/ METADATA_TABLE (GenericParamConstraint, NOTHING,
@@ -1006,8 +1005,6 @@ struct IMetadataTable
 
 struct Member
 {
-    //String_t
-    //string name;
     uint offset;
 };
 
@@ -1093,10 +1090,6 @@ BEGIN_ENUM(MethodDefImplFlags, uint16) // table0x06
 }
 END_ENUM(MethodDefImplFlags, uint16) // table0x06
 
-struct Method_t : Member
-{
-};
-
 BEGIN_ENUM(TypeFlags, uint)
 {
     //TODO bitfields (need to test little and big endian)
@@ -1169,20 +1162,14 @@ END_ENUM(EventFlags, uint16)
 // tables.
 struct MetadataRow
 {
-    int8 table_index = -1;
+//    int8 table_index = -1;
     MetadataRow () { }
     MetadataRow (const MetadataRow&) = default;
     virtual ~MetadataRow () { }
-};
 
-struct Event_t : Member // table0x14
-{
-    EventFlags Flags;
-    MetadataRow* EventType;
-};
-
-struct Property_t : Member
-{
+    virtual void Print()
+    {
+    }
 };
 
 BEGIN_ENUM(FieldFlags, uint16)
@@ -1241,7 +1228,7 @@ END_ENUM(DeclSecurityAction, uint16) // TODO get the values
 
 struct Interface_t
 {
-    vector<Method_t*> methods;
+    vector<MetadataRow*> methods;
 };
 
 struct Signature
@@ -1338,10 +1325,10 @@ struct MethodHeaderFat
 #define metadata_schema_TYPED_Extends           MetadataRow*
 #define metadata_schema_TYPED_FieldList         vector<Field_t*>
 #define metadata_schema_TYPED_Interface         Interface_t*
-#define metadata_schema_TYPED_MethodList        vector<Method_t*>
+#define metadata_schema_TYPED_MethodList        vector<MetadataRow*>
 #define metadata_schema_TYPED_Name              String_t
 #define metadata_schema_TYPED_ParamList         vector<Param_t*>
-#define metadata_schema_TYPED_PropertyList      vector<Property_t*>
+#define metadata_schema_TYPED_PropertyList      vector<MetadataRow*>
 #define metadata_schema_TYPED_RVA               uint
 #define metadata_schema_TYPED_ResolutionScope   MetadataRow*
 #define metadata_schema_TYPED_Sequence          uint16
@@ -1351,7 +1338,7 @@ struct MethodHeaderFat
 #define metadata_schema_TYPED_TypeNameSpace     String_t
 #define metadata_schema_TYPED_Unused            Unused_t
 #define metadata_schema_TYPED_NotStored         Unused_t
-#define metadata_schema_TYPED_EventList         vector<Event_t*>
+#define metadata_schema_TYPED_EventList         vector<MetadataRow*>
 
 #define METADATA_FIELD(table, name) METADATA_FIELD2 (table, name, name)
 
@@ -1364,8 +1351,7 @@ struct MethodHeaderFat
 #define METADATA_FIELD3(table, name, persistant_type, pointerful_type)    /* nothing */
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name) k ## Unused_ ## name,
-// TODO typed enum
-enum {
+enum : uint8 {
 #include __FILE__ // METADATA_TABLES
     kMethodRef = kMemberRef,
     kFieldRef = kMemberRef,
@@ -2154,7 +2140,7 @@ IntGetPrecision (int64 a)
 
 static
 uint
-uint_to_dec_getlen (uint64 b)
+UIntToDec_GetLength (uint64 b)
 {
     uint len = 0;
     do ++len;
@@ -2164,9 +2150,9 @@ uint_to_dec_getlen (uint64 b)
 
 static
 uint
-uint_to_dec (uint64 a, char* buf)
+UIntToDec (uint64 a, char* buf)
 {
-    auto const len = uint_to_dec_getlen(a);
+    auto const len = UIntToDec_GetLength(a);
     for (uint i = 0; i < len; ++i, a /= 10)
         buf [i] = "0123456789" [a % 10];
     return len;
@@ -2179,7 +2165,7 @@ IntToDec (int64 a, char* buf)
     const int_split_sign_magnitude_t split(a);
     if (split.neg)
         *buf++ = '-';
-    return split.neg + uint_to_dec(split.u, buf);
+    return split.neg + UIntToDec(split.u, buf);
 }
 
 static
@@ -2187,7 +2173,7 @@ uint
 IntToDec_GetLength (int64 a)
 {
     const int_split_sign_magnitude_t split(a);
-    return split.neg + uint_to_dec_getlen(split.u);
+    return split.neg + UIntToDec_GetLength(split.u);
 }
 
 static
