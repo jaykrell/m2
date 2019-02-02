@@ -926,10 +926,6 @@ BEGIN_ENUM(TypeFlags, uint)
 }
 END_ENUM(TypeFlags, uint)
 
-struct Type // class, valuetype, delegate, inteface, not char, short, int, long, float
-{
-};
-
 BEGIN_ENUM(EventFlags, uint16)
 {
     EventFlags_SpecialName           =   0x0200,     // event is special. Name describes how.
@@ -938,11 +934,22 @@ BEGIN_ENUM(EventFlags, uint16)
 }
 END_ENUM(EventFlags, uint16)
 
+// TODO This is the base of every row type.
+// It is especially for coded indices.
+// TODO This should actually be templatized with a bitmask of allowed table indices,
+// and provide some "dispatch assistance" where we guaranteeably switch on all allowed
+// tables.
+struct MetadataRow
+{
+    MetadataRow() { }
+    MetadataRow(const MetadataRow&) = default;
+    virtual ~MetadataRow () { }
+};
+
 struct Event_t : Member // table0x14
 {
     EventFlags Flags;
-    String_t Name;
-    Type* EventType;
+    MetadataRow* EventType;
 };
 
 struct Property_t : Member
@@ -1011,10 +1018,6 @@ struct Interface_t
     vector<Method_t*> methods;
 };
 
-struct FieldOrParam
-{
-};
-
 struct Signature
 {
     Blob_t blob; // TODO
@@ -1022,45 +1025,6 @@ struct Signature
 
 struct AssemblyRef;
 struct File;
-
-struct Implementation_t
-{
-    //union
-    AssemblyRef* assembly_ref;
-    File* file;
-};
-
-class RowBase_t
-{
-public:
-    RowBase_t() { }
-    RowBase_t(const RowBase_t&) = default;
-    virtual ~RowBase_t () { }
-};
-
-#if 0
-struct xClass_t
-{
-//    Class_t* base;
-    string name;
-    vector<Interface_t*> interfaces;
-    vector<Method_t*> methods;
-    vector<Field_t*> fields;
-    vector<Event_t*> events;
-    vector<Property_t*> properties;
-};
-#endif
-
-class MethodDeclaration
-{
-};
-
-struct TypeOrMethodDef
-{
-    //union
-    Type* type;
-    Method_t* method;
-};
 
 BEGIN_ENUM(MethodSemanticsFlags, uint16)
 {
@@ -1072,12 +1036,6 @@ BEGIN_ENUM(MethodSemanticsFlags, uint16)
     MethodSemanticsFlags_Fire = 0x20
 }
 END_ENUM(MethodSemanticsFlags, uint16)
-
-union MethodSemanticsAssociation_t // table0x18
-{
-    Event_t* Event;
-    Property_t* Property;
-};
 
 // TODO enum
 typedef uint16 PInvokeAttributes;
@@ -1156,7 +1114,7 @@ struct MethodHeaderFat
     METADATA_FIELD3 (TypeDef, Flags, uint, TypeFlags)                       \
     METADATA_FIELD (TypeDef, TypeName)                                      \
     METADATA_FIELD (TypeDef, TypeNameSpace)                                 \
-    METADATA_FIELD3 (TypeDef, Extends, TypeDefOrRef, RowBase_t*)            \
+    METADATA_FIELD3 (TypeDef, Extends, TypeDefOrRef, MetadataRow*)          \
     METADATA_FIELD (TypeDef, FieldList)                                     \
     METADATA_FIELD (TypeDef, MethodList))                                   \
                                                                             \
@@ -1171,8 +1129,8 @@ struct MethodHeaderFat
                                                                             \
 /*table0x06*/METADATA_TABLE (MethodDef, NOTHING,                            \
     METADATA_FIELD2 (MethodDef, RVA, uint)                                  \
-    METADATA_FIELD3 (MethodDef, ImplFlags, uint16, MethodDefImplFlags) /* TODO higher level support */     \
-    METADATA_FIELD3 (MethodDef, Flags, uint16, MethodDefFlags) /* TODO higher level support */             \
+    METADATA_FIELD3 (MethodDef, ImplFlags, uint16, MethodDefImplFlags) /* TODO higher level support */  \
+    METADATA_FIELD3 (MethodDef, Flags, uint16, MethodDefFlags) /* TODO higher level support */          \
     METADATA_FIELD (MethodDef, Name)                                        \
     METADATA_FIELD (MethodDef, signature)      /* Blob heap, 7 bit encode/decode */ \
     METADATA_FIELD (MethodDef, ParamList)) /* Param table, start, until table end, or start of next MethodDef; index into Param table, 2 or 4 bytes */ \
@@ -1186,7 +1144,7 @@ struct MethodHeaderFat
                                                                             \
 /*table0x09*/METADATA_TABLE (InterfaceImpl, NOTHING,                        \
     METADATA_FIELD2 (InterfaceImpl, Class, TypeDef)                         \
-    METADATA_FIELD3 (InterfaceImpl, Interface, TypeDefOrRef, RowBase_t*))   \
+    METADATA_FIELD3 (InterfaceImpl, Interface, TypeDefOrRef, MetadataRow*)) \
                                                                             \
 /*table0x0A*/METADATA_TABLE (MemberRef, NOTHING, /* FieldRef */             \
     METADATA_FIELD2 (MemberRef, Class, MemberRefParent)                     \
@@ -1196,22 +1154,22 @@ struct MethodHeaderFat
 /*table0x0B*/METADATA_TABLE (Constant, NOTHING,                             \
     METADATA_FIELD2 (Constant, Type, uint8)                                 \
     METADATA_FIELD2 (Constant, Pad, uint8)                                  \
-    METADATA_FIELD3 (Constant, Parent, HasConstant, RowBase_t*)             \
+    METADATA_FIELD3 (Constant, Parent, HasConstant, MetadataRow*)           \
     METADATA_FIELD2 (Constant, Value, blob)                                 \
     METADATA_FIELD3 (Constant, IsNull, NotStored, bool))                    \
                                                                             \
 /*table0x0C*/METADATA_TABLE (CustomAttribute, NOTHING,                      \
-    METADATA_FIELD3 (CustomAttribute, Parent, HasCustomAttribute, RowBase_t*) \
-    METADATA_FIELD3 (CustomAttribute, Type, CustomAttributeType, RowBase_t*) \
+    METADATA_FIELD3 (CustomAttribute, Parent, HasCustomAttribute, MetadataRow*) \
+    METADATA_FIELD3 (CustomAttribute, Type, CustomAttributeType, MetadataRow*) \
     METADATA_FIELD2 (CustomAttribute, Value, blob))                         \
                                                                             \
 /*table0x0D*/METADATA_TABLE (FieldMarshal, NOTHING,                         \
-    METADATA_FIELD3 (FieldMarshal, Parent, HasFieldMarshal, FieldOrParam*)  \
+    METADATA_FIELD3 (FieldMarshal, Parent, HasFieldMarshal, MetadataRow*)   \
     METADATA_FIELD2 (FieldMarshal, NativeType, blob))                       \
                                                                             \
 /*table0x0E*/METADATA_TABLE (DeclSecurity, NOTHING,                         \
     METADATA_FIELD3 (DeclSecurity, Action, uint16, DeclSecurityAction)      \
-    METADATA_FIELD3 (DeclSecurity, Parent_or_Type_TODO, HasDeclSecurity, RowBase_t*)  \
+    METADATA_FIELD3 (DeclSecurity, Parent_or_Type_TODO, HasDeclSecurity, MetadataRow*)  \
     METADATA_FIELD2 (DeclSecurity, PermissionSet_or_Value_TODO, blob))      \
                                                                             \
 /*table0x0F*/ METADATA_TABLE (ClassLayout, NOTHING,                         \
@@ -1235,7 +1193,7 @@ struct MethodHeaderFat
 /*table0x14*/ METADATA_TABLE (Event, NOTHING,                               \
     METADATA_FIELD3 (Event, Flags, uint16, EventFlags)                      \
     METADATA_FIELD2 (Event, Name, string)                                   \
-    METADATA_FIELD3 (Event, EventType, TypeDefOrRef, RowBase_t*))           \
+    METADATA_FIELD3 (Event, EventType, TypeDefOrRef, MetadataRow*))         \
                                                                             \
 /*table0x15*/ METADATA_TABLE (PropertyMap, NOTHING,                         \
     METADATA_FIELD2 (PropertyMap, Parent, TypeDef)                          \
@@ -1255,12 +1213,12 @@ struct MethodHeaderFat
 /*table0x18*/ METADATA_TABLE (metadata_MethodSemantics, NOTHING,            \
     METADATA_FIELD3 (metadata_MethodSemantics, Semantics, uint16, MethodSemanticsFlags)        \
     METADATA_FIELD3 (metadata_MethodSemantics, Method, MethodDef, MethodDefRow*) /* index into MethodDef table, 2 or 4 bytes */ \
-    METADATA_FIELD3 (metadata_MethodSemantics, Association, HasSemantics, MethodSemanticsAssociation_t)) /* Event or Property, CodedIndex */ \
+    METADATA_FIELD3 (metadata_MethodSemantics, Association, HasSemantics, MetadataRow*)) /* Event or Property, CodedIndex */ \
                                                                             \
 /*table0x19*/ METADATA_TABLE (MethodImpl, NOTHING,                          \
     METADATA_FIELD2 (MethodImpl, Class, TypeDef)                            \
-    METADATA_FIELD3 (MethodImpl, MethodBody, MethodDefOrRef, RowBase_t*)    \
-    METADATA_FIELD3 (MethodImpl, MethodDeclaration, MethodDefOrRef, RowBase_t*)) \
+    METADATA_FIELD3 (MethodImpl, MethodBody, MethodDefOrRef, MetadataRow*)  \
+    METADATA_FIELD3 (MethodImpl, MethodDeclaration, MethodDefOrRef, MetadataRow*)) \
                                                                             \
 /*table0x1A*/ METADATA_TABLE (ModuleRef, NOTHING,                           \
     METADATA_FIELD2 (ModuleRef, Name, string))                              \
@@ -1270,7 +1228,7 @@ struct MethodHeaderFat
                                                                             \
 /*table0x1C*/ METADATA_TABLE (ImplMap, NOTHING,                             \
     METADATA_FIELD3 (ImplMap, MappingFlags, uint16, PInvokeAttributes)      \
-    METADATA_FIELD3 (ImplMap, MemberForwarded, MemberForwarded, MethodDefRow*)          \
+    METADATA_FIELD3 (ImplMap, MemberForwarded, MemberForwarded, MethodDefRow*) \
     METADATA_FIELD2 (ImplMap, ImportName, string)                           \
     METADATA_FIELD3 (ImplMap, ImportScope, ModuleRef, ModuleRefRow*))       \
                                                                             \
@@ -1338,7 +1296,7 @@ struct MethodHeaderFat
     METADATA_FIELD2 (ManifestResource, Offset, uint)                        \
     METADATA_FIELD3 (ManifestResource, Flags, uint, ManifestResourceFlags)  \
     METADATA_FIELD2 (ManifestResource, Name, string)                        \
-    METADATA_FIELD3 (ManifestResource, Implementation, Implementation, Implementation_t*))  \
+    METADATA_FIELD3 (ManifestResource, Implementation, Implementation, MetadataRow*))  \
                                                                             \
 /*table0x29*/ METADATA_TABLE (NestedClass, NOTHING,                         \
     METADATA_FIELD2 (NestedClass, NestedClass, TypeDef)                     \
@@ -1347,7 +1305,7 @@ struct MethodHeaderFat
 /*table0x2A*/ METADATA_TABLE (GenericParam, NOTHING,                        \
     METADATA_FIELD2 (GenericParam, Number, uint16)                          \
     METADATA_FIELD3 (GenericParam, Flags, uint16, GenericParamFlags)        \
-    METADATA_FIELD3 (GenericParam, Owner, TypeOrMethodDef, TypeOrMethodDef) \
+    METADATA_FIELD3 (GenericParam, Owner, TypeOrMethodDef, MetadataRow*)    \
     METADATA_FIELD2 (GenericParam, Name, string))                           \
                                                                             \
 /*table0x2B*/ METADATA_TABLE (MethodSpec, NOTHING,                          \
@@ -1356,7 +1314,7 @@ struct MethodHeaderFat
                                                                             \
 /*table0x2C*/ METADATA_TABLE (GenericParamConstraint, NOTHING,              \
     METADATA_FIELD3 (GenericParamConstraint, Owner, GenericParam, GenericParamRow*) \
-    METADATA_FIELD3 (GenericParamConstraint, Constraint, TypeDefOrRef, RowBase_t*)) \
+    METADATA_FIELD3 (GenericParamConstraint, Constraint, TypeDefOrRef, MetadataRow*)) \
 
 // Every table has two maybe three maybe four sets of types/data/forms.
 // 1. A very typed form. Convenient to work with. Does the most work to form.
@@ -1373,7 +1331,7 @@ struct MethodHeaderFat
 #define metadata_schema_TYPED_uint              uint
 #define metadata_schema_TYPED_uint8             uint8
 #define metadata_schema_TYPED_Class             Class_t*
-#define metadata_schema_TYPED_Extends           RowBase_t*
+#define metadata_schema_TYPED_Extends           MetadataRow*
 #define metadata_schema_TYPED_FieldList         vector<Field_t*>
 #define metadata_schema_TYPED_Interface         Interface_t*
 #define metadata_schema_TYPED_MemberRefParent   Parent
@@ -1383,10 +1341,10 @@ struct MethodHeaderFat
 #define metadata_schema_TYPED_PropertyList      vector<Property_t*>
 //#define metadata_schema_TYPED_Parent            Parent
 #define metadata_schema_TYPED_RVA               uint
-#define metadata_schema_TYPED_ResolutionScope   RowBase_t*
+#define metadata_schema_TYPED_ResolutionScope   MetadataRow*
 #define metadata_schema_TYPED_Sequence          uint16
 #define metadata_schema_TYPED_signature         Signature
-#define metadata_schema_TYPED_TypeDef           Type*
+#define metadata_schema_TYPED_TypeDef           TypeDefRow*
 #define metadata_schema_TYPED_TypeName          String_t
 #define metadata_schema_TYPED_TypeNameSpace     String_t
 #define metadata_schema_TYPED_Unused            Unused_t
@@ -2148,9 +2106,8 @@ struct MetadataType;
 
 struct Image;
 
-struct MetadataTypeFunctions
+struct MetadataTypeFunctions // Virtual functions, but allowing for static construction.
 {
-    // Virtual functions, but allowing for static construction.
     void (*Read)(const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem);
     uint (*GetSize)(const MetadataType*, Image*);
     void (*Print)(const MetadataType*, Image*);
@@ -2618,7 +2575,7 @@ struct MetadataTableStatic_t
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
 #define METADATA_TABLE(name, base, fields)                              \
-    struct name ## Row : RowBase_t                                      \
+    struct name ## Row : MetadataRow                                    \
     {                                                                   \
             virtual ~name ## Row ( ) { }                                \
             name ##  Row ( ) { }                                        \
@@ -3286,7 +3243,7 @@ MetadataReadIndexCommon (const MetadataType* type, Image* image, uint table, uin
 
     auto const reffed_table = &image->metadata.file.array [table_index];
     Assert (index <= reffed_table->row_count);
-    *(RowBase_t**)mem = (RowBase_t*)image->metadata.itables [table_index]->iat(index);
+    *(MetadataRow**)mem = (MetadataRow*)image->metadata.itables [table_index]->iat(index);
 }
 
 static
