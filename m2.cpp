@@ -2833,7 +2833,6 @@ struct ImageZero // zero-inited part of Image
     NtHeaders* nt;
     uint NumberOfRvaAndSizes;
     uint number_of_sections;
-    uint number_of_streams;
     uint blob_size; // 2 or 4
     uint string_size; // 2 or 4
     uint guid_size; // 2 or 4
@@ -2992,7 +2991,7 @@ struct Image : ImageZero
         // TODO bounds checks throughout
         uint16* pflags = (uint16*)&metadata_root->Version [(uint)metadata_root->VersionLength];
         uint16* pnumber_of_streams = 1 + pflags;
-        number_of_streams = *pnumber_of_streams;
+        const uint number_of_streams = *pnumber_of_streams;
         printf ("metadata_root.Version:%s\n", metadata_root->Version);
         printf ("flags:0x%08X\n", *pflags);
         printf ("number_of_streams:0x%08X\n", number_of_streams);
