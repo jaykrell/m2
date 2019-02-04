@@ -25,6 +25,10 @@
 // Goals: clarity, simplicity, portability, size, interpreter, compile to C++, and maybe
 // later some JIT
 
+#if _MSC_VER && _MSC_VER <= 1500
+#error This version of Visual C++ is too old. Known bad versions include 5.0 and 2008. Known good includes 1900/2017.
+#endif
+
 #ifdef METADATA_TABLE
 
 // Metadata or other multi-evaluation macro tables must be first in the file.
@@ -286,41 +290,11 @@
 #pragma warning(disable:4505) // unused static function
 #pragma warning(disable:4514) // unused function
 #pragma warning(disable:4706) // assignment within conditional
-#pragma warning(disable:4710) // function not inlined
 #pragma warning(disable:4820) // padding
-
 #pragma warning(push)
-
-//#pragma warning(disable:4616) // not a valid warning (depends on compiler version)
-// We have to include yvals.h early because it breaks warnings.
-#if _MSC_VER == 1100 // TODO test more, but yvals.h not present in 900
-#include <yvals.h>
-#endif
-// TODO These warnings are in standard headers and not in our code.
-#if _MSC_VER <= 1100 // TODO test more compilers/libraries
-//#pragma warning(disable:4018) // unsigned/signed mismatch
-//#pragma warning(disable:4244) // integer conversion
-//#pragma warning(disable:4365) // unsigned/signed mismatch
-#endif
-//#pragma warning(disable:4615) // not a valid warning (depends on compiler version)
-//#pragma warning(disable:4619) // not a valid warning (depends on compiler version)
-//#pragma warning(disable:4663) // c:\msdev\50\VC\INCLUDE\iosfwd(132) : warning C4663: C++ language change: to explicitly specialize class template 'char_traits' use the following syntax:
-                              // template<> struct char_traits<unsigned short>
-//#pragma warning(disable:4097) // typedef-name 'string' used as synonym for class-name 'basic_string<char>'
-//#pragma warning(disable:4146) // unary minus unsigned is still unsigned (xlocnum)
-//#pragma warning(disable:4201) // non standard extension : nameless struct/union (windows.h)
-//#pragma warning(disable:4238) // non standard extension : class rvalue as lvalue (utility)
-//#pragma warning(disable:4480) // non standard extension : typed enums
-//#pragma warning(disable:4510) // function could not be generated
-//#pragma warning(disable:4511) // function could not be generated
-//#pragma warning(disable:4512) // function could not be generated
-//#pragma warning(disable:4513) // function could not be generated
-//#pragma warning(disable:4610) // cannot be instantiated
-//#pragma warning(disable:4616) // not a valid warning
-//#pragma warning(disable:4623) // default constructor deleted
+#pragma warning(disable:4710) // function not inlined
 #pragma warning(disable:4626) // assignment implicitly deleted
 #pragma warning(disable:5027) // move assignment implicitly deleted
-//#pragma warning(disable:4480) // specifying enum type
 #pragma warning(disable:4571) // catch(...)
 #pragma warning(disable:4625) // copy constructor implicitly deleted
 #pragma warning(disable:4668) // //#if not_defined is //#if 0
@@ -356,7 +330,7 @@ using std::vector;
 #include <windows.h>
 #else
 #define IsDebuggerPresent() 0
-#define __debugbreak() 0
+#define __debugbreak() ((void)0)
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -1162,14 +1136,11 @@ END_ENUM(EventFlags, uint16)
 // tables.
 struct MetadataRow
 {
-//    int8 table_index = -1;
-    MetadataRow () { }
-    MetadataRow (const MetadataRow&) = default;
-    virtual ~MetadataRow () { }
-
-    virtual void Print()
-    {
-    }
+    uint8 table_index;
+    //MetadataRow () { }
+    //MetadataRow (const MetadataRow&) = default;
+    //virtual ~MetadataRow () { }
+    //virtual void Print() { }
 };
 
 BEGIN_ENUM(FieldFlags, uint16)
@@ -2556,12 +2527,13 @@ struct MetadataTableStatic_t
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
-#define METADATA_TABLE(name, base, fields)                              \
-    struct name ## Row : MetadataRow                                    \
+#define METADATA_TABLE(name, xbase, fields)                             \
+    struct name ## Row                                                  \
     {                                                                   \
-            virtual ~name ## Row ( ) { }                                \
-            name ##  Row ( ) { }                                        \
-            name ##  Row (const name ##  Row&) = default;               \
+            MetadataRow base { k ## name };                             \
+            /*virtual ~name ## Row ( ) { }*/                            \
+            /*name ##  Row ( ) { }*/                                    \
+            /*name ##  Row (const name ##  Row&) = default;*/           \
             fields                                                      \
     };                                                                  \
     struct name ## Table : vector<name ## Row>, IMetadataTable          \
@@ -3107,27 +3079,30 @@ unknown_stream:
 
         for (auto& t: metadata.TypeDef)
         {
-            //const char* dot = (t.TypeNameSpace.length && t.TypeName.length) ? "." : "";
+            const char* dot = (t.TypeNameSpace.length && t.TypeName.length) ? "." : "";
             //printf("// type { 0x%X, %s%s%s .. }\n", t.Flags, t.TypeNameSpace.chars, dot, t.TypeName.chars);
             //printf("extends:");
-            if (TypeDefRow* row = dynamic_cast<TypeDefRow*>(t.Extends))
+            if (t.Extends)
             {
-                /*
-                dot = (row->TypeNameSpace.length && row->TypeName.length) ? "." : "";
-                printf(" type { 0x%X, %s%s%s .. }\n",
-                    row->Flags,
-                    row->TypeNameSpace.chars,
-                    dot,
-                    row->TypeName.chars);
-                */
-            }
-            else if (t.Extends && typeid(*t.Extends) == typeid (TypeRefRow))
-            {
-                printf("TypeRef\n");
-            }
-            else if (t.Extends && typeid(*t.Extends) == typeid (TypeSpecRow))
-            {
-                printf("TypeSpec\n");
+                switch (t.Extends->table_index)
+                {
+                case kTypeDef:
+                    TypeDefRow* typeDef;
+                    typeDef = (TypeDefRow*)t.Extends;
+                    dot = (typeDef->TypeNameSpace.length && typeDef->TypeName.length) ? "." : "";
+                    printf(" type { 0x%X, %s%s%s .. }\n",
+                        typeDef->Flags,
+                        typeDef->TypeNameSpace.chars,
+                        dot,
+                        typeDef->TypeName.chars);
+                   break;
+                case kTypeRef:
+                    printf("TypeRef\n");
+                    break;
+                case kTypeSpec:
+                    printf("TypeSpec\n");
+                    break;
+                }
             }
         }
     }
