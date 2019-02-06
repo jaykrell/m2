@@ -329,7 +329,7 @@ using std::vector;
 #include <io.h>
 #include <windows.h>
 #else
-#define IsDebuggerPresent() 0
+#define IsDebuggerPresent() (0)
 #define __debugbreak() ((void)0)
 #include <unistd.h>
 #include <fcntl.h>
@@ -1129,6 +1129,85 @@ BEGIN_ENUM(EventFlags, uint16)
 }
 END_ENUM(EventFlags, uint16)
 
+struct MetadataRow;
+
+// Avoiding virtual functions.
+
+typedef void (*Metadata_ForwardDeclareType_t)(MetadataRow*, const char* dot);
+
+struct MetadataFunctions
+{
+    Metadata_ForwardDeclareType_t ForwardDeclareTypeDef;
+};
+
+static void MetadataRow_ForwardDeclareType (MetadataRow*, const char* dot)
+{
+    printf("MetadataRow_ForwardDeclareType\n");
+    __debugbreak();
+}
+
+struct TypeDefRow;
+struct TypeRefRow;
+struct TypeSpecRow;
+
+static void TypeDef_ForwardDeclareType (TypeDefRow* typeDef, const char* dot);
+static void TypeRef_ForwardDeclareType (TypeRefRow* self, const char* dot);
+static void TypeSpec_ForwardDeclareType (TypeSpecRow* self, const char* dot);
+
+MetadataFunctions ModuleFunctions = { };
+
+MetadataFunctions TypeRefFunctions =
+{
+    (Metadata_ForwardDeclareType_t)TypeRef_ForwardDeclareType,
+};
+
+MetadataFunctions TypeDefFunctions =
+{
+    (Metadata_ForwardDeclareType_t)TypeDef_ForwardDeclareType,
+};
+
+MetadataFunctions FieldFunctions = { };
+MetadataFunctions FieldMarshalFunctions = { };
+MetadataFunctions MethodDefFunctions = { };
+MetadataFunctions ParamFunctions = { };
+MetadataFunctions InterfaceImplFunctions = { };
+MetadataFunctions MemberRefFunctions = { };
+MetadataFunctions ConstantFunctions = { };
+MetadataFunctions CustomAttributeFunctions = { };
+MetadataFunctions DeclSecurityFunctions = { };
+MetadataFunctions ClassLayoutFunctions = { };
+MetadataFunctions FieldLayoutFunctions = { };
+MetadataFunctions StandAloneSigFunctions = { };
+MetadataFunctions EventMapFunctions = { };
+MetadataFunctions EventFunctions = { };
+MetadataFunctions PropertyMapFunctions = { };
+MetadataFunctions PropertyFunctions = { };
+MetadataFunctions metadata_MethodSemanticsFunctions = { };
+MetadataFunctions MethodImplFunctions = { };
+MetadataFunctions ModuleRefFunctions = { };
+MetadataFunctions NestedClassFunctions = { };
+
+MetadataFunctions TypeSpecFunctions =
+{
+    (Metadata_ForwardDeclareType_t)TypeSpec_ForwardDeclareType,
+};
+
+MetadataFunctions ImplMapFunctions = { };
+MetadataFunctions FieldRVAFunctions = { };
+MetadataFunctions AssemblyFunctions = { };
+MetadataFunctions AssemblyProcessorFunctions = { };
+MetadataFunctions AssemblyOSFunctions = { };
+MetadataFunctions AssemblyRefFunctions = { };
+MetadataFunctions AssemblyRefProcessorFunctions = { };
+MetadataFunctions AssemblyRefOSFunctions = { };
+MetadataFunctions FileFunctions = { };
+MetadataFunctions ExportedTypeFunctions = { };
+MetadataFunctions ManifestResourceFunctions = { };
+MetadataFunctions NextedClassFunctions = { };
+MetadataFunctions GenericParamFunctions = { };
+MetadataFunctions MethodSpecFunctions = { };
+MetadataFunctions GenericParamConstraintFunctions = { };
+
 // TODO This is the base of every row type.
 // It is especially for coded indices.
 // TODO This should actually be templatized with a bitmask of allowed table indices,
@@ -1136,7 +1215,8 @@ END_ENUM(EventFlags, uint16)
 // tables.
 struct MetadataRow
 {
-    uint8 table_index;
+    MetadataFunctions const * Functions;
+    //uint8 table_index;
     //MetadataRow () { }
     //MetadataRow (const MetadataRow&) = default;
     //virtual ~MetadataRow () { }
@@ -2521,7 +2601,7 @@ struct MetadataTableStatic_t
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name) /* nothing */
 #undef METADATA_TABLE
-#define METADATA_TABLE(name, base, fields) struct name ## Row; struct name ## Table;
+#define METADATA_TABLE(name, base, fields) struct name ## Row; struct name ## Table; extern MetadataFunctions name ## Functions;
 #include __FILE__ // METADATA_TABLES
 
 #undef METADATA_TABLE
@@ -2530,7 +2610,7 @@ struct MetadataTableStatic_t
 #define METADATA_TABLE(name, xbase, fields)                             \
     struct name ## Row                                                  \
     {                                                                   \
-            MetadataRow base { k ## name };                             \
+            MetadataRow base { &name ## Functions };                    \
             /*virtual ~name ## Row ( ) { }*/                            \
             /*name ##  Row ( ) { }*/                                    \
             /*name ##  Row (const name ##  Row&) = default;*/           \
@@ -2724,6 +2804,27 @@ const MetadataTableStatic_t MetadataStatic [ ] =
 {
 #include __FILE__ // METADATA_TABLES
 };
+
+void TypeDef_ForwardDeclareType (TypeDefRow* typeDef, const char* dot)
+{
+    printf(" type { 0x%X, %s%s%s .. }\n",
+        typeDef->Flags,
+        typeDef->TypeNameSpace.chars,
+        dot,
+        typeDef->TypeName.chars);
+}
+
+void TypeRef_ForwardDeclareType (TypeRefRow* self, const char* dot)
+{
+    printf("TypeRef\n");
+    __debugbreak();
+}
+
+void TypeSpec_ForwardDeclareType (TypeSpecRow* self, const char* dot)
+{
+    printf("TypeSpec\n");
+    // TODO __debugbreak();
+}
 
 struct ImageZero // zero-inited part of Image
 {
@@ -3082,28 +3183,8 @@ unknown_stream:
             const char* dot = (t.TypeNameSpace.length && t.TypeName.length) ? "." : "";
             //printf("// type { 0x%X, %s%s%s .. }\n", t.Flags, t.TypeNameSpace.chars, dot, t.TypeName.chars);
             //printf("extends:");
-            if (t.Extends)
-            {
-                switch (t.Extends->table_index)
-                {
-                case kTypeDef:
-                    TypeDefRow* typeDef;
-                    typeDef = (TypeDefRow*)t.Extends;
-                    dot = (typeDef->TypeNameSpace.length && typeDef->TypeName.length) ? "." : "";
-                    printf(" type { 0x%X, %s%s%s .. }\n",
-                        typeDef->Flags,
-                        typeDef->TypeNameSpace.chars,
-                        dot,
-                        typeDef->TypeName.chars);
-                   break;
-                case kTypeRef:
-                    printf("TypeRef\n");
-                    break;
-                case kTypeSpec:
-                    printf("TypeSpec\n");
-                    break;
-                }
-            }
+            if (t.Extends && t.Extends->Functions->ForwardDeclareTypeDef)
+                t.Extends->Functions->ForwardDeclareTypeDef(t.Extends, dot);
         }
     }
 
