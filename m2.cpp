@@ -1154,59 +1154,59 @@ static void TypeDef_ForwardDeclareType (TypeDef_t* typeDef, const char* dot);
 static void TypeRef_ForwardDeclareType (TypeRef_t* self, const char* dot);
 static void TypeSpec_ForwardDeclareType (TypeSpec_t* self, const char* dot);
 
-MetadataFunctions ModuleFunctions = { };
+const static MetadataFunctions ModuleFunctions = { };
 
-MetadataFunctions TypeRefFunctions =
+const static MetadataFunctions TypeRefFunctions =
 {
     (Metadata_ForwardDeclareType_t)TypeRef_ForwardDeclareType,
 };
 
-MetadataFunctions TypeDefFunctions =
+const static MetadataFunctions TypeDefFunctions =
 {
     (Metadata_ForwardDeclareType_t)TypeDef_ForwardDeclareType,
 };
 
-MetadataFunctions FieldFunctions = { };
-MetadataFunctions FieldMarshalFunctions = { };
-MetadataFunctions MethodDefFunctions = { };
-MetadataFunctions ParamFunctions = { };
-MetadataFunctions InterfaceImplFunctions = { };
-MetadataFunctions MemberRefFunctions = { };
-MetadataFunctions ConstantFunctions = { };
-MetadataFunctions CustomAttributeFunctions = { };
-MetadataFunctions DeclSecurityFunctions = { };
-MetadataFunctions ClassLayoutFunctions = { };
-MetadataFunctions FieldLayoutFunctions = { };
-MetadataFunctions StandAloneSigFunctions = { };
-MetadataFunctions EventMapFunctions = { };
-MetadataFunctions EventFunctions = { };
-MetadataFunctions PropertyMapFunctions = { };
-MetadataFunctions PropertyFunctions = { };
-MetadataFunctions MethodSemanticsFunctions = { };
-MetadataFunctions MethodImplFunctions = { };
-MetadataFunctions ModuleRefFunctions = { };
-MetadataFunctions NestedClassFunctions = { };
+const static MetadataFunctions FieldFunctions = { };
+const static MetadataFunctions FieldMarshalFunctions = { };
+const static MetadataFunctions MethodDefFunctions = { };
+const static MetadataFunctions ParamFunctions = { };
+const static MetadataFunctions InterfaceImplFunctions = { };
+const static MetadataFunctions MemberRefFunctions = { };
+const static MetadataFunctions ConstantFunctions = { };
+const static MetadataFunctions CustomAttributeFunctions = { };
+const static MetadataFunctions DeclSecurityFunctions = { };
+const static MetadataFunctions ClassLayoutFunctions = { };
+const static MetadataFunctions FieldLayoutFunctions = { };
+const static MetadataFunctions StandAloneSigFunctions = { };
+const static MetadataFunctions EventMapFunctions = { };
+const static MetadataFunctions EventFunctions = { };
+const static MetadataFunctions PropertyMapFunctions = { };
+const static MetadataFunctions PropertyFunctions = { };
+const static MetadataFunctions MethodSemanticsFunctions = { };
+const static MetadataFunctions MethodImplFunctions = { };
+const static MetadataFunctions ModuleRefFunctions = { };
+const static MetadataFunctions NestedClassFunctions = { };
 
-MetadataFunctions TypeSpecFunctions =
+const static MetadataFunctions TypeSpecFunctions =
 {
     (Metadata_ForwardDeclareType_t)TypeSpec_ForwardDeclareType,
 };
 
-MetadataFunctions ImplMapFunctions = { };
-MetadataFunctions FieldRVAFunctions = { };
-MetadataFunctions AssemblyFunctions = { };
-MetadataFunctions AssemblyProcessorFunctions = { };
-MetadataFunctions AssemblyOSFunctions = { };
-MetadataFunctions AssemblyRefFunctions = { };
-MetadataFunctions AssemblyRefProcessorFunctions = { };
-MetadataFunctions AssemblyRefOSFunctions = { };
-MetadataFunctions FileFunctions = { };
-MetadataFunctions ExportedTypeFunctions = { };
-MetadataFunctions ManifestResourceFunctions = { };
-MetadataFunctions NextedClassFunctions = { };
-MetadataFunctions GenericParamFunctions = { };
-MetadataFunctions MethodSpecFunctions = { };
-MetadataFunctions GenericParamConstraintFunctions = { };
+const static MetadataFunctions ImplMapFunctions = { };
+const static MetadataFunctions FieldRVAFunctions = { };
+const static MetadataFunctions AssemblyFunctions = { };
+const static MetadataFunctions AssemblyProcessorFunctions = { };
+const static MetadataFunctions AssemblyOSFunctions = { };
+const static MetadataFunctions AssemblyRefFunctions = { };
+const static MetadataFunctions AssemblyRefProcessorFunctions = { };
+const static MetadataFunctions AssemblyRefOSFunctions = { };
+const static MetadataFunctions FileFunctions = { };
+const static MetadataFunctions ExportedTypeFunctions = { };
+const static MetadataFunctions ManifestResourceFunctions = { };
+const static MetadataFunctions NextedClassFunctions = { };
+const static MetadataFunctions GenericParamFunctions = { };
+const static MetadataFunctions MethodSpecFunctions = { };
+const static MetadataFunctions GenericParamConstraintFunctions = { };
 
 // TODO This is the base of every row type.
 // It is especially for coded indices.
@@ -2601,7 +2601,7 @@ struct MetadataTableStatic_t
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name) /* nothing */
 #undef METADATA_TABLE
-#define METADATA_TABLE(name, base, fields) struct name ## _t; struct name ## Table; extern MetadataFunctions name ## Functions;
+#define METADATA_TABLE(name, base, fields) struct name ## _t; struct name ## Table;
 #include __FILE__ // METADATA_TABLES
 
 #undef METADATA_TABLE
