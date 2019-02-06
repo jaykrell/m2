@@ -127,7 +127,7 @@
 
 /*table0x10*/ METADATA_TABLE (FieldLayout, NOTHING,
     METADATA_FIELD2 (FieldLayout, Offset, uint)
-    METADATA_FIELD3 (FieldLayout, Field, Field, FieldRow*))
+    METADATA_FIELD3 (FieldLayout, Field, Field, Field_t*))
 
 /*table0x11*/ METADATA_TABLE (StandAloneSig, NOTHING,
     METADATA_FIELD2 (StandAloneSig, signature, blob))
@@ -160,7 +160,7 @@
    A property uses this table to associate get/set methods. */
 /*table0x18*/ METADATA_TABLE (metadata_MethodSemantics, NOTHING,
     METADATA_FIELD3 (metadata_MethodSemantics, Semantics, uint16, MethodSemanticsFlags)
-    METADATA_FIELD3 (metadata_MethodSemantics, Method, MethodDef, MethodDefRow*) /* index into MethodDef table, 2 or 4 bytes */
+    METADATA_FIELD3 (metadata_MethodSemantics, Method, MethodDef, MethodDef_t*) /* index into MethodDef table, 2 or 4 bytes */
     METADATA_FIELD3 (metadata_MethodSemantics, Association, HasSemantics, MetadataRow*)) /* Event or Property, CodedIndex */
 
 /*table0x19*/ METADATA_TABLE (MethodImpl, NOTHING,
@@ -176,13 +176,13 @@
 
 /*table0x1C*/ METADATA_TABLE (ImplMap, NOTHING,
     METADATA_FIELD3 (ImplMap, MappingFlags, uint16, PInvokeAttributes)
-    METADATA_FIELD3 (ImplMap, MemberForwarded, MemberForwarded, MethodDefRow*)
+    METADATA_FIELD3 (ImplMap, MemberForwarded, MemberForwarded, MethodDef_t*)
     METADATA_FIELD2 (ImplMap, ImportName, string)
-    METADATA_FIELD3 (ImplMap, ImportScope, ModuleRef, ModuleRefRow*))
+    METADATA_FIELD3 (ImplMap, ImportScope, ModuleRef, ModuleRef_t*))
 
 /*table0x1D*/ METADATA_TABLE (FieldRVA, NOTHING,
     METADATA_FIELD2 (FieldRVA, RVA, uint)
-    METADATA_FIELD3 (FieldRVA, Field, Field, FieldRow*))
+    METADATA_FIELD3 (FieldRVA, Field, Field, Field_t*))
 
 /*table0x1E*/ METADATA_TABLE_UNUSED(Unused1E) /* ENCLog */
 
@@ -261,7 +261,7 @@
     METADATA_FIELD2 (MethodSpec, Instantiation, blob))
 
 /*table0x2C*/ METADATA_TABLE (GenericParamConstraint, NOTHING,
-    METADATA_FIELD3 (GenericParamConstraint, Owner, GenericParam, GenericParamRow*)
+    METADATA_FIELD3 (GenericParamConstraint, Owner, GenericParam, GenericParam_t*)
     METADATA_FIELD3 (GenericParamConstraint, Constraint, TypeDefOrRef, MetadataRow*))
 
 #else
@@ -1146,13 +1146,13 @@ static void MetadataRow_ForwardDeclareType (MetadataRow*, const char* dot)
     __debugbreak();
 }
 
-struct TypeDefRow;
-struct TypeRefRow;
-struct TypeSpecRow;
+struct TypeDef_t;
+struct TypeRef_t;
+struct TypeSpec_t;
 
-static void TypeDef_ForwardDeclareType (TypeDefRow* typeDef, const char* dot);
-static void TypeRef_ForwardDeclareType (TypeRefRow* self, const char* dot);
-static void TypeSpec_ForwardDeclareType (TypeSpecRow* self, const char* dot);
+static void TypeDef_ForwardDeclareType (TypeDef_t* typeDef, const char* dot);
+static void TypeRef_ForwardDeclareType (TypeRef_t* self, const char* dot);
+static void TypeSpec_ForwardDeclareType (TypeSpec_t* self, const char* dot);
 
 MetadataFunctions ModuleFunctions = { };
 
@@ -1384,7 +1384,7 @@ struct MethodHeaderFat
 #define metadata_schema_TYPED_ResolutionScope   MetadataRow*
 #define metadata_schema_TYPED_Sequence          uint16
 #define metadata_schema_TYPED_signature         Signature
-#define metadata_schema_TYPED_TypeDef           TypeDefRow*
+#define metadata_schema_TYPED_TypeDef           TypeDef_t*
 #define metadata_schema_TYPED_TypeName          String_t
 #define metadata_schema_TYPED_TypeNameSpace     String_t
 #define metadata_schema_TYPED_Unused            Unused_t
@@ -2601,22 +2601,22 @@ struct MetadataTableStatic_t
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name) /* nothing */
 #undef METADATA_TABLE
-#define METADATA_TABLE(name, base, fields) struct name ## Row; struct name ## Table; extern MetadataFunctions name ## Functions;
+#define METADATA_TABLE(name, base, fields) struct name ## _t; struct name ## Table; extern MetadataFunctions name ## Functions;
 #include __FILE__ // METADATA_TABLES
 
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
 #define METADATA_TABLE(name, xbase, fields)                             \
-    struct name ## Row                                                  \
+    struct name ## _t                                                   \
     {                                                                   \
             MetadataRow base { &name ## Functions };                    \
-            /*virtual ~name ## Row ( ) { }*/                            \
-            /*name ##  Row ( ) { }*/                                    \
-            /*name ##  Row (const name ##  Row&) = default;*/           \
+            /*virtual ~name ## _t ( ) { }*/                             \
+            /*name ##  _t ( ) { }*/                                     \
+            /*name ##  _t (const name ##  _t&) = default;*/             \
             fields                                                      \
     };                                                                  \
-    struct name ## Table : vector<name ## Row>, IMetadataTable          \
+    struct name ## Table : vector<name ## _t>, IMetadataTable           \
     {                                                                   \
         virtual void* iat(size_t n)                                     \
         {                                                               \
@@ -2638,8 +2638,8 @@ struct MetadataTableStatic_t
 #undef METADATA_FIELD2
 #undef METADATA_FIELD3
 #define METADATA_TABLE(name, base, fields) const MetaTableStaticField metadata_field_ ## name [ ] = { fields };
-#define METADATA_FIELD2(table, name, type)                             { # name, &MetadataType_  ## type, offsetof (table ## Row, name) },
-#define METADATA_FIELD3(table, name, persistant_type, pointerful_type) { # name, &MetadataType_  ## persistant_type, offsetof (table ## Row, name) },
+#define METADATA_FIELD2(table, name, type)                             { # name, &MetadataType_  ## type, offsetof (table ## _t, name) },
+#define METADATA_FIELD3(table, name, persistant_type, pointerful_type) { # name, &MetadataType_  ## persistant_type, offsetof (table ## _t, name) },
 #undef METADATA_TABLE_UNUSED
 #define METADATA_TABLE_UNUSED(name) /* nothing */
 #include __FILE__ // METADATA_TABLES
@@ -2797,7 +2797,7 @@ const char * const MetadataTableName [ ] =
 #undef METADATA_FIELD3
 #define METADATA_FIELD2(table, name, type)                                /* nothing */
 #define METADATA_FIELD3(table, name, persistant_type, pointerful_type)    /* nothing */
-#define METADATA_TABLE(name, base, fields) { #name, sizeof (name ## Row), (uint)CountOf (metadata_field_ ## name), metadata_field_ ## name },
+#define METADATA_TABLE(name, base, fields) { #name, sizeof (name ## _t), (uint)CountOf (metadata_field_ ## name), metadata_field_ ## name },
 #define METADATA_TABLE_UNUSED(name)        { 0 },
 
 const MetadataTableStatic_t MetadataStatic [ ] =
@@ -2805,7 +2805,7 @@ const MetadataTableStatic_t MetadataStatic [ ] =
 #include __FILE__ // METADATA_TABLES
 };
 
-void TypeDef_ForwardDeclareType (TypeDefRow* typeDef, const char* dot)
+void TypeDef_ForwardDeclareType (TypeDef_t* typeDef, const char* dot)
 {
     printf(" type { 0x%X, %s%s%s .. }\n",
         typeDef->Flags,
@@ -2814,13 +2814,13 @@ void TypeDef_ForwardDeclareType (TypeDefRow* typeDef, const char* dot)
         typeDef->TypeName.chars);
 }
 
-void TypeRef_ForwardDeclareType (TypeRefRow* self, const char* dot)
+void TypeRef_ForwardDeclareType (TypeRef_t* self, const char* dot)
 {
     printf("TypeRef\n");
     __debugbreak();
 }
 
-void TypeSpec_ForwardDeclareType (TypeSpecRow* self, const char* dot)
+void TypeSpec_ForwardDeclareType (TypeSpec_t* self, const char* dot)
 {
     printf("TypeSpec\n");
     // TODO __debugbreak();
