@@ -158,10 +158,10 @@
    Links Events and Properties to specific methods.
    For example one Event can be associated to more methods.
    A property uses this table to associate get/set methods. */
-/*table0x18*/ METADATA_TABLE (metadata_MethodSemantics, NOTHING,
-    METADATA_FIELD3 (metadata_MethodSemantics, Semantics, uint16, MethodSemanticsFlags)
-    METADATA_FIELD3 (metadata_MethodSemantics, Method, MethodDef, MethodDef_t*) /* index into MethodDef table, 2 or 4 bytes */
-    METADATA_FIELD3 (metadata_MethodSemantics, Association, HasSemantics, MetadataRow*)) /* Event or Property, CodedIndex */
+/*table0x18*/ METADATA_TABLE (MethodSemantics, NOTHING,
+    METADATA_FIELD3 (MethodSemantics, Semantics, uint16, MethodSemanticsFlags)
+    METADATA_FIELD3 (MethodSemantics, Method, MethodDef, MethodDef_t*) /* index into MethodDef table, 2 or 4 bytes */
+    METADATA_FIELD3 (MethodSemantics, Association, HasSemantics, MetadataRow*)) /* Event or Property, CodedIndex */
 
 /*table0x19*/ METADATA_TABLE (MethodImpl, NOTHING,
     METADATA_FIELD2 (MethodImpl, Class, TypeDef)
@@ -1182,7 +1182,7 @@ MetadataFunctions EventMapFunctions = { };
 MetadataFunctions EventFunctions = { };
 MetadataFunctions PropertyMapFunctions = { };
 MetadataFunctions PropertyFunctions = { };
-MetadataFunctions metadata_MethodSemanticsFunctions = { };
+MetadataFunctions MethodSemanticsFunctions = { };
 MetadataFunctions MethodImplFunctions = { };
 MetadataFunctions ModuleRefFunctions = { };
 MetadataFunctions NestedClassFunctions = { };
