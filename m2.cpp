@@ -972,9 +972,9 @@ struct Blob_t
 
 struct IMetadataTable
 {
-    virtual void* iat(size_t n) { return 0; }
-    virtual void* iresize(size_t) { return 0; }
-    virtual ~IMetadataTable() { }
+    virtual void* iat (size_t n) { return 0; }
+    virtual void* iresize (size_t) { return 0; }
+    virtual ~IMetadataTable () { }
 };
 
 struct Member
@@ -1133,16 +1133,16 @@ struct MetadataRow;
 
 // Avoiding virtual functions.
 
-typedef void (*Metadata_ForwardDeclareType_t)(MetadataRow*, const char* dot);
+typedef void (*Metadata_SetCName_t)(MetadataRow*);
 
 struct MetadataFunctions
 {
-    Metadata_ForwardDeclareType_t ForwardDeclareTypeDef;
+    Metadata_SetCName_t SetCName;
 };
 
-static void MetadataRow_ForwardDeclareType (MetadataRow*, const char* dot)
+static void MetadataRow_SetCName (MetadataRow*)
 {
-    printf("MetadataRow_ForwardDeclareType\n");
+    printf("MetadataRow_SetCName\n");
     __debugbreak();
 }
 
@@ -1150,20 +1150,20 @@ struct TypeDef_t;
 struct TypeRef_t;
 struct TypeSpec_t;
 
-static void TypeDef_ForwardDeclareType (TypeDef_t* typeDef, const char* dot);
-static void TypeRef_ForwardDeclareType (TypeRef_t* self, const char* dot);
-static void TypeSpec_ForwardDeclareType (TypeSpec_t* self, const char* dot);
+static void TypeDef_SetCName (TypeDef_t* self);
+static void TypeRef_SetCName (TypeRef_t* self);
+static void TypeSpec_SetCName (TypeSpec_t* self);
 
 const static MetadataFunctions ModuleFunctions = { };
 
 const static MetadataFunctions TypeRefFunctions =
 {
-    (Metadata_ForwardDeclareType_t)TypeRef_ForwardDeclareType,
+    (Metadata_SetCName_t)TypeRef_SetCName,
 };
 
 const static MetadataFunctions TypeDefFunctions =
 {
-    (Metadata_ForwardDeclareType_t)TypeDef_ForwardDeclareType,
+    (Metadata_SetCName_t)TypeDef_SetCName,
 };
 
 const static MetadataFunctions FieldFunctions = { };
@@ -1189,7 +1189,7 @@ const static MetadataFunctions NestedClassFunctions = { };
 
 const static MetadataFunctions TypeSpecFunctions =
 {
-    (Metadata_ForwardDeclareType_t)TypeSpec_ForwardDeclareType,
+    (Metadata_SetCName_t)TypeSpec_SetCName,
 };
 
 const static MetadataFunctions ImplMapFunctions = { };
@@ -1216,6 +1216,7 @@ const static MetadataFunctions GenericParamConstraintFunctions = { };
 struct MetadataRow
 {
     MetadataFunctions const * Functions;
+    std::string cname;
     //uint8 table_index;
     //MetadataRow () { }
     //MetadataRow (const MetadataRow&) = default;
@@ -2739,6 +2740,8 @@ struct MetadataDynamic : MetadataDynamicZero
 #define METADATA_TABLE(name, base, fields) name ## Table name; // has vtables, do not memset(0)
 #include __FILE__ // METADATA_TABLES
 
+    std::vector<MetadataRow*> all_rows;
+
     struct UnusedTable : IMetadataTable
     {
     } unused_table;
@@ -2805,22 +2808,28 @@ const MetadataTableStatic_t MetadataStatic [ ] =
 #include __FILE__ // METADATA_TABLES
 };
 
-void TypeDef_ForwardDeclareType (TypeDef_t* typeDef, const char* dot)
+void Type_SetCName_Common (std::string& cname, String_t TypeNameSpace, String_t TypeName)
 {
-    printf(" type { 0x%X, %s%s%s .. }\n",
-        typeDef->Flags,
-        typeDef->TypeNameSpace.chars,
-        dot,
-        typeDef->TypeName.chars);
+    const char* dot = (TypeNameSpace.length && TypeName.length) ? "." : "";
+    cname.reserve (TypeNameSpace.length + TypeName.length + !!*dot);
+    cname = std::string (TypeNameSpace.chars, TypeNameSpace.length);
+    cname += dot;
+    cname += std::string (TypeName.chars, TypeName.length);
 }
 
-void TypeRef_ForwardDeclareType (TypeRef_t* self, const char* dot)
+void TypeDef_SetCName (TypeDef_t* self)
 {
+    Type_SetCName_Common (self->base.cname, self->TypeNameSpace, self->TypeName);
+}
+
+void TypeRef_SetCName (TypeRef_t* self)
+{
+    Type_SetCName_Common (self->base.cname, self->TypeNameSpace, self->TypeName);
     printf("TypeRef\n");
     __debugbreak();
 }
 
-void TypeSpec_ForwardDeclareType (TypeSpec_t* self, const char* dot)
+void TypeSpec_SetCName (TypeSpec_t* self)
 {
     printf("TypeSpec\n");
     // TODO __debugbreak();
@@ -3083,6 +3092,7 @@ unknown_stream:
         printf ("metadata_tables_header.     Unsorted:0x%08X`0x%08X\n", (uint)(unsorted >> 32), (uint)unsorted);
         printf ("metadata_tables_header.InvalidSorted:0x%08X`0x%08X\n", (uint)(invalidSorted >> 32), (uint)invalidSorted);
         uint64 mask = 1;
+        uint all_row_count = 0;
         uint* prow_count = (uint*)(metadata_tables_header + 1);
 
         // Presence and row counts.
@@ -3095,8 +3105,12 @@ unknown_stream:
                 continue;
             }
             metadata.file.array [i].present = true;
-            metadata.file.array [i].row_count = *prow_count++;
+            const uint row_count = *prow_count++;
+            metadata.file.array [i].row_count = row_count;
+            all_row_count += row_count;
         }
+
+        metadata.all_rows.reserve (all_row_count);
 
         for (mask = 1, i = 0; i < CountOf (metadata.file.array); ++i, mask <<= 1)
         {
@@ -3154,6 +3168,7 @@ unknown_stream:
             {
                 auto static_field = schema->fields;
                 auto dynamic_field = dynamic_table->fields;
+                metadata.all_rows.push_back ((MetadataRow*)mem);
                 for (uint fi = 0; fi < field_count; ++fi, ++static_field, ++dynamic_field)
                 {
                     auto const dynamic_size = dynamic_field->size;
@@ -3178,13 +3193,16 @@ unknown_stream:
             fprintf (stderr, "table 0x%08X (%s) has 0x%08X rows (%s)\n", i, MetadataTableName (i), metadata.file.array [i].row_count, (sorted & mask) ? "sorted" : "unsorted");
         }
 
+        for (auto a: metadata.all_rows)
+            if (a->Functions->SetCName)
+                a->Functions->SetCName (a);
+
         for (auto& t: metadata.TypeDef)
         {
-            const char* dot = (t.TypeNameSpace.length && t.TypeName.length) ? "." : "";
             //printf("// type { 0x%X, %s%s%s .. }\n", t.Flags, t.TypeNameSpace.chars, dot, t.TypeName.chars);
             //printf("extends:");
-            if (t.Extends && t.Extends->Functions->ForwardDeclareTypeDef)
-                t.Extends->Functions->ForwardDeclareTypeDef(t.Extends, dot);
+            if (t.Extends)
+                printf("%s\n", t.Extends->cname.c_str ());
         }
     }
 
