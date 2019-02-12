@@ -907,7 +907,8 @@ struct MemoryMappedFile
 
     ~MemoryMappedFile ()
     {
-        if (!base) return;
+        if (!base)
+            return;
 #if _WIN32
         UnmapViewOfFile (base);
 #else
@@ -925,14 +926,16 @@ struct MemoryMappedFile
         Handle h2 = CreateFileMappingW (file, 0, PAGE_READONLY, 0, 0, 0);
         if (!h2) throw_GetLastError (StringFormat ("CreateFileMapping(%s)", a).c_str ());
         base = MapViewOfFile (h2, FILE_MAP_READ, 0, 0, 0);
-        if (!base) throw_GetLastError (StringFormat ("MapViewOfFile(%s)", a).c_str ());
+        if (!base)
+            throw_GetLastError (StringFormat ("MapViewOfFile(%s)", a).c_str ());
 #else
         file = open (a, O_RDONLY);
         if (!file) ThrowErrno (StringFormat ("open(%s)", a).c_str ());
         // FIXME check for size==0 and >4GB.
         size = (size_t)file.get_file_size(a);
         base = mmap (0, size, PROT_READ, MAP_PRIVATE, file, 0);
-        if (base == MAP_FAILED) ThrowErrno (StringFormat ("mmap(%s)", a).c_str ());
+        if (base == MAP_FAILED)
+            ThrowErrno (StringFormat ("mmap(%s)", a).c_str ());
 #endif
     }
 };
@@ -2141,6 +2144,10 @@ struct ImageClrHeader // data_directory [15]
 struct MetadataType;
 struct Image;
 
+typedef void (*MetadataType_Read)(const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem);
+typedef uint (*MetadataType_GetSize)(const MetadataType*, Image*);
+typedef void (*MetadataType_Print)(const MetadataType*, Image*);
+
 struct MetadataTypeFunctions // Virtual functions, but allowing for static construction.
 {
     void (*Read)(const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem);
@@ -2204,7 +2211,7 @@ static
 uint
 UIntToDec (uint64 a, char* buf)
 {
-    auto const len = UIntToDec_GetLength(a);
+    uint const len = UIntToDec_GetLength(a);
     for (uint i = 0; i < len; ++i, a /= 10)
         buf [i] = "0123456789" [a % 10];
     return len;
@@ -2273,7 +2280,7 @@ static
 uint
 IntToHex (int64 a, char *buf)
 {
-    auto const len = IntToHex_GetLength (a);
+    uint const len = IntToHex_GetLength (a);
     IntToHexLength(a, len, buf);
     return len;
 }
@@ -2290,7 +2297,7 @@ static
 uint
 IntToHex_GetLength_AtLeast8 (int64 a)
 {
-    auto const len = IntToHex_GetLength (a);
+    uint const len = IntToHex_GetLength (a);
     return std::max(len, 8u);
 }
 
@@ -2298,7 +2305,7 @@ static
 uint
 UIntToHex_GetLength_AtLeast8 (uint64 a)
 {
-    auto const len = UIntToHex_GetLength (a);
+    uint const len = UIntToHex_GetLength (a);
     return std::max (len, 8u);
 }
 
@@ -2306,7 +2313,7 @@ static
 uint
 IntToHex_AtLeast8 (int64 a, char *buf)
 {
-    auto const len = IntToHex_GetLength_AtLeast8 (a);
+    uint const len = IntToHex_GetLength_AtLeast8 (a);
     IntToHexLength (a, len, buf);
     return len;
 }
@@ -2315,7 +2322,7 @@ static
 uint
 UIntToHex_AtLeast8 (uint64 a, char *buf)
 {
-    auto const len = UIntToHex_GetLength_AtLeast8 (a);
+    uint const len = UIntToHex_GetLength_AtLeast8 (a);
     UIntToHexLength (a, len, buf);
     return len;
 }
@@ -2892,15 +2899,15 @@ struct Image : ImageZero
 
     void ComputeFileRowSize (uint table_index)
     {
-        auto const schema = &MetadataStatic [table_index];
-        auto const field_count = schema->field_count;
+        MetadataTableStatic_t const * const schema = &MetadataStatic [table_index];
+        uint const field_count = schema->field_count;
         if (!field_count)
             return;
-        auto const table = &metadata.file.array [table_index];
+        MetadataTableDynamic * const table = &metadata.file.array [table_index];
         uint size = 0;
         for (uint i = 0; i < field_count; ++i)
         {
-            auto const field = &schema->fields [i];
+            MetaTableStaticField const * const field = &schema->fields [i];
             uint field_size = field->type->functions->GetSize (field->type, this);
             table->fields [i].offset = size;
             table->fields [i].size = field_size;
@@ -2955,7 +2962,7 @@ struct Image : ImageZero
             int m = Map [map + i];
             if (m < 0)
                 continue;
-            auto const rows = metadata.file.array [m].row_count;
+            uint const rows = metadata.file.array [m].row_count;
             if (rows > cap)
             {
                 result = 4;
@@ -2970,7 +2977,8 @@ struct Image : ImageZero
         mmf.read (file_name);
         base = mmf.base;
         file_size = mmf.file.get_file_size ();
-        auto const dos = (DosHeader*)base;
+        void * end = file_size + (char*)base;
+        DosHeader* const dos = (DosHeader*)base;
         printf ("mz: %02x%02x\n", ((uint8*)dos) [0], ((uint8*)dos) [1]);
         if (memcmp (base, "MZ", 2))
             ThrowString (StringFormat ("incorrect MZ signature %s", file_name));
@@ -3043,9 +3051,18 @@ struct Image : ImageZero
             printf ("stream[0x%08X].Offset:0x%08X\n", i, (uint)stream->offset);
             printf ("stream[0x%08X].Size:0x%08X\n", i, (uint)stream->Size);
             AssertFormat ((stream->Size % 4) == 0, ("0x%08X", (uint)stream->Size));
-            auto name = stream->Name;
-            size_t length = strlen (name);
-            AssertFormat (length <= 32, ("0x%08X:%s", length, name));
+            const char* name = stream->Name;
+            size_t length = 0;
+            // TODO Bounds check against end of file.
+            for (length = 0; length <= 32 && &name [length] < end && name [length]; ++length)
+            {
+                // nothing
+            }
+            if (name [length])
+            {
+                printf("                                       012345678\n");
+                AssertFormat (!name [length], ("0x%08X:%s:%c", length, name, name [length]));
+            }
             printf ("stream[0x%08X].Name:0x%08X:%.*s\n", i, (int)length, (int)length, name);
             if (length >= 2 && name [0] == '#')
             {
@@ -3063,7 +3080,8 @@ struct Image : ImageZero
                 else
                     goto unknown_stream;
             }
-            else {
+            else
+            {
 unknown_stream:
                 fprintf (stderr, "unknown stream %s\n", stream->Name);
                 abort ();
@@ -3152,32 +3170,32 @@ unknown_stream:
         for (i = 0; i < CountOf (metadata.file.array); ++i)
         {
             printf ("reading %s\n", MetadataTableName (i));
-            auto const dynamic_table = &metadata.file.array [i];
+            MetadataTableDynamic * const dynamic_table = &metadata.file.array [i];
             char* mem = (char*)dynamic_table->mem_base;
             if (!mem)
                 continue;
             uint row_count = dynamic_table->row_count;
-            auto file = (char*)dynamic_table->file_base;
-            auto const schema = &MetadataStatic [i];
-            auto const field_count = schema->field_count;
+            char* file = (char*)dynamic_table->file_base;
+            MetadataTableStatic_t const * const schema = &MetadataStatic [i];
+            uint const field_count = schema->field_count;
             //
             // In-memoy rows can have padding and in-file do not, so
             // add file field at a time and memory row at a time.
             //
             for (uint ri = 0; ri < row_count; ++ri)
             {
-                auto static_field = schema->fields;
-                auto dynamic_field = dynamic_table->fields;
+                MetaTableStaticField const * static_field = schema->fields;
+                MetadataFieldDynamic const * dynamic_field = dynamic_table->fields;
                 metadata.all_rows.push_back ((MetadataRow*)mem);
                 for (uint fi = 0; fi < field_count; ++fi, ++static_field, ++dynamic_field)
                 {
-                    auto const dynamic_size = dynamic_field->size;
+                    uint const dynamic_size = dynamic_field->size;
                     if (dynamic_size)
                     {
-                        auto const type = static_field->type;
-                        auto const read = type->functions->Read;
+                        MetadataType const * const type = static_field->type;
+                        MetadataType_Read const read = type->functions->Read;
                         if (read)
-                            type->functions->Read(type, this, i, ri, fi, dynamic_size, file, mem + static_field->mem_offset);
+                            type->functions->Read (type, this, i, ri, fi, dynamic_size, file, mem + static_field->mem_offset);
                         file += dynamic_field->size;
                     }
                 }
@@ -3193,11 +3211,11 @@ unknown_stream:
             fprintf (stderr, "table 0x%08X (%s) has 0x%08X rows (%s)\n", i, MetadataTableName (i), metadata.file.array [i].row_count, (sorted & mask) ? "sorted" : "unsorted");
         }
 
-        for (auto a: metadata.all_rows)
+        for (MetadataRow* a: metadata.all_rows)
             if (a->Functions->SetCName)
                 a->Functions->SetCName (a);
 
-        for (auto& t: metadata.TypeDef)
+        for (TypeDef_t& t: metadata.TypeDef)
         {
             //printf("// type { 0x%X, %s%s%s .. }\n", t.Flags, t.TypeNameSpace.chars, dot, t.TypeName.chars);
             //printf("extends:");
@@ -3255,9 +3273,9 @@ MetatadataDecodeBlob (uint8* data)
 void
 MetatadataReadBlob (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    auto const offset = Unpack (file, size);
-    auto const blob = (Blob_t*)mem;
-    auto const m = image->GetBlob (offset);
+    uint const offset = Unpack (file, size);
+    Blob_t* const blob = (Blob_t*)mem;
+    void* const m = image->GetBlob (offset);
     *blob = MetatadataDecodeBlob ((uint8*)m);
 }
 
@@ -3265,9 +3283,9 @@ static
 void
 MetatadataReadString (const MetadataType* type, Image* image, uint table, uint row, uint field, uint size, const void* file, void* mem)
 {
-    auto const offset = Unpack (file, size);
-    auto const s = image->GetString(offset);
-    auto const st = (String_t*)mem;
+    uint const offset = Unpack (file, size);
+    char * const s = image->GetString(offset);
+    String_t* const st = (String_t*)mem;
     st->length = strlen (s); // TODO range check (do not call strlen)
     st->chars = s;
 }
@@ -3293,7 +3311,7 @@ MetadataReadIndexCommon (const MetadataType* type, Image* image, uint table, uin
         return;
     --index;
 
-    auto const reffed_table = &image->metadata.file.array [table_index];
+    MetadataTableDynamic const * const reffed_table = &image->metadata.file.array [table_index];
     Assert (index <= reffed_table->row_count);
     *(MetadataRow**)mem = (MetadataRow*)image->metadata.itables [table_index]->iat(index);
 }
@@ -3327,17 +3345,17 @@ MetatadataReadIndexList (const MetadataType* type, Image* image, uint table, uin
     // The in-memory form of an index list a vector of pointers to rows of a metadata table.
     // There are no coded index lists, just index lists. Like other indices, these are 2 or 4 bytes.
     // The table they refer to is recorded in type.
-    auto start = Unpack (file, size);
+    uint start = Unpack (file, size);
     if (!start)
         return;
     --start;
     uint count = 0;
-    auto const row_count = image->metadata.file.array [table].row_count;
-    auto const file_row_size = image->metadata.file.array [table].file_row_size;
-    auto const mem_typed = (vector<void*>*)mem;
-    auto const reffed_table = &image->metadata.file.array [type->table_index];
-    auto const mem_row_size = MetadataStatic [type->table_index].mem_row_size;
-    auto const reffed_row_count = reffed_table->row_count;
+    uint const row_count = image->metadata.file.array [table].row_count;
+    uint const file_row_size = image->metadata.file.array [table].file_row_size;
+    vector<void*>* const mem_typed = (vector<void*>*)mem;
+    MetadataTableDynamic const * const reffed_table = &image->metadata.file.array [type->table_index];
+    uint const mem_row_size = MetadataStatic [type->table_index].mem_row_size;
+    uint const reffed_row_count = reffed_table->row_count;
     Assert (start <= reffed_row_count);
 
     if (row + 1 == row_count)
@@ -3346,7 +3364,7 @@ MetatadataReadIndexList (const MetadataType* type, Image* image, uint table, uin
     }
     else
     {
-        auto const next = Unpack (file_row_size + (char*)file, size) - 1;
+        uint const next = Unpack (file_row_size + (char*)file, size) - 1;
         Assert (next <= reffed_row_count);
         count = next - start;
     }
