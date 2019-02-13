@@ -1494,8 +1494,11 @@ CODED_INDICES
    LOG_BASE2_X(a,  9) LOG_BASE2_X(a,  8) LOG_BASE2_X(a,  7) LOG_BASE2_X(a,  6) LOG_BASE2_X(a,  5) \
    LOG_BASE2_X(a,  4) LOG_BASE2_X(a,  3) LOG_BASE2_X(a,  2) LOG_BASE2_X(a,  1) LOG_BASE2_X(a,  0) 0)
 
+#if __cplusplus >= 201703L || _MSC_VER >= 1900
 #define CountOf(x) (std::size(x)) // C++17
-//#define CountOf(x) (sizeof (x) / sizeof ((x) [0])) // TODO
+#else
+#define CountOf(x) (sizeof (x) / sizeof ((x) [0])) // TODO
+#endif
 #define CountOfField(x, y) (CountOf(x().y))
 #define CODED_INDEX(name, count, values) CodedIndex_t name;
 
