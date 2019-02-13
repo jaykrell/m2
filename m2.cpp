@@ -2755,8 +2755,8 @@ struct MetadataDynamic : MetadataDynamicZero
 
     MetadataDynamic()
     {
-        auto field = fields;
-        auto table = file.array;
+        MetadataFieldDynamic* field = fields;
+        MetadataTableDynamic* table = file.array;
         uint i = 0;
 #undef METADATA_TABLE
 #undef METADATA_FIELD2
