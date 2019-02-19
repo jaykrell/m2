@@ -3162,7 +3162,7 @@ unknown_stream:
             table_file_base += metadata.file.array [i].file_row_size * metadata.file.array [i].row_count;
         }
 
-        // TODO running should not od this, but dumping/converting probably ok.
+        // TODO running should not do this, but dumping/converting probably ok.
         // TODO A convenient efficient form, pick both? Here we are going for convenient but inefficient.
         //
         // Allocate room for every row to point to file metadatata and have nicely constructed metadata.
@@ -3390,22 +3390,22 @@ MetatadataReadGuid (const MetadataType* type, Image* image, uint table, uint row
 
 #define GUID_FORMAT "{%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X}"
 #define GUID_BYTES(g) \
-    (g)->bytes [ 3], \
-    (g)->bytes [ 2], \
-    (g)->bytes [ 1], \
-    (g)->bytes [ 0], \
-    (g)->bytes [ 5], \
-    (g)->bytes [ 4], \
-    (g)->bytes [ 7], \
-    (g)->bytes [ 6], \
-    (g)->bytes [ 8], \
-    (g)->bytes [ 9], \
-    (g)->bytes [10], \
-    (g)->bytes [11], \
-    (g)->bytes [12], \
-    (g)->bytes [13], \
-    (g)->bytes [14], \
-    (g)->bytes [15] \
+    (g)->bytes [ 3],  \
+    (g)->bytes [ 2],  \
+    (g)->bytes [ 1],  \
+    (g)->bytes [ 0],  \
+    (g)->bytes [ 5],  \
+    (g)->bytes [ 4],  \
+    (g)->bytes [ 7],  \
+    (g)->bytes [ 6],  \
+    (g)->bytes [ 8],  \
+    (g)->bytes [ 9],  \
+    (g)->bytes [10],  \
+    (g)->bytes [11],  \
+    (g)->bytes [12],  \
+    (g)->bytes [13],  \
+    (g)->bytes [14],  \
+    (g)->bytes [15]   \
 
 static
 uint
