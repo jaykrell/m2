@@ -322,8 +322,7 @@
 using std::basic_string;
 using std::string;
 using std::vector;
-#include <algorithm> // TODO? remove STL dependency?
-
+#include <algorithm>
 #if _WIN32
 #define NOMINMAX 1
 #include <io.h>
@@ -2820,11 +2819,16 @@ const MetadataTableStatic_t MetadataStatic [ ] =
 
 void Type_SetCName_Common (std::string& cname, String_t TypeNameSpace, String_t TypeName)
 {
-    const char* dot = (TypeNameSpace.length && TypeName.length) ? "." : "";
+    const char* dot = (TypeNameSpace.length && TypeName.length) ? "_" : "";
     cname.reserve (TypeNameSpace.length + TypeName.length + !!*dot);
     cname = std::string (TypeNameSpace.chars, TypeNameSpace.length);
     cname += dot;
     cname += std::string (TypeName.chars, TypeName.length);
+    for (auto& c: cname)
+    {
+        if (c == '.' || c == '`')
+            c = '_';
+    }
 }
 
 void TypeDef_SetCName (TypeDef_t* self)
@@ -3222,8 +3226,11 @@ unknown_stream:
         {
             //printf("// type { 0x%X, %s%s%s .. }\n", t.Flags, t.TypeNameSpace.chars, dot, t.TypeName.chars);
             //printf("extends:");
+            // TODO flags? enum?
+            printf("type %s /*flags:%X*/ ", t.base.cname.c_str(), t.Flags);
             if (t.Extends)
-                printf("%s\n", t.Extends->cname.c_str ());
+                printf(": %s\n", t.Extends->cname.c_str ()); // output C++ or C? For exceptions, C++. Otherwise?
+            printf("{\n};\n");
         }
     }
 
