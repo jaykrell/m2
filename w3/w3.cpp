@@ -347,7 +347,7 @@ using uint = uint32_t;
 using int64 = int64_t;
 using uint64 = uint64_t;
 
-namespace m2
+namespace w3
 {
 
 
@@ -443,7 +443,7 @@ throw_GetLastError (const char* a = "")
 void
 AssertFailedFormat (const char* condition, const string& extra)
 {
-    //fputs (("AssertFailedFormat:" + string (condition) + ":" + m2::StringFormatVa (format, args) + "\n").c_str (), stderr);
+    //fputs (("AssertFailedFormat:" + string (condition) + ":" + w3::StringFormatVa (format, args) + "\n").c_str (), stderr);
     //Assert (0);
     //abort ();
     if (IsDebuggerPresent ()) __debugbreak ();
@@ -3470,7 +3470,7 @@ ImageGetIndexSize (Image* image, uint /* todo enum */ table_index)
 
 }
 
-using namespace m2;
+using namespace w3;
 
 int
 main (int argc, char** argv)
