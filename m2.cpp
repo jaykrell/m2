@@ -285,7 +285,6 @@
 #endif
 
 #if _MSC_VER
-
 #pragma warning(disable:4100) // unused parameter
 #pragma warning(disable:4505) // unused static function
 #pragma warning(disable:4514) // unused function
@@ -2826,6 +2825,7 @@ void Type_SetCName_Common (std::string& cname, String_t TypeNameSpace, String_t 
     cname += std::string (TypeName.chars, TypeName.length);
     for (auto& c: cname)
     {
+        // TODO something more general?
         if (c == '.' || c == '`')
             c = '_';
     }
@@ -3218,9 +3218,18 @@ unknown_stream:
             fprintf (stderr, "table 0x%08X (%s) has 0x%08X rows (%s)\n", i, MetadataTableName (i), metadata.file.array [i].row_count, (sorted & mask) ? "sorted" : "unsorted");
         }
 
+        // Initialize data needed by multiple passes.
+
         for (MetadataRow* a: metadata.all_rows)
             if (a->Functions->SetCName)
                 a->Functions->SetCName (a);
+
+        // Forward declare helper types and functions.
+
+        printf("struct vtable_System_Object { char * placeholder; };\n");
+        printf("struct class_System_Object { vtable_System_Object * vtable; };\n");
+
+        // Forward declare all types.
 
         for (TypeDef_t& t: metadata.TypeDef)
         {
@@ -3229,9 +3238,17 @@ unknown_stream:
             // TODO flags? enum?
             printf("type %s /*flags:%X*/ ", t.base.cname.c_str(), t.Flags);
             if (t.Extends)
+            {
                 printf(": %s\n", t.Extends->cname.c_str ()); // output C++ or C? For exceptions, C++. Otherwise?
+            }
             printf("{\n};\n");
         }
+
+        // Forward declare all functions.
+
+        // Implement all functions.
+
+        // Implement metadata.
     }
 
     template <typename T>
