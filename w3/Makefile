@@ -90,17 +90,17 @@ debug: $(win)
 !endif
 
 clean:
-	$(RM_F) $(win) m2.obj *.ilk
+	$(RM_F) $(win) w3.obj *.ilk
 
 # TODO clang cross
 #
-#mac: m2.cpp
-#	g++ -std=c++17 -g m2.cpp -o $@
+#mac: w3.cpp
+#	g++ -std=c++17 -g w3.cpp -o $@
 #
 
 # TODO /Qspectre
 
-$(win): m2.cpp
+$(win): w3.cpp
 	@-del $(@R).pdb $(@R).ilk
 	cl $(Wall) /W4 /MD /Zi /EHsc $** /link /out:$@ /incremental:no
 
@@ -138,20 +138,20 @@ debug: mac
 clean:
 	$(RM_F) mac win32 win32.exe win64 win64.exe win win.exe cyg cyg.exe *.ilk lin
 
-mac: m2.cpp
-	g++ -std=c++14 -g m2.cpp -o $@
+mac: w3.cpp
+	g++ -std=c++14 -g w3.cpp -o $@
 
-cyg: m2.cpp
-	g++ -std=c++14 -g m2.cpp -o $@
+cyg: w3.cpp
+	g++ -std=c++14 -g w3.cpp -o $@
 
-lin: m2.cpp
-	g++ -std=c++14  -Wall -g m2.cpp -o $@
+lin: w3.cpp
+	g++ -std=c++14  -Wall -g w3.cpp -o $@
 
-win32.exe: m2.cpp
-	i686-w64-mingw32-g++ -std=c++17 -g m2.cpp -o $@
+win32.exe: w3.cpp
+	i686-w64-mingw32-g++ -std=c++17 -g w3.cpp -o $@
 
-win64.exe: m2.cpp
-	x86_64-w64-mingw32-g++ -std=c++17 -g m2.cpp -o $@
+win64.exe: w3.cpp
+	x86_64-w64-mingw32-g++ -std=c++17 -g w3.cpp -o $@
 
 endif
 !endif :
