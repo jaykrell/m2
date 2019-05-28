@@ -45,6 +45,8 @@
 #endif
 
 #if _MSC_VER
+#pragma warning(disable:4710) // function not inlined
+#pragma warning(disable:4619) // invalid pragma warning disable
 #pragma warning(disable:4100) // unused parameter
 #pragma warning(disable:4505) // unused static function
 #pragma warning(disable:4514) // unused function
@@ -110,7 +112,6 @@ using uint64 = uint64_t;
 namespace w3
 {
 
-
 // Portable to old (and new) Visual C++ runtime.
 uint
 string_vformat_length (const char *format, va_list va)
@@ -169,14 +170,14 @@ void
 ThrowString (const string& a)
 {
     //fprintf (stderr, "%s\n", a.c_str());
-    throw a;
+    throw a + "\n";
     //abort ();
 }
 
 void
 ThrowInt (int i, const char* a = "")
 {
-    ThrowString (StringFormat ("error 0x%08X %s\n", i, a));
+    ThrowString (StringFormat ("error 0x%08X %s", i, a));
 }
 
 void
@@ -207,7 +208,7 @@ AssertFailedFormat (const char* condition, const string& extra)
     //Assert (0);
     //abort ();
     if (IsDebuggerPresent ()) __debugbreak ();
-    ThrowString ("AssertFailed:" + string (condition) + ":" + extra + "\n");
+    ThrowString ("AssertFailed:" + string (condition) + ":" + extra);
 }
 
 void
@@ -527,8 +528,6 @@ struct MemoryMappedFile
     }
 };
 
-typedef struct _Unused_t { } *Unused_t;
-
 #if HAS_TYPED_ENUM
 #define BEGIN_ENUM(name, type) enum name : type
 #define END_ENUM(name, type) ;
@@ -772,6 +771,454 @@ struct stderr_stream : stream
     }
 };
 
+uint
+read_varuint32 (uint8*& cursor, const uint8* end)
+{
+    uint result = 0;
+    uint shift = 0;
+    while (true)
+    {
+        if (cursor >= end)
+            ThrowString (StringFormat ("malformed %d", __LINE__)); // UNDONE context (move to module or section)
+        const uint byte = (uint)(0xff & *cursor++);
+        result |= (byte & 0x7F) << shift;
+        if ((byte & 0x80) == 0)
+            break;
+        shift += 7;
+    }
+    return result;
+}
+
+uint
+read_varuint7 (uint8*& cursor, const uint8* end)
+{
+    if (cursor >= end)
+        ThrowString (StringFormat ("malformed %d", __LINE__)); // UNDONE context (move to module or section)
+    const uint result = *cursor++;
+    if (result & 0x80)
+        ThrowString (StringFormat ("malformed %d", __LINE__)); // UNDONE context (move to module or section)
+    return result;
+}
+
+int
+read_varint32 (uint8*& cursor, const uint8* end)
+{
+    int result = 0;
+    uint shift = 0;
+    uint size = 32;
+    uint byte = 0;
+    do
+    {
+        if (cursor >= end)
+            ThrowString (StringFormat ("malformed %d", __LINE__)); // UNDONE context (move to module or section)
+        byte = *cursor++;
+        result |= (byte & 0x7F) << shift;
+        shift += 7;
+    } while ((byte & 0x80) == 0);
+
+    // sign bit of byte is second high order bit (0x40)
+    if ((shift < size) && (byte & 0x40))
+        result |= (~0 << shift); // sign extend
+    
+    return result;
+}
+
+typedef enum ValueType
+{
+    ValueType_I32 = 0x7F,
+    ValueType_I64 = 0x7E,
+    ValueType_F32 = 0x7D,
+    ValueType_F64 = 0x7C,
+} ValueType;
+
+typedef enum ResultType
+{
+    ResultType_I32 = 0x7F,
+    ResultType_I64 = 0x7E,
+    ResultType_F32 = 0x7D,
+    ResultType_F64 = 0x7C,
+    ResultType_Empty = 0x40
+} ResultType;
+
+const uint kFunctionType = 0x60;
+
+// Table types have limits, either a min or a max/max
+const uint TableLimitsMin = 0;
+const uint TableLimitsMinMax = 1;
+
+// Table types have an element type, funcref
+const uint TypeTypeFuncRef = 0x70;
+
+// Globals are mutable or constant.
+const uint kMutConst = 0;
+const uint kMutVar = 1;
+
+typedef struct InstructionTraits
+{
+        const char* name;
+        void (*handler)(...);
+} InstructionTraits;
+
+#define INSTRUCTIONS \
+    INSTRUCTION (unreachable) \
+    INSTRUCTION (nop) \
+    INSTRUCTION (block) \
+    INSTRUCTION (if) \
+    INSTRUCTION (else) \
+    INSTRUCTION (6) \
+    INSTRUCTION (7) \
+    INSTRUCTION (8) \
+    INSTRUCTION (9) \
+    INSTRUCTION (A) \
+    INSTRUCTION (end) \
+    INSTRUCTION (br) \
+    INSTRUCTION (br_if) \
+
+#undef INSTRUCTION
+#define INSTRUCTION(x) { #x, instr_ ## x ## _handler },
+const static InstructionTraits instructionTraits [ ] =
+{
+INSTRUCTIONS
+};
+
+struct Module;
+struct SectionBase;
+
+struct SectionBase
+{
+    virtual ~SectionBase()
+    {
+    }
+
+    uint id;
+    std::string name;
+    uint payload_len;
+    uint8* payload;
+
+    virtual void read (Module* module, uint8*& cursor)
+    {
+        ThrowString (StringFormat ("%s not yet implemented", __func__));
+    }
+};
+
+struct SectionTraits
+{
+    const char* name;
+    SectionBase* (*make) ();
+};
+
+template <uint N>
+struct Section  : SectionBase
+{
+};
+
+struct Module
+{
+    MemoryMappedFile mmf;
+    uint8* base = 0;
+    uint64 file_size = 0;
+    uint8* end = 0;
+    std::vector<std::shared_ptr<SectionBase>> sections;
+    std::vector<std::shared_ptr<SectionBase>> custom_sections; // FIXME
+
+    uint read_byte (uint8*& cursor);
+    uint read_varuint7 (uint8*& cursor);
+    uint read_varuint32 (uint8*& cursor);
+    void read_section (uint8*& cursor);
+    void read (const char* file_name);
+};
+
+
+// Initial representation of X and XSection are the same.
+// This might evolve, i.e. into separate TypesSection and Types,
+// or just Types that is not Section.
+
+struct FunctionType
+{
+    // CONSIDER pointer into mmf
+    std::vector<ValueType> parameters;
+    std::vector<ValueType> results;
+
+    void read_helper(std::vector<ValueType>& result, Module* module, uint8*& cursor)
+    {
+        uint count = read_varuint32 (cursor, module->end);
+        result.resize (count);
+        for (uint i = 0; i < count; ++i)
+            result [i] = read_byte ();
+    }
+
+    void read (Module* module, uint8*& cursor)
+    {
+        read_helper (parameters, module, cursor);
+        read_helper (results, module, cursor);
+    }
+};
+
+struct Types : Section<1>
+{
+    std::vector<FunctionType> functionTypes
+
+    static SectionBase* make()
+    {
+        return new Types ();
+    }
+
+    virtual void read (Module* module, uint8*& cursor)
+    {
+        uint count = read_varuint32 (cursor, module.end);
+        functionTypes.resize (count);
+        for (uint i = 0; i < count; ++i)
+        {
+            if (cursor >= module->end)
+                ThrowString ("malformed in Types::read");
+            uint marker = *cursor;
+            if (marker != 0x60)
+                ThrowString ("malformed in Types::read");
+            functionTypes [i].read (module, cursor);
+        }
+    }
+};
+
+struct Imports : Section<2>
+{
+    static SectionBase* make()
+    {
+        return new Imports ();
+    }
+
+    virtual void read (Module* module, uint8*& cursor)
+    {
+        ThrowString ("Imports::read not yet implemented");
+    }
+};
+
+struct Functions : Section<3>
+{
+    static SectionBase* make()
+    {
+        return new Functions ();
+    }
+
+    virtual void read (Module* module, uint8*& cursor)
+    {
+        ThrowString ("Functions::read not yet implemented");
+    }
+};
+
+struct Tables : Section<4>
+{
+    static SectionBase* make()
+    {
+        return new Tables ();
+    }
+
+    virtual void read (Module* module, uint8*& cursor)
+    {
+        ThrowString ("Tables::read not yet implemented");
+    }
+};
+
+struct Memory : Section<5>
+{
+    static SectionBase* make()
+    {
+        return new Memory ();
+    }
+
+    virtual void read (Module* module, uint8*& cursor)
+    {
+        ThrowString ("Memory::read not yet implemented");
+    }
+};
+
+struct Globals : Section<6>
+{
+    static SectionBase* make()
+    {
+        return new Globals ();
+    }
+
+    virtual void read (Module* module, uint8*& cursor)
+    {
+        ThrowString ("Globals::read not yet implemented");
+    }
+};
+
+struct Exports : Section<7>
+{
+    static SectionBase* make()
+    {
+        return new Exports ();
+    }
+
+    virtual void read (Module* module, uint8*& cursor)
+    {
+        ThrowString ("Exports::read not yet implemented");
+    }
+};
+
+struct Start : Section<8>
+{
+    static SectionBase* make()
+    {
+        return new Start ();
+    }
+
+    virtual void read (Module* module, uint8*& cursor)
+    {
+        ThrowString ("Start::read not yet implemented");
+    }
+};
+
+struct Elements : Section<9>
+{
+    static SectionBase* make()
+    {
+        return new Elements ();
+    }
+
+    virtual void read (Module* module, uint8*& cursor)
+    {
+        ThrowString ("Elements::read not yet implemented");
+    }
+};
+
+struct Code : Section<10>
+{
+    static SectionBase* make()
+    {
+        return new Code ();
+    }
+
+    virtual void read (Module* module, uint8*& cursor)
+    {
+        ThrowString ("Code::read not yet implemented");
+    }
+};
+
+struct Data : Section<11>
+{
+    static SectionBase* make()
+    {
+        return new Data();
+    }
+
+    virtual void read (Module* module, uint8*& cursor)
+    {
+        ThrowString ("Data::read not yet implemented");
+    }
+};
+
+const
+SectionTraits section_traits [ ] =
+{
+    { 0 },
+#define SECTIONS \
+    SECTION (Types)     \
+    SECTION (Imports)     \
+    SECTION (Functions)     \
+    SECTION (Tables)     \
+    SECTION (Memory)     \
+    SECTION (Globals)     \
+    SECTION (Exports)     \
+    SECTION (Start)     \
+    SECTION (Elements)     \
+    SECTION (Code)     \
+    SECTION (Data)     \
+
+#undef SECTION
+#define SECTION(x) {#x, &x::make },
+SECTIONS
+
+};
+
+uint Module::read_varuint7 (uint8*& cursor)
+{
+    return w3::read_varuint7 (cursor, end);
+}
+
+uint Module::read_varuint32 (uint8*& cursor)
+{
+    return w3::read_varuint32 (cursor, end);
+}
+
+void Module::read_section (uint8*& cursor)
+{
+    uint payload_len = 0;
+    uint8* payload = 0;
+    uint name_len = 0;
+
+    uint id = read_varuint7 (cursor);
+
+    if (id > 11)
+    {
+        ThrowString (StringFormat ("malformed line:%d id:%X payload:%p payload_len:%X base:%p end:%p", __LINE__, id, payload, payload_len, base, end)); // UNDONE context (move to module or section)
+    }
+
+    payload_len = read_varuint32 (cursor);
+    payload = cursor;
+    name_len = 0;
+    if (id == 0)
+    {
+        name_len = read_varuint32 (cursor);
+        if (cursor + name_len > end)
+            ThrowString (StringFormat ("malformed %d", __LINE__)); // UNDONE context (move to module or section)
+    }
+    if (payload + payload_len > end)
+        ThrowString (StringFormat ("malformed line:%d id:%X payload:%p payload_len:%X base:%p end:%p", __LINE__, id, payload, payload_len, base, end)); // UNDONE context (move to module or section)
+
+    cursor = payload + payload_len;
+
+    if (id == 0)
+    {
+        // UNDONE custom sections
+        return;
+    }
+
+    auto section = sections [id] = std::shared_ptr<SectionBase>(section_traits [id].make ());
+    section->id = id;
+    section->name = std::string ((char*)payload, name_len);
+    section->payload_len = payload_len;
+    section->payload = payload;
+    section->read (this, payload);
+}
+
+void Module::read (const char* file_name)
+{
+    sections.resize (12); // FIXME
+    mmf.read (file_name);
+    base = (uint8*)mmf.base;
+    file_size = mmf.file.get_file_size ();
+    end = file_size + (uint8*)base;
+
+    if (file_size < 8)
+        ThrowString (StringFormat ("too small %s", file_name));
+
+    uintLE& magic = (uintLE&)*base;
+    uintLE& version = (uintLE&)*(base + 4);
+    printf ("magic: %X\n", (uint)magic);
+    printf ("version: %X\n", (uint)version);
+
+    if (memcmp (&magic,"\0asm", 4))
+        ThrowString (StringFormat ("incorrect magic: %X", (uint)magic));
+
+    if (version != 1)
+        ThrowString (StringFormat ("incorrect version: %X", (uint)version));
+
+    // Valid module with no section
+    if (file_size == 8)
+        return;
+
+    auto cursor = base + 8;
+    while (cursor < end)
+    {
+        read_section (cursor);
+    }
+
+    assert (cursor == end);
+}
+
+
 }
 
 using namespace w3;
@@ -845,7 +1292,8 @@ main (int argc, char** argv)
     try
 #endif
     {
-        //im.read (argv [1]);
+        Module m;
+	m.read (argv [1]);
     }
 #if 1
     catch (int er)
