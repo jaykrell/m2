@@ -990,6 +990,15 @@ struct Import
     };
 };
 
+struct Function
+{
+    // Functions are split between two sections: types in 3, locals/body in ?
+    uint type;
+    uint code_len;
+    uint8* code;
+    std::vector<uint8> locals; // TODO
+};
+
 struct Module
 {
     MemoryMappedFile mmf;
@@ -998,6 +1007,8 @@ struct Module
     uint8* end = 0;
     std::vector<std::shared_ptr<SectionBase>> sections;
     std::vector<std::shared_ptr<SectionBase>> custom_sections; // FIXME
+
+    std::vector<Function> functions;
 
     std::string read_string (uint8*& cursor);
     uint read_byte (uint8*& cursor);
@@ -1123,7 +1134,19 @@ struct Functions : Section<3>
 
     virtual void read (Module* module, uint8*& cursor)
     {
-        ThrowString ("Functions::read not yet implemented");
+        read_functions (module, cursor);
+    }
+
+    void read_functions (Module* module, uint8*& cursor)
+    {
+        printf ("reading section 3\n");
+        uint count = module->read_varuint32 (cursor);
+        module->functions.resize (count);
+        for (uint i = 0; i < count; ++i)
+        {
+            module->functions [i].type = module->read_varuint32 (cursor);
+        }
+        printf ("read section 3\n");
     }
 };
 
