@@ -772,15 +772,21 @@ struct stderr_stream : stream
 };
 
 uint
+read_byte (uint8*& cursor, const uint8* end)
+{
+    if (cursor >= end)
+        ThrowString (StringFormat ("malformed %d", __LINE__)); // UNDONE context (move to module or section)
+    return *cursor++;
+}
+
+uint
 read_varuint32 (uint8*& cursor, const uint8* end)
 {
     uint result = 0;
     uint shift = 0;
     while (true)
     {
-        if (cursor >= end)
-            ThrowString (StringFormat ("malformed %d", __LINE__)); // UNDONE context (move to module or section)
-        const uint byte = (uint)(0xff & *cursor++);
+        const uint byte = read_byte (cursor, end);
         result |= (byte & 0x7F) << shift;
         if ((byte & 0x80) == 0)
             break;
@@ -792,9 +798,7 @@ read_varuint32 (uint8*& cursor, const uint8* end)
 uint
 read_varuint7 (uint8*& cursor, const uint8* end)
 {
-    if (cursor >= end)
-        ThrowString (StringFormat ("malformed %d", __LINE__)); // UNDONE context (move to module or section)
-    const uint result = *cursor++;
+    const uint result = read_byte (cursor, end);
     if (result & 0x80)
         ThrowString (StringFormat ("malformed %d", __LINE__)); // UNDONE context (move to module or section)
     return result;
@@ -809,9 +813,7 @@ read_varint32 (uint8*& cursor, const uint8* end)
     uint byte = 0;
     do
     {
-        if (cursor >= end)
-            ThrowString (StringFormat ("malformed %d", __LINE__)); // UNDONE context (move to module or section)
-        byte = *cursor++;
+        byte = read_byte (cursor, end);
         result |= (byte & 0x7F) << shift;
         shift += 7;
     } while ((byte & 0x80) == 0);
@@ -840,24 +842,51 @@ typedef enum ResultType
     ResultType_Empty = 0x40
 } ResultType;
 
-const uint kFunctionType = 0x60;
+typedef enum ElementType // specific to tabletype?
+{
+    ElementType_FuncRef = 0x70,
+} ElementType;
 
-// Table types have limits, either a min or a max/max
-const uint TableLimitsMin = 0;
-const uint TableLimitsMinMax = 1;
+typedef enum LimitsTag // specific to tabletype?
+{
+    LimitsTag_Min = 0,
+    Limits_MinMax = 1,
+} LimitsTag;
+
+struct Limits
+{
+    uint min;
+    uint max;
+    bool hasMax;
+};
+
+const uint FunctionTypeTag = 0x60;
+
+typedef struct TableType
+{
+    ElementType element_type;
+    Limits limits;
+} TableType;
 
 // Table types have an element type, funcref
-const uint TypeTypeFuncRef = 0x70;
+const uint TableTypeFuncRef = 0x70;
 
 // Globals are mutable or constant.
-const uint kMutConst = 0;
-const uint kMutVar = 1;
+typedef enum Mutable
+{
+    Mutable_Constant = 0, // aka false
+    Mutable_Variable = 1, // aka true
+} Mutable;
 
 typedef struct InstructionTraits
 {
         const char* name;
         void (*handler)(...);
 } InstructionTraits;
+
+#define INSTRUCTION_TRAITS(x) { #x, instr_ ## x ## _handler },
+
+#define INSTRUCTION_HANDLER(x) void instr_ ## x ## _handler(...) { }
 
 #define INSTRUCTIONS \
     INSTRUCTION (unreachable) \
@@ -875,7 +904,11 @@ typedef struct InstructionTraits
     INSTRUCTION (br_if) \
 
 #undef INSTRUCTION
-#define INSTRUCTION(x) { #x, instr_ ## x ## _handler },
+#define INSTRUCTION(x) INSTRUCTION_HANDLER (x)
+INSTRUCTIONS
+
+#undef INSTRUCTION
+#define INSTRUCTION(x) INSTRUCTION_TRAITS (x)
 const static InstructionTraits instructionTraits [ ] =
 {
 INSTRUCTIONS
@@ -912,6 +945,51 @@ struct Section  : SectionBase
 {
 };
 
+typedef enum ImportTag { // aka desc
+    ImportTag_Function = 0, // aka type
+    ImportTag_Table = 1,
+    ImportTag_Memory = 2,
+    ImportTag_Global = 3,
+} ImportTag;
+
+struct MemoryType
+{
+    Limits limits;
+};
+
+struct ImportFunction
+{
+};
+
+struct ImportTable
+{
+};
+
+struct ImportMemory
+{
+};
+
+struct GlobalType
+{
+    ValueType value_type;
+    bool is_mutable;
+};
+
+struct Import
+{
+    std::string module;
+    std::string name;
+    ImportTag tag;
+    // TODO virtual functions to model union
+    union
+    {
+        uint function;
+        MemoryType memory;
+        GlobalType global;
+        TableType table;
+    };
+};
+
 struct Module
 {
     MemoryMappedFile mmf;
@@ -921,11 +999,19 @@ struct Module
     std::vector<std::shared_ptr<SectionBase>> sections;
     std::vector<std::shared_ptr<SectionBase>> custom_sections; // FIXME
 
+    std::string read_string (uint8*& cursor);
     uint read_byte (uint8*& cursor);
     uint read_varuint7 (uint8*& cursor);
     uint read_varuint32 (uint8*& cursor);
+    Limits read_limits (uint8*& cursor);
+    MemoryType read_memorytype (uint8*& cursor);
+    GlobalType read_globaltype (uint8*& cursor);
+    TableType read_tabletype (uint8*& cursor);
+    ValueType read_valuetype (uint8*& cursor);
+    ElementType read_elementtype (uint8*& cursor);
+    bool read_mutable (uint8*& cursor);
     void read_section (uint8*& cursor);
-    void read (const char* file_name);
+    void read_module (const char* file_name);
 };
 
 
@@ -939,24 +1025,24 @@ struct FunctionType
     std::vector<ValueType> parameters;
     std::vector<ValueType> results;
 
-    void read_helper(std::vector<ValueType>& result, Module* module, uint8*& cursor)
+    void read_vector_ValueType (std::vector<ValueType>& result, Module* module, uint8*& cursor)
     {
-        uint count = read_varuint32 (cursor, module->end);
+        uint count = module->read_varuint32 (cursor);
         result.resize (count);
         for (uint i = 0; i < count; ++i)
-            result [i] = read_byte ();
+            result [i] = module->read_valuetype (cursor);
     }
 
-    void read (Module* module, uint8*& cursor)
+    void read_function_type (Module* module, uint8*& cursor)
     {
-        read_helper (parameters, module, cursor);
-        read_helper (results, module, cursor);
+        read_vector_ValueType (parameters, module, cursor);
+        read_vector_ValueType (results, module, cursor);
     }
 };
 
 struct Types : Section<1>
 {
-    std::vector<FunctionType> functionTypes
+    std::vector<FunctionType> functionTypes;
 
     static SectionBase* make()
     {
@@ -965,22 +1051,24 @@ struct Types : Section<1>
 
     virtual void read (Module* module, uint8*& cursor)
     {
-        uint count = read_varuint32 (cursor, module.end);
+        printf ("reading section 1\n");
+        uint count = module->read_varuint32 (cursor);
         functionTypes.resize (count);
         for (uint i = 0; i < count; ++i)
         {
-            if (cursor >= module->end)
-                ThrowString ("malformed in Types::read");
-            uint marker = *cursor;
+            uint marker = module->read_byte (cursor);
             if (marker != 0x60)
-                ThrowString ("malformed in Types::read");
-            functionTypes [i].read (module, cursor);
+                ThrowString ("malformed2 in Types::read");
+            functionTypes [i].read_function_type (module, cursor);
         }
+        printf ("read section 1\n");
     }
 };
 
 struct Imports : Section<2>
 {
+    std::vector<Import> data;
+
     static SectionBase* make()
     {
         return new Imports ();
@@ -988,7 +1076,41 @@ struct Imports : Section<2>
 
     virtual void read (Module* module, uint8*& cursor)
     {
-        ThrowString ("Imports::read not yet implemented");
+        read_imports (module, cursor);
+    }
+
+    void read_imports (Module* module, uint8*& cursor)
+    {
+        printf ("reading section 2\n");
+        size_t count = module->read_varuint32 (cursor);
+        data.resize (count);
+        for (size_t i = 0; i < count; ++i)
+        {
+            auto& r = data [i];
+            r.module = module->read_string (cursor);
+            r.name = module->read_string (cursor);
+            ImportTag tag = r.tag = (ImportTag)module->read_byte (cursor);
+            printf ("import %s.%s %X\n", r.module.c_str (), r.name.c_str (), (uint)tag);
+            switch (tag)
+            {
+                // TODO more specific import type and vtable?
+            case ImportTag_Function:
+                r.function = module->read_varuint32 (cursor);
+                break;
+            case ImportTag_Table:
+                r.table = module->read_tabletype (cursor);
+                break;
+            case ImportTag_Memory:
+                r.memory = module->read_memorytype (cursor);
+                break;
+            case ImportTag_Global:
+                r.global = module->read_globaltype (cursor);
+                break;
+            default:
+                ThrowString ("invalid ImportTag");
+            }
+        }
+        printf ("read section 2\n");
     }
 };
 
@@ -1134,12 +1256,111 @@ SECTIONS
 
 uint Module::read_varuint7 (uint8*& cursor)
 {
+    // TODO move implementation here
     return w3::read_varuint7 (cursor, end);
+}
+
+uint Module::read_byte (uint8*& cursor)
+{
+    // TODO move implementation here
+    return w3::read_byte (cursor, end);
+}
+
+// TODO efficiency
+std::string Module::read_string (uint8*& cursor)
+{
+    uint length = read_varuint32 (cursor);
+    if (length + cursor > end)
+        ThrowString ("malformed in read_string");
+    // TODO UTF8 handling
+    std::string a = std::string ((char*)cursor, length);
+    cursor += length;
+    return a;
 }
 
 uint Module::read_varuint32 (uint8*& cursor)
 {
+    // TODO move implementation here
     return w3::read_varuint32 (cursor, end);
+}
+
+Limits Module::read_limits (uint8*& cursor)
+{
+    Limits limits { };
+    uint tag = read_byte (cursor);
+    switch (tag)
+    {
+    case 0:
+    case 1:
+        break;
+    default:
+        ThrowString ("invalid limit tag");
+        break;
+    }
+    limits.hasMax = (tag == 1);
+    limits.min = read_varuint32 (cursor);
+    if (limits.hasMax)
+        limits.max = read_varuint32 (cursor);
+    return limits;
+}
+
+MemoryType Module::read_memorytype (uint8*& cursor)
+{
+    return MemoryType { read_limits (cursor) };
+}
+
+bool Module::read_mutable (uint8*& cursor)
+{
+    uint m = read_byte (cursor);
+    switch (m)
+    {
+    case 0:
+    case 1: break;
+    default:
+        ThrowString ("invalid mutable");
+    }
+    return m == 1;
+}
+
+ValueType Module::read_valuetype (uint8*& cursor)
+{
+    uint value_type = read_byte (cursor);
+    switch (value_type)
+    {
+    default:
+        ThrowString ("invalid ValueType");
+        break;
+    case ValueType_I32:
+    case ValueType_I64:
+    case ValueType_F32:
+    case ValueType_F64:
+        break;
+    }
+    return (ValueType)value_type;
+}
+
+GlobalType Module::read_globaltype (uint8*& cursor)
+{
+    GlobalType globalType {};
+    globalType.value_type = read_valuetype (cursor);
+    globalType.is_mutable = read_mutable (cursor);
+    return globalType;
+}
+
+ElementType Module::read_elementtype (uint8*& cursor)
+{
+    ElementType element_type = (ElementType)read_byte (cursor);
+    if (element_type != ElementType_FuncRef)
+        ThrowString ("invalid elementType");
+    return element_type;
+}
+
+TableType Module::read_tabletype (uint8*& cursor)
+{
+    TableType tableType {};
+    tableType.element_type = read_elementtype (cursor);
+    tableType.limits = read_limits (cursor);
+    return tableType;
 }
 
 void Module::read_section (uint8*& cursor)
@@ -1183,7 +1404,7 @@ void Module::read_section (uint8*& cursor)
     section->read (this, payload);
 }
 
-void Module::read (const char* file_name)
+void Module::read_module (const char* file_name)
 {
     sections.resize (12); // FIXME
     mmf.read (file_name);
@@ -1293,7 +1514,7 @@ main (int argc, char** argv)
 #endif
     {
         Module m;
-	m.read (argv [1]);
+        m.read_module (argv [1]);
     }
 #if 1
     catch (int er)
