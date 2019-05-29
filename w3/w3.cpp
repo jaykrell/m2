@@ -842,10 +842,10 @@ typedef enum ResultType
     ResultType_Empty = 0x40
 } ResultType;
 
-typedef enum ElementType // specific to tabletype?
+typedef enum TableElementType
 {
-    ElementType_FuncRef = 0x70,
-} ElementType;
+    TableElementType_FuncRef = 0x70,
+} TableElementType;
 
 typedef enum LimitsTag // specific to tabletype?
 {
@@ -862,11 +862,11 @@ struct Limits
 
 const uint FunctionTypeTag = 0x60;
 
-typedef struct TableType
+struct TableType
 {
-    ElementType element_type;
+    TableElementType element_type;
     Limits limits;
-} TableType;
+};
 
 // Table types have an element type, funcref
 const uint TableTypeFuncRef = 0x70;
@@ -878,44 +878,140 @@ typedef enum Mutable
     Mutable_Variable = 1, // aka true
 } Mutable;
 
-typedef struct InstructionTraits
-{
-        const char* name;
-        void (*handler)(...);
-} InstructionTraits;
-
-#define INSTRUCTION_TRAITS(x) { #x, instr_ ## x ## _handler },
-
-#define INSTRUCTION_HANDLER(x) void instr_ ## x ## _handler(...) { }
-
-#define INSTRUCTIONS \
-    INSTRUCTION (unreachable) \
-    INSTRUCTION (nop) \
-    INSTRUCTION (block) \
-    INSTRUCTION (if) \
-    INSTRUCTION (else) \
-    INSTRUCTION (6) \
-    INSTRUCTION (7) \
-    INSTRUCTION (8) \
-    INSTRUCTION (9) \
-    INSTRUCTION (A) \
-    INSTRUCTION (end) \
-    INSTRUCTION (br) \
-    INSTRUCTION (br_if) \
-
-#undef INSTRUCTION
-#define INSTRUCTION(x) INSTRUCTION_HANDLER (x)
-INSTRUCTIONS
-
-#undef INSTRUCTION
-#define INSTRUCTION(x) INSTRUCTION_TRAITS (x)
-const static InstructionTraits instructionTraits [ ] =
-{
-INSTRUCTIONS
-};
-
 struct Module;
 struct SectionBase;
+
+#if 0 // science project
+typedef enum INSTRUCTIONtructionEncoding
+{
+    INSTRUCTIONtructionEncoding_ZeroIsReserved  = 0x00,
+    INSTRUCTIONtructionEncoding_End             = 0x01,
+    INSTRUCTIONtructionEncoding_ValueType       = 0x02,     // read_varuint32
+    INSTRUCTIONtructionEncoding_TypeIndex       = 0x03,     // read_varuint32
+    INSTRUCTIONtructionEncoding_FunctionIndex   = 0x04,     // read_varuint32
+    INSTRUCTIONtructionEncoding_MemoryIndex     = 0x05,     // read_varuint32
+    INSTRUCTIONtructionEncoding_GlobalIndex     = 0x06,     // read_varuint32
+    INSTRUCTIONtructionEncoding_LocalIndex      = 0x07,,    // read_varuint32
+    INSTRUCTIONtructionEncoding_LabelIndex      = 0x08,     // read_varuint32
+    INSTRUCTIONtructionEncoding_Sequence        = 0x09,     // 0xB
+    INSTRUCTIONtructionEncoding_VectorLabels    = 0x0A,
+} INSTRUCTIONtructionEncoding;
+#endif
+
+struct INSTRUCTIONtruction
+{
+    const char* name;
+    void (*interp)(Module*);
+    int size;
+    bool block;
+    bool loop;
+    int u32;
+};
+
+struct Instruction
+{
+    uint8 b0;
+    int8 length : 2;
+    uint8 b1;
+};
+
+#define INSTRUCTIONS \
+INSTRUCTION (Unreach, 0x00, 1), \
+INSTRUCTION (Nop, 0x01), \
+INSTRUCTION (Block, 0x02), \
+INSTRUCTION (Loop, 0x03), \
+INSTRUCTION (If, 0x04), \
+INSTRUCTION (Else, 0x05), \
+/* reserved 6 7 8 9 A */ \
+INSTRUCTION (BlockEnd, 0x0B), \
+INSTRUCTION (Br, 0x0C), \
+INSTRUCTION (BrIf, 0x0D), \
+INSTRUCTION (BrTable, 0x0E), \
+INSTRUCTION (Ret, 0x0F), \
+INSTRUCTION (Call, 0x10), \
+INSTRUCTION (Calli, 0x11), \
+/* reserved 12 13 14 15 16 17 18 19 */ \
+INSTRUCTION (Drop, 0x1A), \
+INSTRUCTION (Select, 0x1B), \
+/* reserved 1C 1D 1E 1F */ \
+INSTRUCTION (LocalGet, 0x20), \
+INSTRUCTION (LocalSet, 0x21), \
+INSTRUCTION (LocalTee, 0x22), \
+INSTRUCTION (GlobalGet, 0x23), \
+INSTRUCTION (GlobalSet, 0x24), \
+/* reserved 25 26 27 */ \
+INSTRUCTION (Load_i32, 0x28), \
+INSTRUCTION (Load_i64, 0x29), \
+INSTRUCTION (Load_f32, 0x2A), \
+INSTRUCTION (Load_f64, 0x2B), \
+\
+INSTRUCTION (Load_i32_8s, 0x2C), \
+INSTRUCTION (Load_i32_8u, 0x2D), \
+INSTRUCTION (Load_i32_16s, 0x2E), \
+INSTRUCTION (Load_i32_16u, 0x2F), \
+\
+INSTRUCTION (Load_i64_8s, 0x30), \
+INSTRUCTION (Load_i64_8u, 0x31), \
+INSTRUCTION (Load_i64_16s, 0x32), \
+INSTRUCTION (Load_i64_16u, 0x33), \
+INSTRUCTION (Load_i64_32s, 0x34), \
+INSTRUCTION (Load_i64_32u, 0x35), \
+\
+INSTRUCTION (Store_i32, 0x36), \
+INSTRUCTION (Store_i64, 0x37), \
+INSTRUCTION (Store_f32, 0x38), \
+INSTRUCTION (Store_f64, 0x39), \
+\
+INSTRUCTION (Store_i32_8, 0x3A), \
+INSTRUCTION (Store_i32_16, 0x3B), \
+INSTRUCTION (Store_i64_8, 0x3C), \
+INSTRUCTION (Store_i64_16, 0x3D), \
+INSTRUCTION (Store_i64_32, 0x3E), \
+INSTRUCTION (MemSize, 0x3F, 2), \
+INSTRUCTION (MemGrow, 0x40, 2), \
+\
+INSTRUCTION (Const_i32, 0x41, n32) \
+INSTRUCTION (Const_i64, 0x42, n32) \
+INSTRUCTION (Const_f32, 0x43, z) \
+INSTRUCTION (Const_f64, 0x44, z) \
+\
+INSTRUCTION (Eqz_i32, 0x45), \
+INSTRUCTION (Eq_i32, 0x46), \
+INSTRUCTION (Ne_i32, 0x47), \
+INSTRUCTION (Lt_i32s, 0x48), \
+INSTRUCTION (Lt_i32u, 0x49), \
+INSTRUCTION (Gt_i32s, 0x4A), \
+INSTRUCTION (Gt_i32u, 0x4B), \
+INSTRUCTION (Le_i32s, 0x4C), \
+INSTRUCTION (Le_i32u, 0x4D), \
+INSTRUCTION (Ge_i32s, 0x4E), \
+INSTRUCTION (Ge_i32u, 0x4F), \
+\
+INSTRUCTION (Eqz_i64, 0x50), \
+INSTRUCTION (Eq_i64, 0x51), \
+INSTRUCTION (Ne_i64, 0x52), \
+INSTRUCTION (Lt_i64s, 0x53), \
+INSTRUCTION (Lt_i64u, 0x54), \
+INSTRUCTION (Gt_i64s, 0x55), \
+INSTRUCTION (Gt_i64u, 0x56), \
+INSTRUCTION (Le_i64s, 0x57), \
+INSTRUCTION (Le_i64u, 0x58), \
+INSTRUCTION (Ge_i64s, 0x59), \
+INSTRUCTION (Ge_i64u, 0x5A), \
+\
+INSTRUCTION (Eq_f32, 0x5B), \
+INSTRUCTION (Ne_f32, 0x5C), \
+INSTRUCTION (Lt_f32, 0x5D), \
+INSTRUCTION (Gt_f32, 0x5E), \
+INSTRUCTION (Le_f32, 0x5F), \
+INSTRUCTION (Ge_f32, 0x60), \
+\
+INSTRUCTION (Eq_f64, 0x61), \
+INSTRUCTION (Ne_f64, 0x62), \
+INSTRUCTION (Lt_f64, 0x63), \
+INSTRUCTION (Gt_f64, 0x64), \
+INSTRUCTION (Le_f64, 0x65), \
+INSTRUCTION (Ge_f64, 0x66), \
 
 struct SectionBase
 {
@@ -993,10 +1089,16 @@ struct Import
 struct Function
 {
     // Functions are split between two sections: types in 3, locals/body in ?
-    uint type;
+    uint function_type;
     uint code_len;
     uint8* code;
     std::vector<uint8> locals; // TODO
+};
+
+struct Global
+{
+    GlobalType global_type;
+    uint8* init;
 };
 
 struct Module
@@ -1008,7 +1110,9 @@ struct Module
     std::vector<std::shared_ptr<SectionBase>> sections;
     std::vector<std::shared_ptr<SectionBase>> custom_sections; // FIXME
 
-    std::vector<Function> functions;
+    std::vector<Function> functions; // sections 2 and 10
+    std::vector<TableType> tables; // section 3
+    std::vector<Global> globals; // section 6
 
     std::string read_string (uint8*& cursor);
     uint read_byte (uint8*& cursor);
@@ -1019,12 +1123,11 @@ struct Module
     GlobalType read_globaltype (uint8*& cursor);
     TableType read_tabletype (uint8*& cursor);
     ValueType read_valuetype (uint8*& cursor);
-    ElementType read_elementtype (uint8*& cursor);
+    TableElementType read_elementtype (uint8*& cursor);
     bool read_mutable (uint8*& cursor);
     void read_section (uint8*& cursor);
     void read_module (const char* file_name);
 };
-
 
 // Initial representation of X and XSection are the same.
 // This might evolve, i.e. into separate TypesSection and Types,
@@ -1095,9 +1198,8 @@ struct Imports : Section<2>
         printf ("reading section 2\n");
         size_t count = module->read_varuint32 (cursor);
         data.resize (count);
-        for (size_t i = 0; i < count; ++i)
+        for (auto& r : data)
         {
-            auto& r = data [i];
             r.module = module->read_string (cursor);
             r.name = module->read_string (cursor);
             ImportTag tag = r.tag = (ImportTag)module->read_byte (cursor);
@@ -1142,10 +1244,8 @@ struct Functions : Section<3>
         printf ("reading section 3\n");
         uint count = module->read_varuint32 (cursor);
         module->functions.resize (count);
-        for (uint i = 0; i < count; ++i)
-        {
-            module->functions [i].type = module->read_varuint32 (cursor);
-        }
+        for (auto& a : module->functions)
+            a.function_type = module->read_varuint32 (cursor);
         printf ("read section 3\n");
     }
 };
@@ -1159,7 +1259,10 @@ struct Tables : Section<4>
 
     virtual void read (Module* module, uint8*& cursor)
     {
+        uint count = module->read_varuint32 (cursor);
+        printf ("reading tables count:%X\n", count);
         ThrowString ("Tables::read not yet implemented");
+        // Hello world does not have this section.
     }
 };
 
@@ -1173,6 +1276,7 @@ struct Memory : Section<5>
     virtual void read (Module* module, uint8*& cursor)
     {
         ThrowString ("Memory::read not yet implemented");
+        // Hello world does not have this section.
     }
 };
 
@@ -1183,9 +1287,25 @@ struct Globals : Section<6>
         return new Globals ();
     }
 
+    void read_globals (Module* module, uint8*& cursor)
+    {
+        uint count = module->read_varuint32 (cursor);
+        printf ("reading globals6 count:%X\n", count);
+        module->globals.resize (count);
+        for (auto& a: module->globals)
+        {
+            a.global_type = module->read_globaltype (cursor);
+            a.init = cursor;
+            printf ("read_globals value_type:%X  mutable:%X init:%p\n", a.global_type.value_type, a.global_type.is_mutable, a.init);
+
+            // Init points to code -- INSTRUCTIONtructions until end of block 0x0B INSTRUCTIONtruction.
+        }
+        ThrowString ("Globals::read not yet implemented");
+    }
+
     virtual void read (Module* module, uint8*& cursor)
     {
-        ThrowString ("Globals::read not yet implemented");
+        read_globals (module, cursor);
     }
 };
 
@@ -1351,7 +1471,7 @@ ValueType Module::read_valuetype (uint8*& cursor)
     switch (value_type)
     {
     default:
-        ThrowString ("invalid ValueType");
+        ThrowString (StringFormat ("invalid ValueType:%X", value_type));
         break;
     case ValueType_I32:
     case ValueType_I64:
@@ -1370,10 +1490,10 @@ GlobalType Module::read_globaltype (uint8*& cursor)
     return globalType;
 }
 
-ElementType Module::read_elementtype (uint8*& cursor)
+TableElementType Module::read_elementtype (uint8*& cursor)
 {
-    ElementType element_type = (ElementType)read_byte (cursor);
-    if (element_type != ElementType_FuncRef)
+    TableElementType element_type = (TableElementType)read_byte (cursor);
+    if (element_type != TableElementType_FuncRef)
         ThrowString ("invalid elementType");
     return element_type;
 }
