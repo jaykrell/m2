@@ -1381,6 +1381,13 @@ struct Global
     std::vector<InstructionDecoded> init;
 };
 
+struct Element
+{
+    uint table;
+    std::vector<InstructionDecoded> offset;
+    std::vector<uint> functions;
+};
+
 struct Export
 {
     ExportTag tag;
@@ -1394,6 +1401,13 @@ struct Export
     };
 };
 
+struct Data
+{
+    uint memory;
+    std::vector<InstructionDecoded> expr;
+    void * bytes;
+};
+
 struct Module
 {
     MemoryMappedFile mmf;
@@ -1403,10 +1417,12 @@ struct Module
     std::vector<std::shared_ptr<SectionBase>> sections;
     std::vector<std::shared_ptr<SectionBase>> custom_sections; // FIXME
 
-    std::vector<Function> functions; // sections 2 and 10
-    std::vector<TableType> tables; // section 3
-    std::vector<Global> globals; // section 6
-    std::vector<Export> exports; // section 7
+    std::vector<Function> functions; // section2 and section10
+    std::vector<TableType> tables; // section3
+    std::vector<Global> globals; // section6
+    std::vector<Export> exports; // section7
+    std::vector<Element> elements; // section9
+    std::vector<Data> data; // section11
 
     std::string read_string (uint8*& cursor);
 
@@ -1715,9 +1731,26 @@ struct Elements : Section<9>
         return new Elements ();
     }
 
+    void read_elements (Module* module, uint8*& cursor)
+    {
+        uint count = module->read_varuint32 (cursor);
+        printf ("reading elements9 count:%X\n", count);
+        module->elements.resize (count);
+        for (auto& a: module->elements)
+        {
+            a.table = module->read_varuint32 (cursor);
+            DecodeInstructions (module, a.offset, cursor);
+            count = module->read_varuint32 (cursor);
+            a.functions.resize (count);
+            for (auto& b: a.functions)
+                b = module->read_varuint32 (cursor);
+        }
+        printf ("read elements9 count:%X\n", count);
+    }
+
     virtual void read (Module* module, uint8*& cursor)
     {
-        ThrowString ("Elements::read not yet implemented");
+        read_elements (module, cursor);
     }
 };
 
@@ -1728,22 +1761,47 @@ struct Code : Section<10>
         return new Code ();
     }
 
+    void read_code (Module* module, uint8*& cursor)
+    {
+        uint size = module->read_varuint32 (cursor);
+        if (cursor + size > module->end)
+            ThrowString ("code out of bounds");
+    }
+
     virtual void read (Module* module, uint8*& cursor)
     {
-        ThrowString ("Code::read not yet implemented");
+        read_code (module, cursor);
     }
 };
 
-struct Data : Section<11>
+struct DataSection : Section<11>
 {
     static SectionBase* make()
     {
-        return new Data();
+        return new DataSection();
+    }
+
+    void read_data (Module* module, uint8*& cursor)
+    {
+        uint size = module->read_varuint32 (cursor);
+        module->data.resize (size);
+        uint i = i;
+        for (auto& a: module->data)
+        {
+            a.memory = module->read_varuint32 (cursor);
+            DecodeInstructions (module, a.expr, cursor);
+            size = module->read_varuint32 (cursor);
+            if (cursor + size > module->end)
+                ThrowString ("data out of bounds");
+            a.bytes = cursor;
+            cursor += size;
+            printf ("data [%u]:{%X}\n", i++, ((unsigned char*)a.bytes) [0]);
+        }
     }
 
     virtual void read (Module* module, uint8*& cursor)
     {
-        ThrowString ("Data::read not yet implemented");
+        read_data (module, cursor);
     }
 };
 
@@ -1762,7 +1820,7 @@ SectionTraits section_traits [ ] =
     SECTION (Start)     \
     SECTION (Elements)  \
     SECTION (Code)      \
-    SECTION (Data)      \
+    SECTION (DataSection) \
 
 #undef SECTION
 #define SECTION(x) {#x, &x::make },
