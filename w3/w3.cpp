@@ -911,24 +911,6 @@ typedef enum InstructionGroup : uint8
     Variable    = 5,
 } InstructionGroup;
 
-struct InstructionEncode
-{
-    uint8 byte0;
-    InstructionEncodingEnum encoding;
-    uint8 byte1;                    // if encoding == FixedSize2
-    InstructionGroup group;         // useful?
-    uint16 name;
-    uint16 string_offset;
-    void (*interp)(Module*);
-    int8 pop : 3;                   // required minimum stack in
-    int8 push : 3;
-    ResultType stack_in0;  // type of stack [0] upon input, if pop >= 1
-    ResultType stack_in1;  // type of stack [1] upon input, if pop == 2
-    ResultType stack_out0; // type of stack [1] upon input, if push == 1
-};
-
-#define Reserved 0
-
 #define INSTRUCTIONS \
 INSTRUCTION (0x00, FixedSize1, 0, Control, Unreach) \
 INSTRUCTION (0x01, FixedSize1, 0, Control, Nop) \
@@ -1123,7 +1105,7 @@ INSTRUCTION (0xA7, FixedSize1, 0, Numeric, i32_Wrap_i64) \
 
 #undef INSTRUCTION
 #define INSTRUCTION(byte0, enc, byte1, group, name) name,
-enum Instruction
+enum Instruction : uint16
 {
     INSTRUCTIONS
 };
@@ -1135,12 +1117,6 @@ typedef struct InstructionNames
 INSTRUCTIONS
 } InstructionNames;
 
-#undef INSTRUCTION
-#define INSTRUCTION(byte0, enc, byte1, group, name) { byte0, enc, byte1, group, name, offsetof (InstructionNames, name) },
-const InstructionEncode instructionEncode [256] = {
-    INSTRUCTIONS
-};
-
 const char instructionNames [ ] =
 #undef INSTRUCTION
 #define INSTRUCTION(byte0, enc, byte1, group, name) #name "\0"
@@ -1148,6 +1124,28 @@ INSTRUCTIONS
 ;
 
 #define InstructionName(offset) (&instructionNames [offset])
+
+struct InstructionEncode
+{
+    uint8 byte0;
+    InstructionEncodingEnum encoding;
+    uint8 byte1;                    // if encoding == FixedSize2
+    InstructionGroup group;         // useful?
+    Instruction name;
+    uint16 string_offset;
+    void (*interp)(Module*);
+    int8 pop : 3;                   // required minimum stack in
+    int8 push : 3;
+    ResultType stack_in0;  // type of stack [0] upon input, if pop >= 1
+    ResultType stack_in1;  // type of stack [1] upon input, if pop == 2
+    ResultType stack_out0; // type of stack [1] upon input, if push == 1
+};
+
+#undef INSTRUCTION
+#define INSTRUCTION(byte0, enc, byte1, group, name) { byte0, enc, byte1, group, name, offsetof (InstructionNames, name) },
+const InstructionEncode instructionEncode [256] = {
+    INSTRUCTIONS
+};
 
 struct SectionBase
 {
