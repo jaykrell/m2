@@ -1408,6 +1408,13 @@ struct Data
     void * bytes;
 };
 
+struct Code
+{
+    uint size;
+    uint8 * cursor;
+    std::vector<InstructionDecoded> decoded; // section10
+};
+
 struct Module
 {
     MemoryMappedFile mmf;
@@ -1422,6 +1429,7 @@ struct Module
     std::vector<Global> globals; // section6
     std::vector<Export> exports; // section7
     std::vector<Element> elements; // section9
+    std::vector<Code> code; // section10
     std::vector<Data> data; // section11
 
     std::string read_string (uint8*& cursor);
@@ -1754,11 +1762,11 @@ struct Elements : Section<9>
     }
 };
 
-struct Code : Section<10>
+struct CodeSection : Section<10>
 {
     static SectionBase* make()
     {
-        return new Code ();
+        return new CodeSection ();
     }
 
     void read_code (Module* module, uint8*& cursor)
@@ -1766,6 +1774,17 @@ struct Code : Section<10>
         uint size = module->read_varuint32 (cursor);
         if (cursor + size > module->end)
             ThrowString ("code out of bounds");
+        uint i = 0;
+        module->code.resize (size);
+        for (auto& a : module->code)
+        {
+            a.size = module->read_varuint32 (cursor);
+            if (cursor + a.size > module->end)
+                ThrowString ("code out of bounds");
+            a.cursor = cursor;
+            cursor += size;
+            printf ("code [%X]: %p/%X\n", i++, a.cursor, a.size);
+        }
     }
 
     virtual void read (Module* module, uint8*& cursor)
@@ -1785,7 +1804,7 @@ struct DataSection : Section<11>
     {
         uint size = module->read_varuint32 (cursor);
         module->data.resize (size);
-        uint i = i;
+        uint i = 0;
         for (auto& a: module->data)
         {
             a.memory = module->read_varuint32 (cursor);
@@ -1819,7 +1838,7 @@ SectionTraits section_traits [ ] =
     SECTION (Exports)   \
     SECTION (Start)     \
     SECTION (Elements)  \
-    SECTION (Code)      \
+    SECTION (CodeSection) \
     SECTION (DataSection) \
 
 #undef SECTION
@@ -1993,9 +2012,11 @@ void Module::read_section (uint8*& cursor)
     payload_len = read_varuint32 (cursor);
     payload = cursor;
     name_len = 0;
+    const char* name = 0;
     if (id == 0)
     {
         name_len = read_varuint32 (cursor);
+        name = (char*)cursor;
         if (cursor + name_len > end)
             ThrowString (StringFormat ("malformed %d", __LINE__)); // UNDONE context (move to module or section)
     }
@@ -2006,13 +2027,14 @@ void Module::read_section (uint8*& cursor)
 
     if (id == 0)
     {
+        printf ("skipping custom section:.%.*s\n", name_len, name);
         // UNDONE custom sections
         return;
     }
 
     auto section = sections [id] = std::shared_ptr<SectionBase>(section_traits [id].make ());
     section->id = id;
-    section->name = std::string ((char*)payload, name_len);
+    section->name = std::string ((char*)name, name_len);
     section->payload_len = payload_len;
     section->payload = payload;
     section->read (this, payload);
