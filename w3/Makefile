@@ -80,13 +80,13 @@ config:
 check:
 
 run: $(win)
-	.\$(win) $(WINDIR)\Microsoft.NET\Framework\v2.0.50727\mscorlib.dll
+	.\$(win) hello.wasm
 
 debug: $(win)
 !if $(AMD64)
-	\bin\amd64\cdb .\$(win) $(WINDIR)\Microsoft.NET\Framework\v2.0.50727\mscorlib.dll
+	\bin\amd64\cdb .\$(win) hello.wasm
 !elseif $(386)
-	\bin\x86\cdb .\$(win) $(WINDIR)\Microsoft.NET\Framework\v2.0.50727\mscorlib.dll
+	\bin\x86\cdb .\$(win) hello.wasm
 !endif
 
 clean:
