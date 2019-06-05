@@ -1268,11 +1268,12 @@ struct InstructionDecoded
 
     union
     {
+        uint  u32;
+        uint64 u64;
         int   i32;
         int64 i64;
         float f32;
         double f64;
-        uint u32;
         struct // memory
         {
             uint align;
@@ -1325,7 +1326,7 @@ typedef enum ImportTag { // aka desc
     ImportTag_Table = 1,
     ImportTag_Memory = 2,
     ImportTag_Global = 3,
-} ImportTag;
+} ImportTag, ExportTag;
 
 struct MemoryType
 {
@@ -1380,6 +1381,19 @@ struct Global
     std::vector<InstructionDecoded> init;
 };
 
+struct Export
+{
+    ExportTag tag;
+    std::string name;
+    union
+    {
+        uint function;
+        uint memory;
+        uint table;
+        uint global;
+    };
+};
+
 struct Module
 {
     MemoryMappedFile mmf;
@@ -1392,11 +1406,12 @@ struct Module
     std::vector<Function> functions; // sections 2 and 10
     std::vector<TableType> tables; // section 3
     std::vector<Global> globals; // section 6
+    std::vector<Export> exports; // section 7
 
     std::string read_string (uint8*& cursor);
 
-    int read_i32 (uint8*& cursor);
-    int64 read_i64 (uint8*& cursor);
+    uint read_i32 (uint8*& cursor);
+    uint64 read_i64 (uint8*& cursor);
     float read_f32 (uint8*& cursor);
     double read_f64 (uint8*& cursor);
 
@@ -1451,10 +1466,10 @@ DecodeInstructions (Module* module, std::vector<InstructionDecoded>& instruction
                 case Imm_None:
                     break;
                 case Imm_i32: // Spec is confusing here, signed or unsigned.
-                    i.i32 = module->read_i32 (cursor);
+                    i.u32 = module->read_i32 (cursor);
                     break;
                 case Imm_i64: // Spec is confusing here, signed or unsigned.
-                    i.i64 = module->read_i64 (cursor);
+                    i.u64 = module->read_i64 (cursor);
                     break;
                 case Imm_f32:
                     i.f32 = module->read_f32 (cursor);
@@ -1659,9 +1674,24 @@ struct Exports : Section<7>
         return new Exports ();
     }
 
+    void read_exports (Module* module, uint8*& cursor)
+    {
+        uint count = module->read_varuint32 (cursor);
+        printf ("reading exports7 count:%X\n", count);
+        module->exports.resize (count);
+        for (auto& a: module->exports)
+        {
+            a.name = module->read_string (cursor);
+            a.tag = (ExportTag)module->read_byte (cursor);
+            a.function = module->read_varuint32 (cursor);
+            printf ("read_export %s tag:%X index:%X\n", a.name.c_str (), a.tag, a.function);
+        }
+        printf ("read exports7 count:%X\n", count);
+    }
+
     virtual void read (Module* module, uint8*& cursor)
     {
-        ThrowString ("Exports::read not yet implemented");
+        read_exports (module, cursor);
     }
 };
 
@@ -1740,12 +1770,12 @@ SECTIONS
 
 };
 
-int Module::read_i32 (uint8*& cursor)
+uint Module::read_i32 (uint8*& cursor)
 {
     return read_varuint32 (cursor);
 }
 
-int64 Module::read_i64 (uint8*& cursor)
+uint64 Module::read_i64 (uint8*& cursor)
 {
     return read_varuint64 (cursor, end);
 }
