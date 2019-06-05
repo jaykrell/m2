@@ -1751,18 +1751,18 @@ const
 SectionTraits section_traits [ ] =
 {
     { 0 },
-#define SECTIONS \
+#define SECTIONS        \
     SECTION (Types)     \
-    SECTION (Imports)     \
-    SECTION (Functions)     \
-    SECTION (Tables)     \
-    SECTION (Memory)     \
-    SECTION (Globals)     \
-    SECTION (Exports)     \
+    SECTION (Imports)   \
+    SECTION (Functions) \
+    SECTION (Tables)    \
+    SECTION (Memory)    \
+    SECTION (Globals)   \
+    SECTION (Exports)   \
     SECTION (Start)     \
-    SECTION (Elements)     \
-    SECTION (Code)     \
-    SECTION (Data)     \
+    SECTION (Elements)  \
+    SECTION (Code)      \
+    SECTION (Data)      \
 
 #undef SECTION
 #define SECTION(x) {#x, &x::make },
