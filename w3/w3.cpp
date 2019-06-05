@@ -825,7 +825,7 @@ read_varint32 (uint8*& cursor, const uint8* end)
     return result;
 }
 
-typedef enum ValueType
+typedef enum ValueType : uint8
 {
     ValueType_I32 = 0x7F,
     ValueType_I64 = 0x7E,
@@ -833,7 +833,7 @@ typedef enum ValueType
     ValueType_F64 = 0x7C,
 } ValueType;
 
-typedef enum ResultType
+typedef enum ResultType : uint8
 {
     ResultType_I32 = 0x7F,
     ResultType_I64 = 0x7E,
@@ -882,272 +882,255 @@ struct Module;
 struct SectionBase;
 
 // science project?
-typedef enum InstructionEncoding
+typedef enum InstructionEncodingEnum : uint8
 {
-    Reserved        = 0x00,
+    ieReserved      = 0,
     FixedSize1      = 0x01,
-    FixedSize2      = 0x02,
-    End             = 0x03,
-    ValueType       = 0x04,     // read_varuint32
-    TypeIndex       = 0x05,     // read_varuint32
-    FunctionIndex   = 0x06,     // read_varuint32
-    MemoryIndex     = 0x07,     // read_varuint32
-    GlobalIndex     = 0x08,     // read_varuint32
-    LocalIndex      = 0x09,,    // read_varuint32
-    LabelIndex      = 0x0A,     // read_varuint32
-    InstructionEncoding_Sequence        = 0x0B,     // 0xB
-    VectorLabels    = 0x0C,
-} InstructionEncoding;
+    FixedSize1z     = 0x02,
+    FixedSize1n32   = 0x03,
+    FixedSize2      = 0x04,
+    End             = 0x05,
+    ieValueType     = 0x06,     // read_varuint32
+    TypeIndex       = 0x07,     // read_varuint32
+    FunctionIndex   = 0x08,     // read_varuint32
+    MemoryIndex     = 0x09,     // read_varuint32
+    GlobalIndex     = 0x0A,     // read_varuint32
+    LocalIndex      = 0x0B,     // read_varuint32
+    LabelIndex      = 0x0C,     // read_varuint32
+    InstructionEncoding_Sequence = 0x0D,     // 0xB
+    VectorLabels    = 0x0E,
+} InstructionEncodingEnum;
 
-typedef enum InstructionGroup {
-    InstructionGroup_Reserved   = 0,
-    InstructionGroup_Control    = 1,
-    InstructionGroup_Parametric = 2,
-    InstructionGroup_Numeric    = 3,
-    InstructionGroup_Memory     = 4,
+typedef enum InstructionGroup : uint8
+{
+    igReserved  = 0,
+    Control     = 1,
+    Memory      = 2,
+    Numeric     = 3,
+    Parametric  = 4,
+    Variable    = 5,
 } InstructionGroup;
 
-struct Instruction
-{
-    const char* name;
-    void (*interp)(Module*);
-    int size;
-    bool block;
-    bool loop;
-    int u32;
-};
-
-struct Instruction
+struct InstructionEncode
 {
     uint8 b0;
-    int encoding[4];
-    InstructionGroup group; // useful?
+    InstructionEncodingEnum encoding;
+    uint8 b1;                       // if encoding == FixedSize2
+    InstructionGroup group;         // useful?
     uint16 name;
-    uint8 stack_in;
-    int8 stack_adjust; // push is negative, pop is positive
-    ResultType stack_in0;
-    ResultType stack_in1;
-    ResultType stack_out0;
+    void (*interp)(Module*);
+    int8 pop : 3;                   // required minimum stack in
+    int8 push : 3;
+    ResultType stack_in0;  // type of stack [0] upon input, if pop >= 1
+    ResultType stack_in1;  // type of stack [1] upon input, if pop == 2
+    ResultType stack_out0; // type of stack [1] upon input, if push == 1
 };
 
-#define INSTRUCTIONS \
-INSTRUCTION (0x00, { FixedSize1 }, Control, Unreach) \
-INSTRUCTION (0x01, { FixedSize1 }, Control, Nop) \
-INSTRUCTION (0x02, { FixedSize1 }, Control, Block) \
-INSTRUCTION (0x03, { FixedSize1 }, Control, Loop) \
-INSTRUCTION (0x04, { FixedSize1 }, Control, If) \
-INSTRUCTION (0x05, { FixedSize1 }, Control, Else) \
-\
-INSTRUCTION (0x06, { Reserved }, Reserved, Reserved06, 0) \
-INSTRUCTION (0x07, { Reserved }, Reserved, Reserved07, 0) \
-INSTRUCTION (0x08, { Reserved }, Reserved, Reserved08, 0) \
-INSTRUCTION (0x09, { Reserved }, Reserved, Reserved09, 0) \
-INSTRUCTION (0x0A, { Reserved }, Reserved, Reserved0A, 0) \
-\
-INSTRUCTION (0x0B, { FixedSize1 }, Control, BlockEnd) \
-INSTRUCTION (0x0C, { FixedSize1 }, Control, Br) \
-INSTRUCTION (0x0D, { FixedSize1 }, Control, BrIf) \
-INSTRUCTION (0x0E, { FixedSize1 }, Control, BrTable) \
-INSTRUCTION (0x0F, { FixedSize1 }, Control, Ret) \
-INSTRUCTION (0x10, { FixedSize1 }, Control, Call) \
-INSTRUCTION (0x11, { FixedSize1 }, Control, Calli) \
-\
-INSTRUCTION (0x12, 0, Reserved, Reserved12, 0) \
-INSTRUCTION (0x13, 0, Reserved, Reserved13, 0) \
-INSTRUCTION (0x14, 0, Reserved, Reserved14, 0) \
-INSTRUCTION (0x15, 0, Reserved, Reserved15, 0) \
-INSTRUCTION (0x16, 0, Reserved, Reserved16, 0) \
-INSTRUCTION (0x17, 0, Reserved, Reserved17, 0) \
-INSTRUCTION (0x18, 0, Reserved, Reserved18, 0) \
-INSTRUCTION (0x19, 0, Reserved, Reserved19, 0) \
-\
-INSTRUCTION (0x1A, { FixedSize1 }, Parametric, Drop) \
-INSTRUCTION (0x1B, { FixedSize1 }, Parametric, Select) \
-\
-INSTRUCTION (0x1C, 0, Reserved1C, 0) \
-INSTRUCTION (0x1D, 0, Reserved1D, 0) \
-INSTRUCTION (0x1E, 0, Reserved1E, 0) \
-INSTRUCTION (0x1F, 0, Reserved1F, 0) \
-\
-INSTRUCTION (0x20, { FixedSize1 }, Variable, Local_get) \
-INSTRUCTION (0x21, { FixedSize1 }, Variable, Local_set) \
-INSTRUCTION (0x22, { FixedSize1 }, Variable, Local_tee) \
-INSTRUCTION (0x23, { FixedSize1 }, Variable, Global_get) \
-INSTRUCTION (0x24, { FixedSize1 }, Variable, Global_set) \
-\
-INSTRUCTION (0x25, 0, Reserved, Reserved25, 0) \
-INSTRUCTION (0x26, 0, Reserved, Reserved26, 0) \
-INSTRUCTION (0x27, 0, Reserved, Reserved27, 0) \
-\
-INSTRUCTION (0x28, { FixedSize1 }, Memory, Load_i32) \
-INSTRUCTION (0x29, { FixedSize1 }, Memory, Load_i64) \
-INSTRUCTION (0x2A, { FixedSize1 }, Memory, Load_f32) \
-INSTRUCTION (0x2B, { FixedSize1 }, Memory, Load_f64) \
-\
-INSTRUCTION (0x2C, { FixedSize1 }, Memory, Load_i32_8s) \
-INSTRUCTION (0x2D, { FixedSize1 }, Memory, Load_i32_8u) \
-INSTRUCTION (0x2E, { FixedSize1 }, Memory, Load_i32_16s) \
-INSTRUCTION (0x2F, { FixedSize1 }, Memory, Load_i32_16u) \
-\
-INSTRUCTION (0x30, { FixedSize1 }, Memory, Load_i64_8s) \
-INSTRUCTION (0x31, { FixedSize1 }, Memory, Load_i64_8u) \
-INSTRUCTION (0x32, { FixedSize1 }, Memory, Load_i64_16s) \
-INSTRUCTION (0x33, { FixedSize1 }, Memory, Load_i64_16u) \
-INSTRUCTION (0x34, { FixedSize1 }, Memory, Load_i64_32s) \
-INSTRUCTION (0x35, { FixedSize1 }, Memory, Load_i64_32u) \
-\
-INSTRUCTION (0x36, { FixedSize1 }, Memory, Store_i32) \
-INSTRUCTION (0x37, { FixedSize1 }, Memory, Store_i64) \
-INSTRUCTION (0x38, { FixedSize1 }, Memory, Store_f32) \
-INSTRUCTION (0x39, { FixedSize1 }, Memory, Store_f64) \
-\
-INSTRUCTION (0x3A, { FixedSize1 }, Memory, Store_i32_8) \
-INSTRUCTION (0x3B, { FixedSize1 }, Memory, Store_i32_16) \
-INSTRUCTION (0x3C, { FixedSize1 }, Memory, Store_i64_8) \
-INSTRUCTION (0x3D, { FixedSize1 }, Memory, Store_i64_16) \
-INSTRUCTION (0x3E, { FixedSize1 }, Memory, Store_i64_32) \
-INSTRUCTION (0x3F, { FixedSize1 }, Memory, MemSize, 2) \
-INSTRUCTION (0x40, { FixedSize1 }, Memory, MemGrow, 2) \
-\
-INSTRUCTION (0x41, { FixedSize1 }, Numeric, Const_i32, n32) \
-INSTRUCTION (0x42, { FixedSize1 }, Numeric, Const_i64, n32) \
-INSTRUCTION (0x43, { FixedSize1 }, Numeric, Const_f32, z) \
-INSTRUCTION (0x44, { FixedSize1 }, Numeric, Const_f64, z) \
-\
-INSTRUCTION (0x45, { FixedSize1 }, Numeric, Eqz_i32) \
-INSTRUCTION (0x46, { FixedSize1 }, Numeric, Eq_i32) \
-INSTRUCTION (0x47, { FixedSize1 }, Numeric, Ne_i32) \
-INSTRUCTION (0x48, { FixedSize1 }, Numeric, Lt_i32s) \
-INSTRUCTION (0x49, { FixedSize1 }, Numeric, Lt_i32u) \
-INSTRUCTION (0x4A, { FixedSize1 }, Numeric, Gt_i32s) \
-INSTRUCTION (0x4B, { FixedSize1 }, Numeric, Gt_i32u) \
-INSTRUCTION (0x4C, { FixedSize1 }, Numeric, Le_i32s) \
-INSTRUCTION (0x4D, { FixedSize1 }, Numeric, Le_i32u) \
-INSTRUCTION (0x4E, { FixedSize1 }, Numeric, Ge_i32s) \
-INSTRUCTION (0x4F, { FixedSize1 }, Numeric, Ge_i32u) \
-\
-INSTRUCTION (0x50, { FixedSize1 }, Numeric, Eqz_i64) \
-INSTRUCTION (0x51, { FixedSize1 }, Numeric, Eq_i64) \
-INSTRUCTION (0x52, { FixedSize1 }, Numeric, Ne_i64) \
-INSTRUCTION (0x53, { FixedSize1 }, Numeric, Lt_i64s) \
-INSTRUCTION (0x54, { FixedSize1 }, Numeric, Lt_i64u) \
-INSTRUCTION (0x55, { FixedSize1 }, Numeric, Gt_i64s) \
-INSTRUCTION (0x56, { FixedSize1 }, Numeric, Gt_i64u) \
-INSTRUCTION (0x57, { FixedSize1 }, Numeric, Le_i64s) \
-INSTRUCTION (0x58, { FixedSize1 }, Numeric, Le_i64u) \
-INSTRUCTION (0x59, { FixedSize1 }, Numeric, Ge_i64s) \
-INSTRUCTION (0x5A, { FixedSize1 }, Numeric, Ge_i64u) \
-\
-INSTRUCTION (0x5B, { FixedSize1 }, Eq_f32) \
-INSTRUCTION (0x5C, { FixedSize1 }, Ne_f32) \
-INSTRUCTION (0x5D, { FixedSize1 }, Lt_f32) \
-INSTRUCTION (0x5E, { FixedSize1 }, Gt_f32) \
-INSTRUCTION (0x5F, { FixedSize1 }, Le_f32) \
-INSTRUCTION (0x60, { FixedSize1 }, Ge_f32) \
-\
-INSTRUCTION (0x61, { FixedSize1 }, Eq_f64) \
-INSTRUCTION (0x62, { FixedSize1 }, Ne_f64) \
-INSTRUCTION (0x63, { FixedSize1 }, Lt_f64) \
-INSTRUCTION (0x64, { FixedSize1 }, Gt_f64) \
-INSTRUCTION (0x65, { FixedSize1 }, Le_f64) \
-INSTRUCTION (0x66, { FixedSize1 }, Ge_f64) \
-\
-INSTRUCTION (0x67, { FixedSize1 }, Clz_i32) \
-INSTRUCTION (0x68, { FixedSize1 }, Ctz_i32) \
-INSTRUCTION (0x69, { FixedSize1 }, Popcnt_i32) \
-INSTRUCTION (0x6A, { FixedSize1 }, Add_i32) \
-INSTRUCTION (0x6B, { FixedSize1 }, Sub_i32) \
-INSTRUCTION (0x6C, { FixedSize1 }, Mul_i32) \
-INSTRUCTION (0x6D, { FixedSize1 }, Div_s_i32) \
-INSTRUCTION (0x6E, { FixedSize1 }, Div_u_i32) \
-INSTRUCTION (0x6F, { FixedSize1 }, Rem_s_i32) \
-INSTRUCTION (0x70, { FixedSize1 }, Rem_u_i32) \
-INSTRUCTION (0x71, { FixedSize1 }, And_i32) \
-INSTRUCTION (0x72, { FixedSize1 }, Or_i32) \
-INSTRUCTION (0x73, { FixedSize1 }, Xor_i32) \
-INSTRUCTION (0x74, { FixedSize1 }, Shl_i32) \
-INSTRUCTION (0x75, { FixedSize1 }, Shr_s_i32) \
-INSTRUCTION (0x76, { FixedSize1 }, Shr_u_i32) \
-INSTRUCTION (0x77, { FixedSize1 }, Rotl_i32) \
-INSTRUCTION (0x78, { FixedSize1 }, Rotr_i32) \
-\
-INSTRUCTION (0x79, { FixedSize1 }, Clz_i64) \
-INSTRUCTION (0x7A, { FixedSize1 }, Ctz_i64) \
-INSTRUCTION (0x7B, { FixedSize1 }, Popcnt_i64) \
-INSTRUCTION (0x7C, { FixedSize1 }, Add_i64) \
-INSTRUCTION (0x7D, { FixedSize1 }, Sub_i64) \
-INSTRUCTION (0x7E, { FixedSize1 }, Mul_i64) \
-INSTRUCTION (0x7F, { FixedSize1 }, Div_s_i64) \
-INSTRUCTION (0x80, { FixedSize1 }, Div_u_i64) \
-INSTRUCTION (0x81, { FixedSize1 }, Rem_s_i64) \
-INSTRUCTION (0x82, { FixedSize1 }, Rem_u_i64) \
-INSTRUCTION (0x83, { FixedSize1 }, And_i64) \
-INSTRUCTION (0x84, { FixedSize1 }, Or_i64) \
-INSTRUCTION (0x85, { FixedSize1 }, Xor_i64) \
-INSTRUCTION (0x86, { FixedSize1 }, Shl_i64) \
-INSTRUCTION (0x87, { FixedSize1 }, Shr_s_i64) \
-INSTRUCTION (0x88, { FixedSize1 }, Shr_u_i64) \
-INSTRUCTION (0x89, { FixedSize1 }, Rotl_i64) \
-INSTRUCTION (0x8A, { FixedSize1 }, Rotr_i64) \
-\
-INSTRUCTION (0x8B, { FixedSize1 }, Abs_f32) \
-INSTRUCTION (0x8C, { FixedSize1 }, Neg_f32) \
-INSTRUCTION (0x8D, { FixedSize1 }, Ceil_f32) \
-INSTRUCTION (0x8E, { FixedSize1 }, Floor_f32) \
-INSTRUCTION (0x8F, { FixedSize1 }, Trunc_f32) \
-INSTRUCTION (0x90, { FixedSize1 }, Nearest_f32) \
-INSTRUCTION (0x91, { FixedSize1 }, Sqrt_f32) \
-INSTRUCTION (0x92, { FixedSize1 }, Add_f32) \
-INSTRUCTION (0x93, { FixedSize1 }, Sub_f32) \
-INSTRUCTION (0x94, { FixedSize1 }, Mul_f32) \
-INSTRUCTION (0x95, { FixedSize1 }, Div_f32) \
-INSTRUCTION (0x96, { FixedSize1 }, Min_f32) \
-INSTRUCTION (0x97, { FixedSize1 }, Max_f32) \
-INSTRUCTION (0x98, { FixedSize1 }, Copysign_f32) \
-\
-INSTRUCTION (0x99, { FixedSize1 }, Abs_f64) \
-INSTRUCTION (0x9A, { FixedSize1 }, Neg_f64) \
-INSTRUCTION (0x9B, { FixedSize1 }, Ceil_f64) \
-INSTRUCTION (0x9C, { FixedSize1 }, Floor_f64) \
-INSTRUCTION (0x9D, { FixedSize1 }, Trunc_f64) \
-INSTRUCTION (0x9E, { FixedSize1 }, Nearest_f64) \
-INSTRUCTION (0x9F, { FixedSize1 }, Sqrt_f64) \
-INSTRUCTION (0xA0, { FixedSize1 }, Add_f64) \
-INSTRUCTION (0xA1, { FixedSize1 }, Sub_f64) \
-INSTRUCTION (0xA2, { FixedSize1 }, Mul_f64) \
-INSTRUCTION (0xA3, { FixedSize1 }, Div_f64) \
-INSTRUCTION (0xA4, { FixedSize1 }, Min_f64) \
-INSTRUCTION (0xA5, { FixedSize1 }, Max_f64) \
-INSTRUCTION (0xA6, { FixedSize1 }, Copysign_f64) \
-\
-INSTRUCTION (0xA7, { FixedSize1 }, i32_Wrap_i64) \
-INSTRUCTION (0xA8, { FixedSize1 }, ) \
-INSTRUCTION (0xA9, { FixedSize1 }, ) \
-INSTRUCTION (0xAA, { FixedSize1 }, ) \
-INSTRUCTION (0xAB, { FixedSize1 }, ) \
-INSTRUCTION (0xAC, { FixedSize1 }, ) \
-INSTRUCTION (0xAD, { FixedSize1 }, ) \
-INSTRUCTION (0xAE, { FixedSize1 }, ) \
-INSTRUCTION (0xAF, { FixedSize1 }, ) \
-INSTRUCTION (0xB0, { FixedSize1 }, ) \
-INSTRUCTION (0xB1, { FixedSize1 }, ) \
-INSTRUCTION (0xB2, { FixedSize1 }, ) \
-INSTRUCTION (0xB3, { FixedSize1 }, ) \
-INSTRUCTION (0xB4, { FixedSize1 }, ) \
-INSTRUCTION (0xB5, { FixedSize1 }, ) \
-INSTRUCTION (0xB6, { FixedSize1 }, ) \
-INSTRUCTION (0xB6, { FixedSize1 }, ) \
-INSTRUCTION (0xB7, { FixedSize1 }, ) \
-INSTRUCTION (0xB8, { FixedSize1 }, ) \
-INSTRUCTION (0xB9, { FixedSize1 }, ) \
-INSTRUCTION (0xBA, { FixedSize1 }, ) \
-INSTRUCTION (0xBB, { FixedSize1 }, ) \
-INSTRUCTION (0xBC, { FixedSize1 }, ) \
-INSTRUCTION (0xBD, { FixedSize1 }, ) \
-INSTRUCTION (0xBE, { FixedSize1 }, ) \
-INSTRUCTION (0xBF, { FixedSize1 }, ) \
+#define Reserved 0
 
-struct SectionBasepthread_mutexattr_setprotoc
+#define INSTRUCTIONS \
+INSTRUCTION (0x00, FixedSize1, 0, Control, Unreach) \
+INSTRUCTION (0x01, FixedSize1, 0, Control, Nop) \
+INSTRUCTION (0x02, FixedSize1, 0, Control, Block) \
+INSTRUCTION (0x03, FixedSize1, 0, Control, Loop) \
+INSTRUCTION (0x04, FixedSize1, 0, Control, If) \
+INSTRUCTION (0x05, FixedSize1, 0, Control, Else) \
+\
+INSTRUCTION (0x06, ieReserved, 0, igReserved, Reserved06) \
+INSTRUCTION (0x07, ieReserved, 0, igReserved, Reserved07) \
+INSTRUCTION (0x08, ieReserved, 0, igReserved, Reserved08) \
+INSTRUCTION (0x09, ieReserved, 0, igReserved, Reserved09) \
+INSTRUCTION (0x0A, ieReserved, 0, igReserved, Reserved0A) \
+\
+INSTRUCTION (0x0B, FixedSize1, 0, Control, BlockEnd) \
+INSTRUCTION (0x0C, FixedSize1, 0, Control, Br) \
+INSTRUCTION (0x0D, FixedSize1, 0, Control, BrIf) \
+INSTRUCTION (0x0E, FixedSize1, 0, Control, BrTable) \
+INSTRUCTION (0x0F, FixedSize1, 0, Control, Ret) \
+INSTRUCTION (0x10, FixedSize1, 0, Control, Call) \
+INSTRUCTION (0x11, FixedSize1, 0, Control, Calli) \
+\
+INSTRUCTION (0x12, ieReserved, 0, igReserved, Reserved12) \
+INSTRUCTION (0x13, ieReserved, 0, igReserved, Reserved13) \
+INSTRUCTION (0x14, ieReserved, 0, igReserved, Reserved14) \
+INSTRUCTION (0x15, ieReserved, 0, igReserved, Reserved15) \
+INSTRUCTION (0x16, ieReserved, 0, igReserved, Reserved16) \
+INSTRUCTION (0x17, ieReserved, 0, igReserved, Reserved17) \
+INSTRUCTION (0x18, ieReserved, 0, igReserved, Reserved18) \
+INSTRUCTION (0x19, ieReserved, 0, igReserved, Reserved19) \
+\
+INSTRUCTION (0x1A, FixedSize1, 0, Parametric, Drop) \
+INSTRUCTION (0x1B, FixedSize1, 0, Parametric, Select) \
+\
+INSTRUCTION (0x1C, ieReserved, 0, igReserved, Reserved1C) \
+INSTRUCTION (0x1D, ieReserved, 0, igReserved, Reserved1D) \
+INSTRUCTION (0x1E, ieReserved, 0, igReserved, Reserved1E) \
+INSTRUCTION (0x1F, ieReserved, 0, igReserved, Reserved1F) \
+\
+INSTRUCTION (0x20, FixedSize1, 0, Variable, Local_get) \
+INSTRUCTION (0x21, FixedSize1, 0, Variable, Local_set) \
+INSTRUCTION (0x22, FixedSize1, 0, Variable, Local_tee) \
+INSTRUCTION (0x23, FixedSize1, 0, Variable, Global_get) \
+INSTRUCTION (0x24, FixedSize1, 0, Variable, Global_set) \
+\
+INSTRUCTION (0x25, ieReserved, 0, igReserved, Reserved25) \
+INSTRUCTION (0x26, ieReserved, 0, igReserved, Reserved26) \
+INSTRUCTION (0x27, ieReserved, 0, igReserved, Reserved27) \
+\
+INSTRUCTION (0x28, FixedSize1, 0, Memory, Load_i32) \
+INSTRUCTION (0x29, FixedSize1, 0, Memory, Load_i64) \
+INSTRUCTION (0x2A, FixedSize1, 0, Memory, Load_f32) \
+INSTRUCTION (0x2B, FixedSize1, 0, Memory, Load_f64) \
+\
+INSTRUCTION (0x2C, FixedSize1, 0, Memory, Load_i32_8s) \
+INSTRUCTION (0x2D, FixedSize1, 0, Memory, Load_i32_8u) \
+INSTRUCTION (0x2E, FixedSize1, 0, Memory, Load_i32_16s) \
+INSTRUCTION (0x2F, FixedSize1, 0, Memory, Load_i32_16u) \
+\
+INSTRUCTION (0x30, FixedSize1, 0, Memory, Load_i64_8s) \
+INSTRUCTION (0x31, FixedSize1, 0, Memory, Load_i64_8u) \
+INSTRUCTION (0x32, FixedSize1, 0, Memory, Load_i64_16s) \
+INSTRUCTION (0x33, FixedSize1, 0, Memory, Load_i64_16u) \
+INSTRUCTION (0x34, FixedSize1, 0, Memory, Load_i64_32s) \
+INSTRUCTION (0x35, FixedSize1, 0, Memory, Load_i64_32u) \
+\
+INSTRUCTION (0x36, FixedSize1, 0, Memory, Store_i32) \
+INSTRUCTION (0x37, FixedSize1, 0, Memory, Store_i64) \
+INSTRUCTION (0x38, FixedSize1, 0, Memory, Store_f32) \
+INSTRUCTION (0x39, FixedSize1, 0, Memory, Store_f64) \
+\
+INSTRUCTION (0x3A, FixedSize1, 0, Memory, Store_i32_8) \
+INSTRUCTION (0x3B, FixedSize1, 0, Memory, Store_i32_16) \
+INSTRUCTION (0x3C, FixedSize1, 0, Memory, Store_i64_8) \
+INSTRUCTION (0x3D, FixedSize1, 0, Memory, Store_i64_16) \
+INSTRUCTION (0x3E, FixedSize1, 0, Memory, Store_i64_32) \
+INSTRUCTION (0x3F, FixedSize2, 0, Memory, MemSize) \
+INSTRUCTION (0x40, FixedSize2, 0, Memory, MemGrow) \
+\
+INSTRUCTION (0x41, FixedSize1n32, 0, Numeric, Const_i32) \
+INSTRUCTION (0x42, FixedSize1n32, 0, Numeric, Const_i64) \
+INSTRUCTION (0x43, FixedSize1z, 0, Numeric, Const_f32) \
+INSTRUCTION (0x44, FixedSize1z, 0, Numeric, Const_f64) \
+\
+INSTRUCTION (0x45, FixedSize1, 0, Numeric, Eqz_i32) \
+INSTRUCTION (0x46, FixedSize1, 0, Numeric, Eq_i32) \
+INSTRUCTION (0x47, FixedSize1, 0, Numeric, Ne_i32) \
+INSTRUCTION (0x48, FixedSize1, 0, Numeric, Lt_i32s) \
+INSTRUCTION (0x49, FixedSize1, 0, Numeric, Lt_i32u) \
+INSTRUCTION (0x4A, FixedSize1, 0, Numeric, Gt_i32s) \
+INSTRUCTION (0x4B, FixedSize1, 0, Numeric, Gt_i32u) \
+INSTRUCTION (0x4C, FixedSize1, 0, Numeric, Le_i32s) \
+INSTRUCTION (0x4D, FixedSize1, 0, Numeric, Le_i32u) \
+INSTRUCTION (0x4E, FixedSize1, 0, Numeric, Ge_i32s) \
+INSTRUCTION (0x4F, FixedSize1, 0, Numeric, Ge_i32u) \
+\
+INSTRUCTION (0x50, FixedSize1, 0, Numeric, Eqz_i64) \
+INSTRUCTION (0x51, FixedSize1, 0, Numeric, Eq_i64) \
+INSTRUCTION (0x52, FixedSize1, 0, Numeric, Ne_i64) \
+INSTRUCTION (0x53, FixedSize1, 0, Numeric, Lt_i64s) \
+INSTRUCTION (0x54, FixedSize1, 0, Numeric, Lt_i64u) \
+INSTRUCTION (0x55, FixedSize1, 0, Numeric, Gt_i64s) \
+INSTRUCTION (0x56, FixedSize1, 0, Numeric, Gt_i64u) \
+INSTRUCTION (0x57, FixedSize1, 0, Numeric, Le_i64s) \
+INSTRUCTION (0x58, FixedSize1, 0, Numeric, Le_i64u) \
+INSTRUCTION (0x59, FixedSize1, 0, Numeric, Ge_i64s) \
+INSTRUCTION (0x5A, FixedSize1, 0, Numeric, Ge_i64u) \
+\
+INSTRUCTION (0x5B, FixedSize1, 0, Numeric, Eq_f32) \
+INSTRUCTION (0x5C, FixedSize1, 0, Numeric, Ne_f32) \
+INSTRUCTION (0x5D, FixedSize1, 0, Numeric, Lt_f32) \
+INSTRUCTION (0x5E, FixedSize1, 0, Numeric, Gt_f32) \
+INSTRUCTION (0x5F, FixedSize1, 0, Numeric, Le_f32) \
+INSTRUCTION (0x60, FixedSize1, 0, Numeric, Ge_f32) \
+\
+INSTRUCTION (0x61, FixedSize1, 0, Numeric, Eq_f64) \
+INSTRUCTION (0x62, FixedSize1, 0, Numeric, Ne_f64) \
+INSTRUCTION (0x63, FixedSize1, 0, Numeric, Lt_f64) \
+INSTRUCTION (0x64, FixedSize1, 0, Numeric, Gt_f64) \
+INSTRUCTION (0x65, FixedSize1, 0, Numeric, Le_f64) \
+INSTRUCTION (0x66, FixedSize1, 0, Numeric, Ge_f64) \
+\
+INSTRUCTION (0x67, FixedSize1, 0, Numeric, Clz_i32) \
+INSTRUCTION (0x68, FixedSize1, 0, Numeric, Ctz_i32) \
+INSTRUCTION (0x69, FixedSize1, 0, Numeric, Popcnt_i32) \
+INSTRUCTION (0x6A, FixedSize1, 0, Numeric, Add_i32) \
+INSTRUCTION (0x6B, FixedSize1, 0, Numeric, Sub_i32) \
+INSTRUCTION (0x6C, FixedSize1, 0, Numeric, Mul_i32) \
+INSTRUCTION (0x6D, FixedSize1, 0, Numeric, Div_s_i32) \
+INSTRUCTION (0x6E, FixedSize1, 0, Numeric, Div_u_i32) \
+INSTRUCTION (0x6F, FixedSize1, 0, Numeric, Rem_s_i32) \
+INSTRUCTION (0x70, FixedSize1, 0, Numeric, Rem_u_i32) \
+INSTRUCTION (0x71, FixedSize1, 0, Numeric, And_i32) \
+INSTRUCTION (0x72, FixedSize1, 0, Numeric, Or_i32) \
+INSTRUCTION (0x73, FixedSize1, 0, Numeric, Xor_i32) \
+INSTRUCTION (0x74, FixedSize1, 0, Numeric, Shl_i32) \
+INSTRUCTION (0x75, FixedSize1, 0, Numeric, Shr_s_i32) \
+INSTRUCTION (0x76, FixedSize1, 0, Numeric, Shr_u_i32) \
+INSTRUCTION (0x77, FixedSize1, 0, Numeric, Rotl_i32) \
+INSTRUCTION (0x78, FixedSize1, 0, Numeric, Rotr_i32) \
+\
+INSTRUCTION (0x79, FixedSize1, 0, Numeric, Clz_i64) \
+INSTRUCTION (0x7A, FixedSize1, 0, Numeric, Ctz_i64) \
+INSTRUCTION (0x7B, FixedSize1, 0, Numeric, Popcnt_i64) \
+INSTRUCTION (0x7C, FixedSize1, 0, Numeric, Add_i64) \
+INSTRUCTION (0x7D, FixedSize1, 0, Numeric, Sub_i64) \
+INSTRUCTION (0x7E, FixedSize1, 0, Numeric, Mul_i64) \
+INSTRUCTION (0x7F, FixedSize1, 0, Numeric, Div_s_i64) \
+INSTRUCTION (0x80, FixedSize1, 0, Numeric, Div_u_i64) \
+INSTRUCTION (0x81, FixedSize1, 0, Numeric, Rem_s_i64) \
+INSTRUCTION (0x82, FixedSize1, 0, Numeric, Rem_u_i64) \
+INSTRUCTION (0x83, FixedSize1, 0, Numeric, And_i64) \
+INSTRUCTION (0x84, FixedSize1, 0, Numeric, Or_i64) \
+INSTRUCTION (0x85, FixedSize1, 0, Numeric, Xor_i64) \
+INSTRUCTION (0x86, FixedSize1, 0, Numeric, Shl_i64) \
+INSTRUCTION (0x87, FixedSize1, 0, Numeric, Shr_s_i64) \
+INSTRUCTION (0x88, FixedSize1, 0, Numeric, Shr_u_i64) \
+INSTRUCTION (0x89, FixedSize1, 0, Numeric, Rotl_i64) \
+INSTRUCTION (0x8A, FixedSize1, 0, Numeric, Rotr_i64) \
+\
+INSTRUCTION (0x8B, FixedSize1, 0, Numeric, Abs_f32) \
+INSTRUCTION (0x8C, FixedSize1, 0, Numeric, Neg_f32) \
+INSTRUCTION (0x8D, FixedSize1, 0, Numeric, Ceil_f32) \
+INSTRUCTION (0x8E, FixedSize1, 0, Numeric, Floor_f32) \
+INSTRUCTION (0x8F, FixedSize1, 0, Numeric, Trunc_f32) \
+INSTRUCTION (0x90, FixedSize1, 0, Numeric, Nearest_f32) \
+INSTRUCTION (0x91, FixedSize1, 0, Numeric, Sqrt_f32) \
+INSTRUCTION (0x92, FixedSize1, 0, Numeric, Add_f32) \
+INSTRUCTION (0x93, FixedSize1, 0, Numeric, Sub_f32) \
+INSTRUCTION (0x94, FixedSize1, 0, Numeric, Mul_f32) \
+INSTRUCTION (0x95, FixedSize1, 0, Numeric, Div_f32) \
+INSTRUCTION (0x96, FixedSize1, 0, Numeric, Min_f32) \
+INSTRUCTION (0x97, FixedSize1, 0, Numeric, Max_f32) \
+INSTRUCTION (0x98, FixedSize1, 0, Numeric, Copysign_f32) \
+\
+INSTRUCTION (0x99, FixedSize1, 0, Numeric, Abs_f64) \
+INSTRUCTION (0x9A, FixedSize1, 0, Numeric, Neg_f64) \
+INSTRUCTION (0x9B, FixedSize1, 0, Numeric, Ceil_f64) \
+INSTRUCTION (0x9C, FixedSize1, 0, Numeric, Floor_f64) \
+INSTRUCTION (0x9D, FixedSize1, 0, Numeric, Trunc_f64) \
+INSTRUCTION (0x9E, FixedSize1, 0, Numeric, Nearest_f64) \
+INSTRUCTION (0x9F, FixedSize1, 0, Numeric, Sqrt_f64) \
+INSTRUCTION (0xA0, FixedSize1, 0, Numeric, Add_f64) \
+INSTRUCTION (0xA1, FixedSize1, 0, Numeric, Sub_f64) \
+INSTRUCTION (0xA2, FixedSize1, 0, Numeric, Mul_f64) \
+INSTRUCTION (0xA3, FixedSize1, 0, Numeric, Div_f64) \
+INSTRUCTION (0xA4, FixedSize1, 0, Numeric, Min_f64) \
+INSTRUCTION (0xA5, FixedSize1, 0, Numeric, Max_f64) \
+INSTRUCTION (0xA6, FixedSize1, 0, Numeric, Copysign_f64) \
+\
+INSTRUCTION (0xA7, FixedSize1, 0, Numeric, i32_Wrap_i64) \
+
+
+#undef INSTRUCTION
+
+#define INSTRUCTION(b0, enc, b1, grp, name) { b0, enc, b1, grp },
+
+const InstructionEncode instructionEncode [256] = {
+    INSTRUCTIONS
+};
+
+
+struct SectionBase
 {
     virtual ~SectionBase()
     {
