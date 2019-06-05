@@ -779,6 +779,22 @@ read_byte (uint8*& cursor, const uint8* end)
     return *cursor++;
 }
 
+uint64
+read_varuint64 (uint8*& cursor, const uint8* end)
+{
+    uint64 result = 0;
+    uint shift = 0;
+    while (true)
+    {
+        const uint byte = read_byte (cursor, end);
+        result |= (byte & 0x7F) << shift;
+        if ((byte & 0x80) == 0)
+            break;
+        shift += 7;
+    }
+    return result;
+}
+
 uint
 read_varuint32 (uint8*& cursor, const uint8* end)
 {
@@ -804,6 +820,27 @@ read_varuint7 (uint8*& cursor, const uint8* end)
     return result;
 }
 
+int64
+read_varint64 (uint8*& cursor, const uint8* end)
+{
+    int64 result = 0;
+    uint shift = 0;
+    uint size = 64;
+    uint byte = 0;
+    do
+    {
+        byte = read_byte (cursor, end);
+        result |= (byte & 0x7F) << shift;
+        shift += 7;
+    } while ((byte & 0x80) == 0);
+
+    // sign bit of byte is second high order bit (0x40)
+    if ((shift < size) && (byte & 0x40))
+        result |= (~0 << shift); // sign extend
+
+    return result;
+}
+
 int
 read_varint32 (uint8*& cursor, const uint8* end)
 {
@@ -821,7 +858,7 @@ read_varint32 (uint8*& cursor, const uint8* end)
     // sign bit of byte is second high order bit (0x40)
     if ((shift < size) && (byte & 0x40))
         result |= (~0 << shift); // sign extend
-    
+
     return result;
 }
 
@@ -881,17 +918,16 @@ typedef enum Mutable
 struct Module;
 struct SectionBase;
 
-// science project?
-typedef enum Immedate : uint8
+typedef enum Immediate : uint8
 {
     Imm_None = 0,
     Imm_i32,
     Imm_i64,
     Imm_f32,
     Imm_f64,
-    Imm_Sequence    ,     // 0xB
-    Imm_u32,
+    Imm_Sequence,
     Imm_VecLabel,
+    Imm_u32,
     Imm_Memory      , // align:u32 offset:u32
     Imm_Type        ,     // read_varuint32
     Imm_Function    ,     // read_varuint32
@@ -915,8 +951,8 @@ INSTRUCTION (0x09, 0, 0, Reserved09, Imm_None) \
 INSTRUCTION (0x0A, 0, 0, Reserved0A, Imm_None) \
 \
 INSTRUCTION (0x0B, 1, 0, BlockEnd, Imm_None) \
-INSTRUCTION (0x0C, 1, 0, Br, Imm_Local) \
-INSTRUCTION (0x0D, 1, 0, BrIf, Imm_Local) \
+INSTRUCTION (0x0C, 1, 0, Br, Imm_Label) \
+INSTRUCTION (0x0D, 1, 0, BrIf, Imm_Label) \
 INSTRUCTION (0x0E, 1, 0, BrTable, Imm_VecLabel) \
 INSTRUCTION (0x0F, 1, 0, Ret, Imm_None) \
 INSTRUCTION (0x10, 1, 0, Call, Imm_Function) \
@@ -1186,7 +1222,7 @@ INSTRUCTION (0xFF, 0, 0, ReservedFF, Imm_None) \
 
 #undef INSTRUCTION
 #define INSTRUCTION(byte0, fixed_size, byte1, name, imm) name,
-enum Instruction : uint16
+enum InstructionEnum : uint16
 {
     INSTRUCTIONS
 };
@@ -1204,17 +1240,17 @@ const char instructionNames [ ] =
 INSTRUCTIONS
 ;
 
-#define InstructionName(offset) (&instructionNames [offset])
+#define InstructionName(i) (&instructionNames [instructionEncode [i].string_offset])
 
-struct InstructionEncode
+struct InstructionEncoding
 {
     uint8 byte0;
     uint8 fixed_size;
     uint8 byte1;                    // if fixed_size > 1
-    uint8 immediate;
-    Instruction name;
+    Immediate immediate;
+    InstructionEnum name;
     uint16 string_offset;
-    void (*interp)(Module*);
+    void (*interp)(Module*); // Module* probably wrong
     int8 pop : 3;                   // required minimum stack in
     int8 push : 3;
     ResultType stack_in0;  // type of stack [0] upon input, if pop >= 1
@@ -1222,9 +1258,35 @@ struct InstructionEncode
     ResultType stack_out0; // type of stack [1] upon input, if push == 1
 };
 
+struct InstructionDecoded
+{
+    InstructionDecoded ()
+    {
+        name = (InstructionEnum)-1;
+        align = offset = -1;
+    }
+
+    union
+    {
+        int   i32;
+        int64 i64;
+        float f32;
+        double f64;
+        uint u32;
+        struct // memory
+        {
+            uint align;
+            uint offset;
+        };
+        // etc.
+    };
+    std::vector<uint> vecLabel;
+    InstructionEnum name;
+};
+
 #undef INSTRUCTION
 #define INSTRUCTION(byte0, fixed_size, byte1, name, imm) { byte0, fixed_size, byte1, imm, name, offsetof (InstructionNames, name) },
-const InstructionEncode instructionEncode [ ] = {
+const InstructionEncoding instructionEncode [ ] = {
     INSTRUCTIONS
 };
 
@@ -1232,7 +1294,7 @@ static_assert (sizeof (instructionEncode) / sizeof (instructionEncode [0]) == 25
 
 struct SectionBase
 {
-    virtual ~SectionBase()
+    virtual ~SectionBase ()
     {
     }
 
@@ -1315,7 +1377,7 @@ struct Function
 struct Global
 {
     GlobalType global_type;
-    uint8* init;
+    std::vector<InstructionDecoded> init;
 };
 
 struct Module
@@ -1332,9 +1394,16 @@ struct Module
     std::vector<Global> globals; // section 6
 
     std::string read_string (uint8*& cursor);
+
+    int read_i32 (uint8*& cursor);
+    int64 read_i64 (uint8*& cursor);
+    float read_f32 (uint8*& cursor);
+    double read_f64 (uint8*& cursor);
+
     uint read_byte (uint8*& cursor);
     uint read_varuint7 (uint8*& cursor);
     uint read_varuint32 (uint8*& cursor);
+    void read_vector_varuint32 (std::vector<uint>&, uint8*& cursor);
     Limits read_limits (uint8*& cursor);
     MemoryType read_memorytype (uint8*& cursor);
     GlobalType read_globaltype (uint8*& cursor);
@@ -1345,6 +1414,64 @@ struct Module
     void read_section (uint8*& cursor);
     void read_module (const char* file_name);
 };
+
+void
+DecodeInstructions (Module* module, std::vector<InstructionDecoded>& instructions, uint8*& cursor)
+{
+    while (1)
+    {
+        InstructionEncoding e;
+        uint b0;
+        InstructionDecoded i;
+        switch (b0 = module->read_byte (cursor))
+        {
+        case BlockEnd:
+            return;
+        default:
+            e = instructionEncode [b0];
+            if (e.fixed_size == 0)
+                ThrowString ("reserved");
+            i.name = e.name;
+            if (e.fixed_size == 2)
+                module->read_byte (cursor);
+            if (e.immediate >= Imm_u32)
+            {
+                i.u32 = module->read_varuint32 (cursor);
+                if (e.immediate == Imm_Memory)
+                {
+                    i.align = i.u32;
+                    i.offset = module->read_varuint32 (cursor);
+                }
+            }
+            else
+            {
+                switch (e.immediate)
+                {
+                default:
+                case Imm_None:
+                    break;
+                case Imm_i32: // Spec is confusing here, signed or unsigned.
+                    i.i32 = module->read_i32 (cursor);
+                    break;
+                case Imm_i64: // Spec is confusing here, signed or unsigned.
+                    i.i64 = module->read_i64 (cursor);
+                    break;
+                case Imm_f32:
+                    i.f32 = module->read_f32 (cursor);
+                    break;
+                case Imm_f64:
+                    i.f64 = module->read_f64 (cursor);
+                    break;
+                case Imm_VecLabel:
+                    module->read_vector_varuint32 (i.vecLabel, cursor);
+                    break;
+                }
+            }
+            printf ("%s %X %d\n", InstructionName (i.name), i.i32, i.i32);
+            instructions.emplace_back (i);
+        }
+    }
+}
 
 // Initial representation of X and XSection are the same.
 // This might evolve, i.e. into separate TypesSection and Types,
@@ -1512,12 +1639,11 @@ struct Globals : Section<6>
         for (auto& a: module->globals)
         {
             a.global_type = module->read_globaltype (cursor);
-            a.init = cursor;
-            printf ("read_globals value_type:%X  mutable:%X init:%p\n", a.global_type.value_type, a.global_type.is_mutable, a.init);
-
+            printf ("read_globals value_type:%X  mutable:%X init:%p\n", a.global_type.value_type, a.global_type.is_mutable, cursor);
+            DecodeInstructions (module, a.init, cursor);
             // Init points to code -- Instructions until end of block 0x0B Instruction.
         }
-        ThrowString ("Globals::read not yet implemented");
+        printf ("read globals6 count:%X\n", count);
     }
 
     virtual void read (Module* module, uint8*& cursor)
@@ -1614,6 +1740,38 @@ SECTIONS
 
 };
 
+int Module::read_i32 (uint8*& cursor)
+{
+    return read_varuint32 (cursor);
+}
+
+int64 Module::read_i64 (uint8*& cursor)
+{
+    return read_varuint64 (cursor, end);
+}
+
+float Module::read_f32 (uint8*& cursor)
+{
+    union {
+        uint8 bytes [4];
+        float f32;
+    } u;
+    for (int i = 0; i < 4; ++i)
+        u.bytes [i] = (uint8)read_byte (cursor);
+    return u.f32;
+}
+
+double Module::read_f64 (uint8*& cursor)
+{
+    union {
+        uint8 bytes [8];
+        double f64;
+    } u;
+    for (int i = 0; i < 8; ++i)
+        u.bytes [i] = (uint8)read_byte (cursor);
+    return u.f64;
+}
+
 uint Module::read_varuint7 (uint8*& cursor)
 {
     // TODO move implementation here
@@ -1636,6 +1794,14 @@ std::string Module::read_string (uint8*& cursor)
     std::string a = std::string ((char*)cursor, length);
     cursor += length;
     return a;
+}
+
+void Module::read_vector_varuint32 (std::vector<uint>& result, uint8*& cursor)
+{
+    uint count = read_varuint32 (cursor);
+    result.resize (count);
+    for (uint i = 0; i < count; ++i)
+        result [i] = read_varuint32 (cursor);
 }
 
 uint Module::read_varuint32 (uint8*& cursor)
@@ -1807,8 +1973,8 @@ using namespace w3;
 int
 main (int argc, char** argv)
 {
-    printf ("%s\n", InstructionName (instructionEncode [1].string_offset));
-    printf ("%s\n", InstructionName (instructionEncode [0xA7].string_offset));
+    printf ("%s\n", InstructionName (1));
+    printf ("%s\n", InstructionName (0xA));
 #if 0 // test code
     char buf [99] = { 0 };
     uint len;
