@@ -886,8 +886,8 @@ typedef enum InstructionEncodingEnum : uint8
 {
     ieReserved      = 0,
     FixedSize1      = 0x01,
-    FixedSize1z     = 0x02,
-    FixedSize1n32   = 0x03,
+    FixedSize1_z    = 0x02,
+    FixedSize1_n32  = 0x03,
     FixedSize2      = 0x04,
     End             = 0x05,
     ieValueType     = 0x06,     // read_varuint32
@@ -1008,10 +1008,10 @@ INSTRUCTION (0x3E, FixedSize1, 0, Memory, Store_i64_32) \
 INSTRUCTION (0x3F, FixedSize2, 0, Memory, MemSize) \
 INSTRUCTION (0x40, FixedSize2, 0, Memory, MemGrow) \
 \
-INSTRUCTION (0x41, FixedSize1n32, 0, Numeric, Const_i32) \
-INSTRUCTION (0x42, FixedSize1n32, 0, Numeric, Const_i64) \
-INSTRUCTION (0x43, FixedSize1z, 0, Numeric, Const_f32) \
-INSTRUCTION (0x44, FixedSize1z, 0, Numeric, Const_f64) \
+INSTRUCTION (0x41, FixedSize1_n32, 0, Numeric, Const_i32) \
+INSTRUCTION (0x42, FixedSize1_n32, 0, Numeric, Const_i64) \
+INSTRUCTION (0x43, FixedSize1_z, 0, Numeric, Const_f32) \
+INSTRUCTION (0x44, FixedSize1_z, 0, Numeric, Const_f64) \
 \
 INSTRUCTION (0x45, FixedSize1, 0, Numeric, Eqz_i32) \
 INSTRUCTION (0x46, FixedSize1, 0, Numeric, Eq_i32) \
