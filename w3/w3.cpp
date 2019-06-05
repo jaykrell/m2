@@ -897,7 +897,7 @@ typedef enum InstructionEncodingEnum : uint8
     GlobalIndex     = 0x0A,     // read_varuint32
     LocalIndex      = 0x0B,     // read_varuint32
     LabelIndex      = 0x0C,     // read_varuint32
-    InstructionEncoding_Sequence = 0x0D,     // 0xB
+    ieSequence      = 0x0D,     // 0xB
     VectorLabels    = 0x0E,
 } InstructionEncodingEnum;
 
@@ -913,11 +913,12 @@ typedef enum InstructionGroup : uint8
 
 struct InstructionEncode
 {
-    uint8 b0;
+    uint8 byte0;
     InstructionEncodingEnum encoding;
-    uint8 b1;                       // if encoding == FixedSize2
+    uint8 byte1;                    // if encoding == FixedSize2
     InstructionGroup group;         // useful?
     uint16 name;
+    uint16 string_offset;
     void (*interp)(Module*);
     int8 pop : 3;                   // required minimum stack in
     int8 push : 3;
@@ -1120,15 +1121,33 @@ INSTRUCTION (0xA6, FixedSize1, 0, Numeric, Copysign_f64) \
 \
 INSTRUCTION (0xA7, FixedSize1, 0, Numeric, i32_Wrap_i64) \
 
+#undef INSTRUCTION
+#define INSTRUCTION(byte0, enc, byte1, group, name) name,
+enum Instruction
+{
+    INSTRUCTIONS
+};
 
 #undef INSTRUCTION
+#define INSTRUCTION(byte0, enc, byte1, group, name) char name [ sizeof (#name) ];
+typedef struct InstructionNames
+{
+INSTRUCTIONS
+} InstructionNames;
 
-#define INSTRUCTION(b0, enc, b1, grp, name) { b0, enc, b1, grp },
-
+#undef INSTRUCTION
+#define INSTRUCTION(byte0, enc, byte1, group, name) { byte0, enc, byte1, group, name, offsetof (InstructionNames, name) },
 const InstructionEncode instructionEncode [256] = {
     INSTRUCTIONS
 };
 
+const char instructionNames [ ] =
+#undef INSTRUCTION
+#define INSTRUCTION(byte0, enc, byte1, group, name) #name "\0"
+INSTRUCTIONS
+;
+
+#define InstructionName(offset) (&instructionNames [offset])
 
 struct SectionBase
 {
@@ -1707,6 +1726,8 @@ using namespace w3;
 int
 main (int argc, char** argv)
 {
+    printf ("%s\n", InstructionName (instructionEncode [1].string_offset));
+    printf ("%s\n", InstructionName (instructionEncode [0xA7].string_offset));
 #if 0 // test code
     char buf [99] = { 0 };
     uint len;
