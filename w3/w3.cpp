@@ -1263,7 +1263,7 @@ struct InstructionDecoded
     InstructionDecoded ()
     {
         name = (InstructionEnum)-1;
-        align = offset = -1;
+        align = offset = (uint)-1;
     }
 
     union
@@ -1486,8 +1486,17 @@ DecodeInstructions (Module* module, std::vector<InstructionDecoded>& instruction
             {
                 switch (e.immediate)
                 {
-                default:
+                case Imm_Sequence:
+                    break;
+                case Imm_u32:
                 case Imm_None:
+                case Imm_Memory:
+                case Imm_Function:
+                case Imm_Global:
+                case Imm_Local:
+                case Imm_Label:
+                case Imm_Type:
+                default:
                     break;
                 case Imm_i32: // Spec is confusing here, signed or unsigned.
                     i.u32 = module->read_i32 (cursor);
@@ -1771,18 +1780,19 @@ struct CodeSection : Section<10>
 
     void read_code (Module* module, uint8*& cursor)
     {
+        uint8* end = module->end;
         uint size = module->read_varuint32 (cursor);
         if (cursor + size > module->end)
-            ThrowString ("code out of bounds");
+            ThrowString (StringFormat ("code out of bounds cursor:%p end:%p size:%X line:%u", cursor, end, size, __LINE__));
         uint i = 0;
         module->code.resize (size);
         for (auto& a : module->code)
         {
             a.size = module->read_varuint32 (cursor);
             if (cursor + a.size > module->end)
-                ThrowString ("code out of bounds");
+                ThrowString (StringFormat ("code out of bounds cursor:%p end:%p size:%X line:%u", cursor, end, a.size, __LINE__));
             a.cursor = cursor;
-            cursor += size;
+            cursor += a.size;
             printf ("code [%X]: %p/%X\n", i++, a.cursor, a.size);
         }
     }
