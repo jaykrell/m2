@@ -45,23 +45,23 @@
 #endif
 
 #if _MSC_VER
-#pragma warning(disable:4710) // function not inlined
-#pragma warning(disable:4619) // invalid pragma warning disable
-#pragma warning(disable:4100) // unused parameter
-#pragma warning(disable:4505) // unused static function
-#pragma warning(disable:4514) // unused function
-#pragma warning(disable:4706) // assignment within conditional
-#pragma warning(disable:4820) // padding
-#pragma warning(push)
-#pragma warning(disable:4710) // function not inlined
-#pragma warning(disable:4626) // assignment implicitly deleted
-#pragma warning(disable:5027) // move assignment implicitly deleted
-#pragma warning(disable:4571) // catch(...)
-#pragma warning(disable:4625) // copy constructor implicitly deleted
-#pragma warning(disable:4668) // //#if not_defined is //#if 0
-#pragma warning(disable:4774) // printf used without constant format
-#pragma warning(disable:5026) // move constructor implicitly deleted
-#pragma warning(disable:5039) // exception handling and function pointers
+#pragma warning (disable:4100) // unused parameter
+#pragma warning (disable:4201) // nonstandard extension used: nameless struct/union
+#pragma warning (disable:4619) // invalid pragma warning disable
+#pragma warning (disable:4505) // unused static function
+#pragma warning (disable:4514) // unused function
+#pragma warning (disable:4706) // assignment within conditional
+#pragma warning (disable:4710) // function not inlined
+#pragma warning (disable:4820) // padding
+#pragma warning (push)
+#pragma warning (disable:4626) // assignment implicitly deleted
+#pragma warning (disable:4571) // catch(...)
+#pragma warning (disable:4625) // copy constructor implicitly deleted
+#pragma warning (disable:4668) // #if not_defined as #if 0
+#pragma warning (disable:4774) // printf used without constant format
+#pragma warning (disable:5026) // move constructor implicitly deleted
+#pragma warning (disable:5027) // move assignment implicitly deleted
+#pragma warning (disable:5039) // exception handling and function pointers
 #endif
 
 #if __GNUC__ || __clang__
@@ -78,11 +78,7 @@
 #include <stdlib.h>
 #include <string>
 #include <vector>
-#include <utility>
 #include <memory>
-using std::basic_string;
-using std::string;
-using std::vector;
 #include <algorithm>
 #if _WIN32
 #define NOMINMAX 1
@@ -98,41 +94,41 @@ using std::vector;
 #endif
 #if _MSC_VER
 #include <malloc.h> // for _alloca
-#pragma warning(pop)
+#pragma warning (pop)
 #endif
 
-using int8 = int8_t;
-using uint8 = uint8_t;
-using int16 = int16_t;
-using uint16 = uint16_t;
-using uint = uint32_t;
-using int64 = int64_t;
-using uint64 = uint64_t;
+typedef int8_t int8;
+typedef int16_t int16;
+typedef int64_t int64;
+typedef uint8_t uint8;
+typedef uint16_t uint16;
+typedef uint64_t uint64;
+typedef uint32_t uint;
 
 namespace w3
 {
 
 // Portable to old (and new) Visual C++ runtime.
 uint
-string_vformat_length (const char *format, va_list va)
+string_vformat_length (const char* format, va_list va)
 {
-#if !_MSC_VER
-    return 2 + vsnprintf (0, 0, format, va);
-#else
+#if _MSC_VER
     // newer runtime: _vscprintf (format, va);
     // else loop until it fits, getting -1 while it does not.
     uint n = 0;
     for (;;)
     {
         uint inc = n ? n : 64;
-        if (_vsnprintf ((char*)_alloca(inc), n += inc, format, va) != -1)
+        if (_vsnprintf ((char*)_alloca (inc), n += inc, format, va) != -1)
             return n + 2;
     }
+#else
+    return 2 + vsnprintf (0, 0, format, va);
 #endif
 }
 
-string
-StringFormatVa (const char *format, va_list va)
+std::string
+StringFormatVa (const char* format, va_list va)
 {
     // Some systems, including Linux/amd64, cannot consume a
     // va_list multiple times. It must be copied first.
@@ -145,21 +141,21 @@ StringFormatVa (const char *format, va_list va)
     va_copy (va2, va); // C99
 #endif
 #endif
-    vector<char> s((size_t)string_vformat_length(format, va));
+    std::vector<char> s ((size_t)string_vformat_length (format, va));
 #if _WIN32
-    _vsnprintf (&s [0], s.size(), format, va);
+    _vsnprintf (&s [0], s.size (), format, va);
 #else
-    vsnprintf (&s [0], s.size(), format, va2);
+    vsnprintf (&s [0], s.size (), format, va2);
 #endif
     return &s [0];
 }
 
-string
-StringFormat (const char *format, ...)
+std::string
+StringFormat (const char* format, ...)
 {
     va_list va;
     va_start (va, format);
-    string a = StringFormatVa (format, va);
+    std::string a = StringFormatVa (format, va);
     va_end (va);
     return a;
 }
@@ -167,9 +163,9 @@ StringFormat (const char *format, ...)
 #define NotImplementedYed() (AssertFormat (0, ("not yet implemented %s 0x%08X ", __func__, __LINE__)))
 
 void
-ThrowString (const string& a)
+ThrowString (const std::string& a)
 {
-    //fprintf (stderr, "%s\n", a.c_str());
+    //fprintf (stderr, "%s\n", a.c_str ());
     throw a + "\n";
     //abort ();
 }
@@ -202,17 +198,17 @@ throw_GetLastError (const char* a = "")
 #endif
 
 void
-AssertFailedFormat (const char* condition, const string& extra)
+AssertFailedFormat (const char* condition, const std::string& extra)
 {
-    //fputs (("AssertFailedFormat:" + string (condition) + ":" + w3::StringFormatVa (format, args) + "\n").c_str (), stderr);
+    //fputs (("AssertFailedFormat:" + std::string (condition) + ":" + w3::StringFormatVa (format, args) + "\n").c_str (), stderr);
     //Assert (0);
     //abort ();
     if (IsDebuggerPresent ()) __debugbreak ();
-    ThrowString ("AssertFailed:" + string (condition) + ":" + extra);
+    ThrowString ("AssertFailed:" + std::string (condition) + ":" + extra);
 }
 
 void
-AssertFailed (const char * expr)
+AssertFailed (const char* expr)
 {
     fprintf (stderr, "AssertFailed:%s\n", expr);
     assert (0);
@@ -224,7 +220,7 @@ AssertFailed (const char * expr)
 
 static
 uint
-Unpack2 (const void *a)
+Unpack2 (const void* a)
 {
     uint8* b = (uint8*)a;
     return ((b [1]) << 8) | (uint)b [0];
@@ -232,21 +228,21 @@ Unpack2 (const void *a)
 
 static
 uint
-Unpack4 (const void *a)
+Unpack4 (const void* a)
 {
     return (Unpack2 ((char*)a + 2) << 16) | Unpack2 (a);
 }
 
 static
 uint
-Unpack (const void *a, uint size)
+Unpack (const void* a, uint size)
 {
     switch (size)
     {
     case 2: return Unpack2 (a);
     case 4: return Unpack4 (a);
     }
-    AssertFormat(size == 2 || size == 4, ("%X", size));
+    AssertFormat (size == 2 || size == 4, ("%X", size));
     return ~0u;
 }
 
@@ -291,7 +287,7 @@ struct uintLEn // unsigned little endian integer, size n bits
             a = (a << 8) | data [--i];
         return a;
     }
-    void operator=(uint);
+    void operator= (uint);
 };
 
 typedef uintLEn<16> uintLE16;
@@ -336,7 +332,7 @@ struct Handle
 {
     // TODO Handle vs. win32file_t, etc.
 
-    uint64 get_file_size (const char * file_name = "")
+    uint64 get_file_size (const char* file_name = "")
     {
         DWORD hi = 0;
         DWORD lo = GetFileSize (h, &hi);
@@ -344,14 +340,14 @@ struct Handle
         {
             DWORD err = GetLastError ();
             if (err != NO_ERROR)
-                throw_Win32Error ((int)err, StringFormat ("GetFileSizeEx(%s)", file_name).c_str());
+                throw_Win32Error ((int)err, StringFormat ("GetFileSizeEx (%s)", file_name).c_str ());
         }
         return (((uint64)hi) << 32) | lo;
     }
 
-    void * h;
+    void* h;
 
-    Handle (void *a) : h (a) { }
+    Handle (void* a) : h (a) { }
     Handle () : h (0) { }
 
     void* get () { return h; }
@@ -412,7 +408,7 @@ struct Fd
     int fd;
 
 #ifndef _WIN32
-    uint64 get_file_size (const char * file_name = "")
+    uint64 get_file_size (const char* file_name = "")
     {
 #if __CYGWIN__
         struct stat st = { 0 }; // TODO test more systems
@@ -421,7 +417,7 @@ struct Fd
         struct stat64 st = { 0 }; // TODO test more systems
         if (fstat64 (fd, &st))
 #endif
-            ThrowErrno (StringFormat ("fstat(%s)", file_name).c_str ());
+            ThrowErrno (StringFormat ("fstat (%s)", file_name).c_str ());
         return st.st_size;
     }
 #endif
@@ -484,14 +480,14 @@ struct MemoryMappedFile
 {
 // TODO allow for redirection to built-in data (i.e. filesystem emulation with builtin BCL)
 // TODO allow for systems that must read, not mmap
-    void * base;
+    void* base;
     size_t size;
 #if _WIN32
     Handle file;
 #else
     Fd file;
 #endif
-    MemoryMappedFile () : base(0), size(0) { }
+    MemoryMappedFile () : base (0), size (0) { }
 
     ~MemoryMappedFile ()
     {
@@ -508,22 +504,22 @@ struct MemoryMappedFile
     {
 #if _WIN32
         file = CreateFileA (a, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-        if (!file) throw_GetLastError (StringFormat ("CreateFileA(%s)", a).c_str ());
+        if (!file) throw_GetLastError (StringFormat ("CreateFileA (%s)", a).c_str ());
         // FIXME check for size==0 and >4GB.
-        size = (size_t)file.get_file_size(a);
+        size = (size_t)file.get_file_size (a);
         Handle h2 = CreateFileMappingW (file, 0, PAGE_READONLY, 0, 0, 0);
-        if (!h2) throw_GetLastError (StringFormat ("CreateFileMapping(%s)", a).c_str ());
+        if (!h2) throw_GetLastError (StringFormat ("CreateFileMapping (%s)", a).c_str ());
         base = MapViewOfFile (h2, FILE_MAP_READ, 0, 0, 0);
         if (!base)
-            throw_GetLastError (StringFormat ("MapViewOfFile(%s)", a).c_str ());
+            throw_GetLastError (StringFormat ("MapViewOfFile (%s)", a).c_str ());
 #else
         file = open (a, O_RDONLY);
-        if (!file) ThrowErrno (StringFormat ("open(%s)", a).c_str ());
+        if (!file) ThrowErrno (StringFormat ("open (%s)", a).c_str ());
         // FIXME check for size==0 and >4GB.
-        size = (size_t)file.get_file_size(a);
+        size = (size_t)file.get_file_size (a);
         base = mmap (0, size, PROT_READ, MAP_PRIVATE, file, 0);
         if (base == MAP_FAILED)
-            ThrowErrno (StringFormat ("mmap(%s)", a).c_str ());
+            ThrowErrno (StringFormat ("mmap (%s)", a).c_str ());
 #endif
     }
 };
@@ -553,9 +549,9 @@ SignExtend (uint64 value, uint bits)
 
 struct int_split_sign_magnitude_t
 {
-    int_split_sign_magnitude_t(int64 a)
-    : neg((a < 0) ? 1u : 0u),
-        u((a < 0) ? (1 + (uint64)-(a + 1)) // Avoid negating most negative number.
+    int_split_sign_magnitude_t (int64 a)
+    : neg ((a < 0) ? 1u : 0u),
+        u ((a < 0) ? (1 + (uint64)-(a + 1)) // Avoid negating most negative number.
                   : (uint64)a) { }
     uint neg;
     uint64 u;
@@ -577,7 +573,7 @@ IntGetPrecision (int64 a)
 {
     // How many bits needed to represent.
     // i.e. so leading bit is extendible sign bit, or 64
-    return std::min(64u, 1 + UIntGetPrecision (int_split_sign_magnitude_t(a).u));
+    return std::min (64u, 1 + UIntGetPrecision (int_split_sign_magnitude_t (a).u));
 }
 
 static
@@ -594,7 +590,7 @@ static
 uint
 UIntToDec (uint64 a, char* buf)
 {
-    uint const len = UIntToDec_GetLength(a);
+    uint const len = UIntToDec_GetLength (a);
     for (uint i = 0; i < len; ++i, a /= 10)
         buf [i] = "0123456789" [a % 10];
     return len;
@@ -604,18 +600,18 @@ static
 uint
 IntToDec (int64 a, char* buf)
 {
-    const int_split_sign_magnitude_t split(a);
+    const int_split_sign_magnitude_t split (a);
     if (split.neg)
         *buf++ = '-';
-    return split.neg + UIntToDec(split.u, buf);
+    return split.neg + UIntToDec (split.u, buf);
 }
 
 static
 uint
 IntToDec_GetLength (int64 a)
 {
-    const int_split_sign_magnitude_t split(a);
-    return split.neg + UIntToDec_GetLength(split.u);
+    const int_split_sign_magnitude_t split (a);
+    return split.neg + UIntToDec_GetLength (split.u);
 }
 
 static
@@ -645,7 +641,7 @@ IntToHex_GetLength (int64 a)
 
 static
 void
-UIntToHexLength (uint64 a, uint len, char *buf)
+UIntToHexLength (uint64 a, uint len, char* buf)
 {
     buf += len;
     for (uint i = 0; i < len; ++i, a >>= 4)
@@ -654,25 +650,25 @@ UIntToHexLength (uint64 a, uint len, char *buf)
 
 static
 void
-IntToHexLength (int64 a, uint len, char *buf)
+IntToHexLength (int64 a, uint len, char* buf)
 {
-    UIntToHexLength((uint64)a, len, buf);
+    UIntToHexLength ((uint64)a, len, buf);
 }
 
 static
 uint
-IntToHex (int64 a, char *buf)
+IntToHex (int64 a, char* buf)
 {
     uint const len = IntToHex_GetLength (a);
-    IntToHexLength(a, len, buf);
+    IntToHexLength (a, len, buf);
     return len;
 }
 
 static
 uint
-IntToHex8 (int64 a, char *buf)
+IntToHex8 (int64 a, char* buf)
 {
-    IntToHexLength(a, 8, buf);
+    IntToHexLength (a, 8, buf);
     return 8;
 }
 
@@ -681,7 +677,7 @@ uint
 IntToHex_GetLength_AtLeast8 (int64 a)
 {
     uint const len = IntToHex_GetLength (a);
-    return std::max(len, 8u);
+    return std::max (len, 8u);
 }
 
 static
@@ -694,7 +690,7 @@ UIntToHex_GetLength_AtLeast8 (uint64 a)
 
 static
 uint
-IntToHex_AtLeast8 (int64 a, char *buf)
+IntToHex_AtLeast8 (int64 a, char* buf)
 {
     uint const len = IntToHex_GetLength_AtLeast8 (a);
     IntToHexLength (a, len, buf);
@@ -703,7 +699,7 @@ IntToHex_AtLeast8 (int64 a, char *buf)
 
 static
 uint
-UIntToHex_AtLeast8 (uint64 a, char *buf)
+UIntToHex_AtLeast8 (uint64 a, char* buf)
 {
     uint const len = UIntToHex_GetLength_AtLeast8 (a);
     UIntToHexLength (a, len, buf);
@@ -713,8 +709,8 @@ UIntToHex_AtLeast8 (uint64 a, char *buf)
 struct stream
 {
     virtual void write (const void* bytes, size_t count) = 0;
-    void prints (const char* a) { write (a, strlen(a)); }
-    void prints (const string& a) { prints(a.c_str()); }
+    void prints (const char* a) { write (a, strlen (a)); }
+    void prints (const std::string& a) { prints (a.c_str ()); }
     void printc (char a) { write (&a, 1); }
     void printf (const char* format, ...)
     {
@@ -725,9 +721,9 @@ struct stream
     }
 
     void
-    printv(const char *format, va_list va)
+    printv (const char* format, va_list va)
     {
-        prints(StringFormatVa(format, va));
+        prints (StringFormatVa (format, va));
     }
 };
 
@@ -739,11 +735,11 @@ struct stdout_stream : stream
         const char* pc = (const char*)bytes;
         while (count > 0)
         {
-            uint const n = (uint)std::min(count, ((size_t)1024) * 1024 * 1024);
+            uint const n = (uint)std::min (count, ((size_t)1024) * 1024 * 1024);
 #if _MSC_VER
-            ::_write(_fileno(stdout), pc, n);
+            ::_write (_fileno (stdout), pc, n);
 #else
-            ::write(fileno(stdout), pc, n);
+            ::write (fileno (stdout), pc, n);
 #endif
             count -= n;
             pc += n;
@@ -753,17 +749,17 @@ struct stdout_stream : stream
 
 struct stderr_stream : stream
 {
-    virtual void write(const void* bytes, size_t count)
+    virtual void write (const void* bytes, size_t count)
     {
         fflush (stderr);
         const char* pc = (const char*)bytes;
         while (count > 0)
         {
-            uint const n = (uint)std::min(count, ((size_t)1024) * 1024 * 1024);
+            uint const n = (uint)std::min (count, ((size_t)1024) * 1024 * 1024);
 #if _MSC_VER
-            ::_write(_fileno(stderr), pc, n);
+            ::_write (_fileno (stderr), pc, n);
 #else
-            ::write(fileno(stderr), pc, n);
+            ::write (fileno (stderr), pc, n);
 #endif
             count -= n;
             pc += n;
@@ -1250,7 +1246,7 @@ struct InstructionEncoding
     Immediate immediate;
     InstructionEnum name;
     uint16 string_offset;
-    void (*interp)(Module*); // Module* probably wrong
+    void (*interp) (Module*); // Module* probably wrong
     int8 pop : 3;                   // required minimum stack in
     int8 push : 3;
     ResultType stack_in0;  // type of stack [0] upon input, if pop >= 1
@@ -1405,13 +1401,13 @@ struct Data
 {
     uint memory;
     std::vector<InstructionDecoded> expr;
-    void * bytes;
+    void* bytes;
 };
 
 struct Code
 {
     uint size;
-    uint8 * cursor;
+    uint8* cursor;
     std::vector<InstructionDecoded> decoded; // section10
 };
 
@@ -1550,7 +1546,7 @@ struct Types : Section<1>
 {
     std::vector<FunctionType> functionTypes;
 
-    static SectionBase* make()
+    static SectionBase* make ()
     {
         return new Types ();
     }
@@ -1575,7 +1571,7 @@ struct Imports : Section<2>
 {
     std::vector<Import> data;
 
-    static SectionBase* make()
+    static SectionBase* make ()
     {
         return new Imports ();
     }
@@ -1621,7 +1617,7 @@ struct Imports : Section<2>
 
 struct Functions : Section<3>
 {
-    static SectionBase* make()
+    static SectionBase* make ()
     {
         return new Functions ();
     }
@@ -1644,7 +1640,7 @@ struct Functions : Section<3>
 
 struct Tables : Section<4>
 {
-    static SectionBase* make()
+    static SectionBase* make ()
     {
         return new Tables ();
     }
@@ -1660,7 +1656,7 @@ struct Tables : Section<4>
 
 struct Memory : Section<5>
 {
-    static SectionBase* make()
+    static SectionBase* make ()
     {
         return new Memory ();
     }
@@ -1674,7 +1670,7 @@ struct Memory : Section<5>
 
 struct Globals : Section<6>
 {
-    static SectionBase* make()
+    static SectionBase* make ()
     {
         return new Globals ();
     }
@@ -1702,7 +1698,7 @@ struct Globals : Section<6>
 
 struct Exports : Section<7>
 {
-    static SectionBase* make()
+    static SectionBase* make ()
     {
         return new Exports ();
     }
@@ -1730,7 +1726,7 @@ struct Exports : Section<7>
 
 struct Start : Section<8>
 {
-    static SectionBase* make()
+    static SectionBase* make ()
     {
         return new Start ();
     }
@@ -1743,7 +1739,7 @@ struct Start : Section<8>
 
 struct Elements : Section<9>
 {
-    static SectionBase* make()
+    static SectionBase* make ()
     {
         return new Elements ();
     }
@@ -1773,7 +1769,7 @@ struct Elements : Section<9>
 
 struct CodeSection : Section<10>
 {
-    static SectionBase* make()
+    static SectionBase* make ()
     {
         return new CodeSection ();
     }
@@ -1805,9 +1801,9 @@ struct CodeSection : Section<10>
 
 struct DataSection : Section<11>
 {
-    static SectionBase* make()
+    static SectionBase* make ()
     {
-        return new DataSection();
+        return new DataSection ();
     }
 
     void read_data (Module* module, uint8*& cursor)
@@ -1858,16 +1854,20 @@ SECTIONS
 };
 
 uint Module::read_i32 (uint8*& cursor)
+// Unspecified signedness is unsigned. Spec is unclear.
 {
     return read_varuint32 (cursor);
 }
 
 uint64 Module::read_i64 (uint8*& cursor)
+// Unspecified signedness is unsigned. Spec is unclear.
 {
     return read_varuint64 (cursor, end);
 }
 
 float Module::read_f32 (uint8*& cursor)
+// floats are not variably sized? Spec is unclear due to fancy notation
+// getting in the way.
 {
     union {
         uint8 bytes [4];
@@ -1879,6 +1879,8 @@ float Module::read_f32 (uint8*& cursor)
 }
 
 double Module::read_f64 (uint8*& cursor)
+// floats are not variably sized? Spec is unclear due to fancy notation
+// getting in the way.
 {
     union {
         uint8 bytes [8];
@@ -1891,17 +1893,18 @@ double Module::read_f64 (uint8*& cursor)
 
 uint Module::read_varuint7 (uint8*& cursor)
 {
-    // TODO move implementation here
+    // TODO move implementation here, i.e. for context, for errors
     return w3::read_varuint7 (cursor, end);
 }
 
 uint Module::read_byte (uint8*& cursor)
 {
-    // TODO move implementation here
+    // TODO move implementation here, i.e. for context, for errors
     return w3::read_byte (cursor, end);
 }
 
 // TODO efficiency
+// i.e. string_view or such pointing right into the mmap
 std::string Module::read_string (uint8*& cursor)
 {
     uint length = read_varuint32 (cursor);
@@ -1923,7 +1926,7 @@ void Module::read_vector_varuint32 (std::vector<uint>& result, uint8*& cursor)
 
 uint Module::read_varuint32 (uint8*& cursor)
 {
-    // TODO move implementation here
+    // TODO move implementation here, i.e. for context, for errors
     return w3::read_varuint32 (cursor, end);
 }
 
@@ -2042,7 +2045,7 @@ void Module::read_section (uint8*& cursor)
         return;
     }
 
-    auto section = sections [id] = std::shared_ptr<SectionBase>(section_traits [id].make ());
+    auto section = sections [id] = std::shared_ptr <SectionBase> (section_traits [id].make ());
     section->id = id;
     section->name = std::string ((char*)name, name_len);
     section->payload_len = payload_len;
@@ -2052,7 +2055,7 @@ void Module::read_section (uint8*& cursor)
 
 void Module::read_module (const char* file_name)
 {
-    sections.resize (12); // FIXME
+    sections.resize (12); // FIXME mostly can be fixed size, but handle custom sections
     mmf.read (file_name);
     base = (uint8*)mmf.base;
     file_size = mmf.file.get_file_size ();
@@ -2085,45 +2088,44 @@ void Module::read_module (const char* file_name)
     assert (cursor == end);
 }
 
-
 }
 
-using namespace w3;
+using namespace w3; // TODO C or C++?
 
 int
 main (int argc, char** argv)
 {
     printf ("%s\n", InstructionName (1));
-    printf ("%s\n", InstructionName (0xA));
-#if 0 // test code
+    printf ("%s\n", InstructionName (0x44));
+#if 0 // test code TODO move it elsewhere? Or under a switch.
     char buf [99] = { 0 };
     uint len;
 #define Xd(x) printf ("%s %I64d\n", #x, x);
 #define Xx(x) printf ("%s %I64x\n", #x, x);
 #define Xs(x) len = x; buf [len] = 0; printf ("%s %s\n", #x, buf);
-    Xd (UIntGetPrecision(0));
-    Xd (UIntGetPrecision(1));
-    Xd (UIntGetPrecision(0x2));
-    Xd (UIntGetPrecision(0x2));
-    Xd (UIntGetPrecision(0x7));
-    Xd (UIntGetPrecision(0x8));
-    Xd (IntGetPrecision(0));
-    Xd (IntGetPrecision(1));
-    Xd (IntGetPrecision(0x2));
-    Xd (IntGetPrecision(0x2));
-    Xd (IntGetPrecision(0x7));
-    Xd (IntGetPrecision(0x8));
-    Xd (IntGetPrecision(0));
-    Xd (IntGetPrecision(-1));
-    Xd (IntGetPrecision(-0x2));
-    Xd (IntGetPrecision(-0x2));
-    Xd (IntGetPrecision(-0x7));
-    Xd (IntGetPrecision(-0x8));
-    Xd (IntToDec_GetLength(0))
-    Xd (IntToDec_GetLength(1))
-    Xd (IntToDec_GetLength(2))
-    Xd (IntToDec_GetLength(300))
-    Xd (IntToDec_GetLength(-1))
+    Xd (UIntGetPrecision (0));
+    Xd (UIntGetPrecision (1));
+    Xd (UIntGetPrecision (0x2));
+    Xd (UIntGetPrecision (0x2));
+    Xd (UIntGetPrecision (0x7));
+    Xd (UIntGetPrecision (0x8));
+    Xd (IntGetPrecision (0));
+    Xd (IntGetPrecision (1));
+    Xd (IntGetPrecision (0x2));
+    Xd (IntGetPrecision (0x2));
+    Xd (IntGetPrecision (0x7));
+    Xd (IntGetPrecision (0x8));
+    Xd (IntGetPrecision (0));
+    Xd (IntGetPrecision (-1));
+    Xd (IntGetPrecision (-0x2));
+    Xd (IntGetPrecision (-0x2));
+    Xd (IntGetPrecision (-0x7));
+    Xd (IntGetPrecision (-0x8));
+    Xd (IntToDec_GetLength (0))
+    Xd (IntToDec_GetLength (1))
+    Xd (IntToDec_GetLength (2))
+    Xd (IntToDec_GetLength (300))
+    Xd (IntToDec_GetLength (-1))
     Xx (SignExtend (0xf, 0));
     Xx (SignExtend (0xf, 1));
     Xx (SignExtend (0xf, 2));
@@ -2155,7 +2157,7 @@ main (int argc, char** argv)
     Xd (IntToHex_GetLength (~0u >> 1));
     Xd (IntToHex_GetLength (~0u >> 2));
     Xd (IntToHex_GetLength (~0u >> 4));
-    exit(0);
+    exit (0);
 #endif
 #if 1
     try
@@ -2169,9 +2171,9 @@ main (int argc, char** argv)
     {
         fprintf (stderr, "error 0x%08X\n", er);
     }
-    catch (const string& er)
+    catch (const std::string& er)
     {
-        fprintf (stderr, "%s", er.c_str());
+        fprintf (stderr, "%s", er.c_str ());
     }
 #endif
     return 0;
