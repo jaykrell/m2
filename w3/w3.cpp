@@ -994,33 +994,35 @@ RESERVED (25) \
 RESERVED (26) \
 RESERVED (27) \
 \
-INSTRUCTION (0x28, 1, 0, Load_i32, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_i32) \
-INSTRUCTION (0x29, 1, 0, Load_i64, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_i64) \
-INSTRUCTION (0x2A, 1, 0, Load_f32, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_f32) \
-INSTRUCTION (0x2B, 1, 0, Load_f64, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_f64) \
+LOAD (0x28, i32, ) \
+LOAD (0x29, i64, ) \
+LOAD (0x2A, f32, ) \
+LOAD (0x2B, f64, ) \
 \
-INSTRUCTION (0x2C, 1, 0, Load_i32_8s, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_i32) \
-INSTRUCTION (0x2D, 1, 0, Load_i32_8u, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_i32) \
-INSTRUCTION (0x2E, 1, 0, Load_i32_16s, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_i32) \
-INSTRUCTION (0x2F, 1, 0, Load_i32_16u, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_i32) \
+/* zero or sign extending load from memory to register */ \
+LOAD (0x2C, i32, 8s) \
+LOAD (0x2D, i32, 8u) \
+LOAD (0x2E, i32, 16s) \
+LOAD (0x2F, i32, 16u) \
+LOAD (0x30, i64, 8s) \
+LOAD (0x31, i64, 8u) \
+LOAD (0x32, i64, 16s) \
+LOAD (0x33, i64, 16u) \
+LOAD (0x34, i64, 32s) \
+LOAD (0x35, i64, 32u) \
 \
-INSTRUCTION (0x30, 1, 0, Load_i64_8s, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_i64) \
-INSTRUCTION (0x31, 1, 0, Load_i64_8u, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_i64) \
-INSTRUCTION (0x32, 1, 0, Load_i64_16s, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_i64) \
-INSTRUCTION (0x33, 1, 0, Load_i64_16u, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_i64) \
-INSTRUCTION (0x34, 1, 0, Load_i64_32s, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_i64) \
-INSTRUCTION (0x35, 1, 0, Load_i64_32u, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_i64) \
+STORE (0x36, i32, ) \
+STORE (0x37, i64, ) \
+STORE (0x38, f32, ) \
+STORE (0x39, f64, ) \
 \
-INSTRUCTION (0x36, 1, 0, Store_i32, Imm_memory, 1, 0, Type_i32, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x37, 1, 0, Store_i64, Imm_memory, 1, 0, Type_i64, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x38, 1, 0, Store_f32, Imm_memory, 1, 0, Type_f32, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x39, 1, 0, Store_f64, Imm_memory, 1, 0, Type_f64, Type_none, Type_none, Type_none) \
+/* truncating store from register to memory */ \
+STORE (0x3A, i32, 8) \
+STORE (0x3B, i32, 16) \
+STORE (0x3C, i64, 8)  \
+STORE (0x3D, i64, 16) \
+STORE (0x3E, i64, 32) \
 \
-INSTRUCTION (0x3A, 1, 0, Store_i32_8,   Imm_memory, 1, 0, Type_i32, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x3B, 1, 0, Store_i32_16,  Imm_memory, 1, 0, Type_i32, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x3C, 1, 0, Store_i64_8,   Imm_memory, 1, 0, Type_i64, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x3D, 1, 0, Store_i64_16,  Imm_memory, 1, 0, Type_i64, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x3E, 1, 0, Store_i64_32,  Imm_memory, 1, 0, Type_i64, Type_none, Type_none, Type_none) \
 INSTRUCTION (0x3F, 2, 0, MemSize,       Imm_none,   0, 0, Type_none, Type_none, Type_none, Type_none) \
 INSTRUCTION (0x40, 2, 0, MemGrow,       Imm_none,   0, 0, Type_none, Type_none, Type_none, Type_none) \
 \
@@ -1246,7 +1248,11 @@ RESERVED (FF) \
 #define RESERVED(b0) INSTRUCTION (0x ## b0, 0, 0, Reserved ## b0, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none)
 
 #undef CONST
-#define CONST(b0, type) INSTRUCTION (b0, 1, 0, Const_ ## type, Imm_ ## type, 0, 1, Type_none, Type_none, Type_none, Type_ ## type) \
+#define CONST(b0, type) INSTRUCTION (b0, 1, 0, Const_ ## type, Imm_ ## type, 0, 1, Type_none, Type_none, Type_none, Type_ ## type)
+
+#define LOAD(b0, to, from) INSTRUCTION (b0, 1, 0, to ## _Load ## from, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_ ## to)
+#define STORE(b0, from, to) INSTRUCTION (b0, 1, 0, from ## _Store ## to, Imm_memory, 1, 0, Type_ ## from, Type_none, Type_none, Type_none)
+
 
 #undef INSTRUCTION
 #define INSTRUCTION(byte0, fixed_size, byte1, name, imm, push, pop, in0, in1, in2, out0) name,
