@@ -139,7 +139,7 @@ clean:
 	$(RM_F) mac win32 win32.exe win64 win64.exe win win.exe cyg cyg.exe *.ilk lin
 
 mac: w3.cpp
-	g++ -std=c++14 -g w3.cpp -o $@ -Bsymbolic -znow -zrelro
+	g++ -std=c++14 -g w3.cpp -o $@ -Bsymbolic -bind_at_load
 
 cyg: w3.cpp
 	g++ -std=c++14 -g w3.cpp -o $@ -Bsymbolic -znow -zrelro
