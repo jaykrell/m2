@@ -953,11 +953,11 @@ INSTRUCTION (0x03, 1, 0, Loop,      Imm_sequence, 0, 0, Type_none, Type_none, Ty
 INSTRUCTION (0x04, 1, 0, If,        Imm_sequence, 0, 0, Type_none, Type_none, Type_none, Type_none) \
 INSTRUCTION (0x05, 1, 0, Else,      Imm_sequence, 0, 0, Type_none, Type_none, Type_none, Type_none) \
 \
-INSTRUCTION (0x06, 0, 0, Reserved06, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x07, 0, 0, Reserved07, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x08, 0, 0, Reserved08, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x09, 0, 0, Reserved09, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x0A, 0, 0, Reserved0A, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
+RESERVED (06) \
+RESERVED (07) \
+RESERVED (08) \
+RESERVED (09) \
+RESERVED (0A) \
 \
 INSTRUCTION (0x0B, 1, 0, BlockEnd,  Imm_none,       0, 0, Type_none, Type_none, Type_none, Type_none) \
 INSTRUCTION (0x0C, 1, 0, Br,        Imm_label,      0, 0, Type_none, Type_none, Type_none, Type_none) \
@@ -967,22 +967,22 @@ INSTRUCTION (0x0F, 1, 0, Ret,       Imm_none,       0, 0, Type_none, Type_none, 
 INSTRUCTION (0x10, 1, 0, Call,      Imm_function,   0, 0, Type_none, Type_none, Type_none, Type_none) \
 INSTRUCTION (0x11, 1, 0, Calli,     Imm_type,       0, 0, Type_none, Type_none, Type_none, Type_none) \
 \
-INSTRUCTION (0x12, 0, 0, Reserved12, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x13, 0, 0, Reserved13, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x14, 0, 0, Reserved14, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x15, 0, 0, Reserved15, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x16, 0, 0, Reserved16, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x17, 0, 0, Reserved17, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x18, 0, 0, Reserved18, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x19, 0, 0, Reserved19, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
+RESERVED (12) \
+RESERVED (13) \
+RESERVED (14) \
+RESERVED (15) \
+RESERVED (16) \
+RESERVED (17) \
+RESERVED (18) \
+RESERVED (19) \
 \
 INSTRUCTION (0x1A, 1, 0, Drop,       Imm_none, 1, 0, Type_any, Type_none, Type_none, Type_none) \
 INSTRUCTION (0x1B, 1, 0, Select,     Imm_none, 3, 1, Type_any, Type_any, Type_bool, Type_any) \
 \
-INSTRUCTION (0x1C, 0, 0, Reserved1C, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x1D, 0, 0, Reserved1D, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x1E, 0, 0, Reserved1E, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x1F, 0, 0, Reserved1F, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
+RESERVED (1C) \
+RESERVED (1D) \
+RESERVED (1E) \
+RESERVED (1F) \
 \
 INSTRUCTION (0x20, 1, 0, Local_get, Imm_local, 0, 1, Type_none, Type_none, Type_none, Type_any) \
 INSTRUCTION (0x21, 1, 0, Local_set, Imm_local, 1, 0, Type_any, Type_none, Type_none, Type_none) \
@@ -990,9 +990,9 @@ INSTRUCTION (0x22, 1, 0, Local_tee, Imm_local, 1, 1, Type_any, Type_none, Type_n
 INSTRUCTION (0x23, 1, 0, Global_get, Imm_global, 0, 1, Type_none, Type_none, Type_none, Type_any) \
 INSTRUCTION (0x24, 1, 0, Global_set, Imm_global, 1, 0, Type_any, Type_none, Type_none, Type_none) \
 \
-INSTRUCTION (0x25, 0, 0, Reserved25, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x26, 0, 0, Reserved26, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0x27, 0, 0, Reserved27, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
+RESERVED (25) \
+RESERVED (26) \
+RESERVED (27) \
 \
 INSTRUCTION (0x28, 1, 0, Load_i32, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_i32) \
 INSTRUCTION (0x29, 1, 0, Load_i64, Imm_memory, 0, 1, Type_none, Type_none, Type_none, Type_i64) \
@@ -1024,214 +1024,229 @@ INSTRUCTION (0x3E, 1, 0, Store_i64_32,  Imm_memory, 1, 0, Type_i64, Type_none, T
 INSTRUCTION (0x3F, 2, 0, MemSize,       Imm_none,   0, 0, Type_none, Type_none, Type_none, Type_none) \
 INSTRUCTION (0x40, 2, 0, MemGrow,       Imm_none,   0, 0, Type_none, Type_none, Type_none, Type_none) \
 \
-INSTRUCTION (0x41, 1, 0, Const_i32, Imm_i32, 0, 0, Type_none, Type_none, Type_none, Type_i32) \
-INSTRUCTION (0x42, 1, 0, Const_i64, Imm_i64, 0, 0, Type_none, Type_none, Type_none, Type_i64) \
-INSTRUCTION (0x43, 1, 0, Const_f32, Imm_f32, 0, 0, Type_none, Type_none, Type_none, Type_f32) \
-INSTRUCTION (0x44, 1, 0, Const_f64, Imm_f64, 0, 0, Type_none, Type_none, Type_none, Type_f64) \
+CONST (0x41, i32) \
+CONST (0x42, i64) \
+CONST (0x43, f32) \
+CONST (0x44, f64) \
 \
-INSTRUCTION (0x45, 1, 0, Eqz_i32, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x46, 1, 0, Eq_i32, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x47, 1, 0, Ne_i32, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x48, 1, 0, Lt_i32s, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x49, 1, 0, Lt_i32u, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x4A, 1, 0, Gt_i32s, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x4B, 1, 0, Gt_i32u, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x4C, 1, 0, Le_i32s, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x4D, 1, 0, Le_i32u, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x4E, 1, 0, Ge_i32s, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x4F, 1, 0, Ge_i32u, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
+ITESTOP (0x45, Eqz, 32) \
+IRELOP (0x46, Eq, 32, ) \
+IRELOP (0x47, Ne, 32, ) \
+IRELOP (0x48, Lt, 32, s) \
+IRELOP (0x49, Lt, 32, u) \
+IRELOP (0x4A, Gt, 32, s) \
+IRELOP (0x4B, Gt, 32, u) \
+IRELOP (0x4C, Le, 32, s) \
+IRELOP (0x4D, Le, 32, u) \
+IRELOP (0x4E, Ge, 32, s) \
+IRELOP (0x4F, Ge, 32, u) \
 \
-INSTRUCTION (0x50, 1, 0, Eqz_i64, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x51, 1, 0, Eq_i64, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x52, 1, 0, Ne_i64, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x53, 1, 0, Lt_i64s, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x54, 1, 0, Lt_i64u, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x55, 1, 0, Gt_i64s, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x56, 1, 0, Gt_i64u, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x57, 1, 0, Le_i64s, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x58, 1, 0, Le_i64u, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x59, 1, 0, Ge_i64s, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x5A, 1, 0, Ge_i64u, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
+ITESTOP (0x50, Eqz, 64) \
+IRELOP (0x51, Eq, 64,  ) \
+IRELOP (0x52, Ne, 64,  ) \
+IRELOP (0x53, Lt, 64, s) \
+IRELOP (0x54, Lt, 64, u) \
+IRELOP (0x55, Gt, 64, s) \
+IRELOP (0x56, Gt, 64, u) \
+IRELOP (0x57, Le, 64, s) \
+IRELOP (0x58, Le, 64, u) \
+IRELOP (0x59, Ge, 64, s) \
+IRELOP (0x5A, Ge, 64, u) \
 \
-INSTRUCTION (0x5B, 1, 0, Eq_f32, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x5C, 1, 0, Ne_f32, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x5D, 1, 0, Lt_f32, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x5E, 1, 0, Gt_f32, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x5F, 1, 0, Le_f32, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x60, 1, 0, Ge_f32, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
+FRELOP (0x5B, Eq, 32) \
+FRELOP (0x5C, Ne, 32) \
+FRELOP (0x5D, Lt, 32) \
+FRELOP (0x5E, Gt, 32) \
+FRELOP (0x5F, Le, 32) \
+FRELOP (0x60, Ge, 32) \
 \
-INSTRUCTION (0x61, 1, 0, Eq_f64, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x62, 1, 0, Ne_f64, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x63, 1, 0, Lt_f64, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x64, 1, 0, Gt_f64, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x65, 1, 0, Le_f64, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
-INSTRUCTION (0x66, 1, 0, Ge_f64, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_bool) \
+FRELOP (0x61, Eq, 64) \
+FRELOP (0x62, Ne, 64) \
+FRELOP (0x63, Lt, 64) \
+FRELOP (0x64, Gt, 64) \
+FRELOP (0x65, Le, 64) \
+FRELOP (0x66, Ge, 64) \
 \
- IUNOP (0x67, Clz,       i32) \
- IUNOP (0x68, Ctz,       i32) \
- IUNOP (0x69, Popcnt,    i32) \
-IBINOP (0x6A, Add,       i32) \
-IBINOP (0x6B, Sub,       i32) \
-IBINOP (0x6C, Mul,       i32) \
-IBINOP (0x6D, Div_s,     i32) \
-IBINOP (0x6E, Div_u,     i32) \
-IBINOP (0x6F, Rem_s,     i32) \
-IBINOP (0x70, Rem_u,     i32) \
-IBINOP (0x71, And,       i32) \
-IBINOP (0x72, Or,        i32) \
-IBINOP (0x73, Xor,       i32) \
-IBINOP (0x74, Shl,       i32) \
-IBINOP (0x75, Shr_s,     i32) \
-IBINOP (0x76, Shr_u,     i32) \
-IBINOP (0x77, Rotl,      i32) \
-IBINOP (0x78, Rotr,      i32) \
+ IUNOP (0x67, Clz,     32) \
+ IUNOP (0x68, Ctz,     32) \
+ IUNOP (0x69, Popcnt,  32) \
+IBINOP (0x6A, Add,     32) \
+IBINOP (0x6B, Sub,     32) \
+IBINOP (0x6C, Mul,     32) \
+IBINOP (0x6D, Div_s,   32) \
+IBINOP (0x6E, Div_u,   32) \
+IBINOP (0x6F, Rem_s,   32) \
+IBINOP (0x70, Rem_u,   32) \
+IBINOP (0x71, And,     32) \
+IBINOP (0x72, Or,      32) \
+IBINOP (0x73, Xor,     32) \
+IBINOP (0x74, Shl,     32) \
+IBINOP (0x75, Shr_s,   32) \
+IBINOP (0x76, Shr_u,   32) \
+IBINOP (0x77, Rotl,    32) \
+IBINOP (0x78, Rotr,    32) \
 \
- IUNOP (0x79, Clz,     i64) \
- IUNOP (0x7A, Ctz,     i64) \
- IUNOP (0x7B, Popcnt,  i64) \
-IBINOP (0x7C, Add,     i64) \
-IBINOP (0x7D, Sub,     i64) \
-IBINOP (0x7E, Mul,     i64) \
-IBINOP (0x7F, Div_s,   i64) \
-IBINOP (0x80, Div_u,   i64) \
-IBINOP (0x81, Rem_s,   i64) \
-IBINOP (0x82, Rem_u,   i64) \
-IBINOP (0x83, And,     i64) \
-IBINOP (0x84, Or,      i64) \
-IBINOP (0x85, Xor,     i64) \
-IBINOP (0x86, Shl,     i64) \
-IBINOP (0x87, Shr_s,   i64) \
-IBINOP (0x88, Shr_u,   i64) \
-IBINOP (0x89, Rotl,    i64) \
-IBINOP (0x8A, Rotr,    i64) \
+ IUNOP (0x79, Clz,     64) \
+ IUNOP (0x7A, Ctz,     64) \
+ IUNOP (0x7B, Popcnt,  64) \
+IBINOP (0x7C, Add,     64) \
+IBINOP (0x7D, Sub,     64) \
+IBINOP (0x7E, Mul,     64) \
+IBINOP (0x7F, Div_s,   64) \
+IBINOP (0x80, Div_u,   64) \
+IBINOP (0x81, Rem_s,   64) \
+IBINOP (0x82, Rem_u,   64) \
+IBINOP (0x83, And,     64) \
+IBINOP (0x84, Or,      64) \
+IBINOP (0x85, Xor,     64) \
+IBINOP (0x86, Shl,     64) \
+IBINOP (0x87, Shr_s,   64) \
+IBINOP (0x88, Shr_u,   64) \
+IBINOP (0x89, Rotl,    64) \
+IBINOP (0x8A, Rotr,    64) \
 \
-INSTRUCTION (0x8B, 1, 0, Abs_f32,       Imm_none,   1, 1, Type_f32, Type_none, Type_none, Type_f32) \
-INSTRUCTION (0x8C, 1, 0, Neg_f32,       Imm_none,   1, 1, Type_f32, Type_none, Type_none, Type_f32) \
-INSTRUCTION (0x8D, 1, 0, Ceil_f32,      Imm_none,   1, 1, Type_f32, Type_none, Type_none, Type_f32) \
-INSTRUCTION (0x8E, 1, 0, Floor_f32,     Imm_none,   1, 1, Type_f32, Type_none, Type_none, Type_f32) \
-INSTRUCTION (0x8F, 1, 0, Trunc_f32,     Imm_none,   1, 1, Type_f32, Type_none, Type_none, Type_f32) \
-INSTRUCTION (0x90, 1, 0, Nearest_f32,   Imm_none,   1, 1, Type_f32, Type_none, Type_none, Type_f32) \
-INSTRUCTION (0x91, 1, 0, Sqrt_f32,      Imm_none,   1, 1, Type_f32, Type_none, Type_none, Type_f32) \
-INSTRUCTION (0x92, 1, 0, Add_f32,       Imm_none,   2, 1, Type_f32, Type_f32, Type_none, Type_f32) \
-INSTRUCTION (0x93, 1, 0, Sub_f32,       Imm_none,   2, 1, Type_f32, Type_f32, Type_none, Type_f32) \
-INSTRUCTION (0x94, 1, 0, Mul_f32,       Imm_none,   2, 1, Type_f32, Type_f32, Type_none, Type_f32) \
-INSTRUCTION (0x95, 1, 0, Div_f32,       Imm_none,   2, 1, Type_f32, Type_f32, Type_none, Type_f32) \
-INSTRUCTION (0x96, 1, 0, Min_f32,       Imm_none,   2, 1, Type_f32, Type_f32, Type_none, Type_f32) \
-INSTRUCTION (0x97, 1, 0, Max_f32,       Imm_none,   2, 1, Type_f32, Type_f32, Type_none, Type_f32) \
-INSTRUCTION (0x98, 1, 0, Copysign_f32,  Imm_none,   2, 1, Type_f32, Type_f32, Type_none, Type_f32) \
+ FUNOP (0x8B, Abs,      32) \
+ FUNOP (0x8C, Neg,      32) \
+ FUNOP (0x8D, Ceil,     32) \
+ FUNOP (0x8E, Floor,    32) \
+ FUNOP (0x8F, Trunc,    32) \
+ FUNOP (0x90, Nearest,  32) \
+ FUNOP (0x91, Sqrt,     32) \
+FBINOP (0x92, Add,      32) \
+FBINOP (0x93, Sub,      32) \
+FBINOP (0x94, Mul,      32) \
+FBINOP (0x95, Div,      32) \
+FBINOP (0x96, Min,      32) \
+FBINOP (0x97, Max,      32) \
+FBINOP (0x98, Copysign, 32) \
 \
-INSTRUCTION (0x99, 1, 0, Abs_f64,       Imm_none,   1, 1, Type_f64, Type_none, Type_none, Type_f64) \
-INSTRUCTION (0x9A, 1, 0, Neg_f64,       Imm_none,   1, 1, Type_f64, Type_none, Type_none, Type_f64) \
-INSTRUCTION (0x9B, 1, 0, Ceil_f64,      Imm_none,   1, 1, Type_f64, Type_none, Type_none, Type_f64) \
-INSTRUCTION (0x9C, 1, 0, Floor_f64,     Imm_none,   1, 1, Type_f64, Type_none, Type_none, Type_f64) \
-INSTRUCTION (0x9D, 1, 0, Trunc_f64,     Imm_none,   1, 1, Type_f64, Type_none, Type_none, Type_f64) \
-INSTRUCTION (0x9E, 1, 0, Nearest_f64,   Imm_none,   1, 1, Type_f64, Type_none, Type_none, Type_f64) \
-INSTRUCTION (0x9F, 1, 0, Sqrt_f64,      Imm_none,   1, 1, Type_f64, Type_none, Type_none, Type_f64) \
-INSTRUCTION (0xA0, 1, 0, Add_f64,       Imm_none,   2, 1, Type_f64, Type_f64, Type_none, Type_f64) \
-INSTRUCTION (0xA1, 1, 0, Sub_f64,       Imm_none,   2, 1, Type_f64, Type_f64, Type_none, Type_f64) \
-INSTRUCTION (0xA2, 1, 0, Mul_f64,       Imm_none,   2, 1, Type_f64, Type_f64, Type_none, Type_f64) \
-INSTRUCTION (0xA3, 1, 0, Div_f64,       Imm_none,   2, 1, Type_f64, Type_f64, Type_none, Type_f64) \
-INSTRUCTION (0xA4, 1, 0, Min_f64,       Imm_none,   2, 1, Type_f64, Type_f64, Type_none, Type_f64) \
-INSTRUCTION (0xA5, 1, 0, Max_f64,       Imm_none,   2, 1, Type_f64, Type_f64, Type_none, Type_f64) \
-INSTRUCTION (0xA6, 1, 0, Copysign_f64,  Imm_none,   2, 1, Type_f64, Type_f64, Type_none, Type_f64) \
+ FUNOP (0x99, Abs,      64) \
+ FUNOP (0x9A, Neg,      64) \
+ FUNOP (0x9B, Ceil,     64) \
+ FUNOP (0x9C, Floor,    64) \
+ FUNOP (0x9D, Trunc,    64) \
+ FUNOP (0x9E, Nearest,  64) \
+ FUNOP (0x9F, Sqrt,     64) \
+FBINOP (0xA0, Add,      64) \
+FBINOP (0xA1, Sub,      64) \
+FBINOP (0xA2, Mul,      64) \
+FBINOP (0xA3, Div,      64) \
+FBINOP (0xA4, Min,      64) \
+FBINOP (0xA5, Max,      64) \
+FBINOP (0xA6, Copysign, 64) \
 \
-/* FIXME clean this up; output on left of instruction name and right of list, input on right of instruction name and left of list */ \
-INSTRUCTION (0xA7, 1, 0, i32_Wrap_i64,          Imm_none, 1, 1, Type_i64, Type_none, Type_none, Type_i32) \
-INSTRUCTION (0xA8, 1, 0, i32_Trunc_f32_s,       Imm_none, 1, 1, Type_f32, Type_none, Type_none, Type_i32) \
-INSTRUCTION (0xA9, 1, 0, i32_Trunc_f32_u,       Imm_none, 1, 1, Type_f32, Type_none, Type_none, Type_i32) \
-INSTRUCTION (0xAA, 1, 0, i32_Trunc_f64_s,       Imm_none, 1, 1, Type_f64, Type_none, Type_none, Type_i32) \
-INSTRUCTION (0xAB, 1, 0, i32_Trunc_f64_u,       Imm_none, 1, 1, Type_f64, Type_none, Type_none, Type_i32) \
-INSTRUCTION (0xAC, 1, 0, i64_Extend_i32_s,      Imm_none, 1, 1, Type_i32, Type_none, Type_none, Type_i64) \
-INSTRUCTION (0xAD, 1, 0, i64_Extend_i32_u,      Imm_none, 1, 1, Type_i32, Type_none, Type_none, Type_i64) \
-INSTRUCTION (0xAE, 1, 0, i64_Trunc_f32_s,       Imm_none, 1, 1, Type_f32, Type_none, Type_none, Type_i64) \
-INSTRUCTION (0xAF, 1, 0, i64_Trunc_f32_u,       Imm_none, 1, 1, Type_f32, Type_none, Type_none, Type_i64) \
-INSTRUCTION (0xB0, 1, 0, i64_Trunc_f64_s,       Imm_none, 1, 1, Type_f64, Type_none, Type_none, Type_i64) \
-INSTRUCTION (0xB1, 1, 0, i64_Trunc_f64_u,       Imm_none, 1, 1, Type_f64, Type_none, Type_none, Type_i64) \
-INSTRUCTION (0xB2, 1, 0, f32_Convert_i32_u,     Imm_none, 1, 1, Type_i32, Type_none, Type_none, Type_f32) \
-INSTRUCTION (0xB3, 1, 0, f32_Convert_i32_s,     Imm_none, 1, 1, Type_i32, Type_none, Type_none, Type_f32) \
-INSTRUCTION (0xB4, 1, 0, f32_Convert_i64_u,     Imm_none, 1, 1, Type_i64, Type_none, Type_none, Type_f32) \
-INSTRUCTION (0xB5, 1, 0, f32_Convert_i64_s,     Imm_none, 1, 1, Type_i64, Type_none, Type_none, Type_f32) \
-INSTRUCTION (0xB6, 1, 0, f64_Convert_i32_u,     Imm_none, 1, 1, Type_i32, Type_none, Type_none, Type_f64) \
-INSTRUCTION (0xB7, 1, 0, f64_Convert_i32_s,     Imm_none, 1, 1, Type_i32, Type_none, Type_none, Type_f64) \
-INSTRUCTION (0xB8, 1, 0, f64_Convert_i64_u,     Imm_none, 1, 1, Type_i64, Type_none, Type_none, Type_f64) \
-INSTRUCTION (0xB9, 1, 0, f64_Convert_i64_s,     Imm_none, 1, 1, Type_i64, Type_none, Type_none, Type_f64) \
-INSTRUCTION (0xBA, 1, 0, f64_Convert_f32,       Imm_none, 1, 1, Type_f32, Type_none, Type_none, Type_f64) \
-INSTRUCTION (0xBB, 1, 0, f64_Promotet_f32,      Imm_none, 1, 1, Type_f32, Type_none, Type_none, Type_f64) \
-INSTRUCTION (0xBC, 1, 0, i32_Reinterpret_f32,   Imm_none, 1, 1, Type_f32, Type_none, Type_none, Type_i32) \
-INSTRUCTION (0xBD, 1, 0, i64_Reinterpret_f64,   Imm_none, 1, 1, Type_f64, Type_none, Type_none, Type_i64) \
-INSTRUCTION (0xBE, 1, 0, f32_Reinterpret_i32,   Imm_none, 1, 1, Type_i32, Type_none, Type_none, Type_f32) \
-INSTRUCTION (0xBF, 1, 0, f64_Reinterpret_i64,   Imm_none, 1, 1, Type_f64, Type_none, Type_none, Type_f64) \
+CVTOP (0xA7,  Wrap, i64,  , i32)  \
+CVTOP (0xA8, Trunc, f32, s, i32)  \
+CVTOP (0xA9, Trunc, f32, u, i32)  \
+CVTOP (0xAA, Trunc, f64, s, i32)  \
+CVTOP (0xAB, Trunc, f64, u, i32)  \
+CVTOP (0xAC, Extend, i32, s, i64) \
+CVTOP (0xAD, Extend, i32, u, i64) \
+CVTOP (0xAE, Trunc, f32, s, i64)  \
+CVTOP (0xAF, Trunc, f32, u, i64)  \
+CVTOP (0xB0, Trunc, f64, s, i64)  \
+CVTOP (0xB1, Trunc, f64, u, i64)  \
 \
-INSTRUCTION (0xC0, 0, 0, ReservedC0, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xC1, 0, 0, ReservedC1, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xC2, 0, 0, ReservedC2, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xC3, 0, 0, ReservedC3, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xC4, 0, 0, ReservedC4, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xC5, 0, 0, ReservedC5, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xC6, 0, 0, ReservedC6, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xC7, 0, 0, ReservedC7, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xC8, 0, 0, ReservedC8, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xC9, 0, 0, ReservedC9, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xCA, 0, 0, ReservedCA, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xCB, 0, 0, ReservedCB, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xCC, 0, 0, ReservedCC, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xCD, 0, 0, ReservedCD, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xCE, 0, 0, ReservedCE, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xCF, 0, 0, ReservedCF, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
+CVTOP (0xB2, Convert, i32, u, f32) \
+CVTOP (0xB3, Convert, i32, s, f32) \
+CVTOP (0xB4, Convert, i64, u, f32) \
+CVTOP (0xB5, Convert, i64, s, f32) \
+CVTOP (0xB6, Demote,  i32, u, f64) \
+CVTOP (0xB7, Convert, i32, s, f64) \
+CVTOP (0xB8, Convert, i32, u, f64) \
+CVTOP (0xB9, Convert, i64, s, f64) \
+CVTOP (0xBA, Convert, i64, u, f64) \
+CVTOP (0xBB, Promote, f32, s, f64) \
 \
-INSTRUCTION (0xD0, 0, 0, ReservedD0, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xD1, 0, 0, ReservedD1, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xD2, 0, 0, ReservedD2, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xD3, 0, 0, ReservedD3, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xD4, 0, 0, ReservedD4, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xD5, 0, 0, ReservedD5, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xD6, 0, 0, ReservedD6, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xD7, 0, 0, ReservedD7, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xD8, 0, 0, ReservedD8, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xD9, 0, 0, ReservedD9, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xDA, 0, 0, ReservedDA, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xDB, 0, 0, ReservedDB, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xDC, 0, 0, ReservedDC, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xDD, 0, 0, ReservedDD, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xDE, 0, 0, ReservedDE, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xDF, 0, 0, ReservedDF, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
+CVTOP (0xBC, Reinterpret, f32, , i32) \
+CVTOP (0xBD, Reinterpret, f64, , i64) \
+CVTOP (0xBE, Reinterpret, i32, , f32) \
+CVTOP (0xBF, Reinterpret, i64, , f64) \
 \
-INSTRUCTION (0xE0, 0, 0, ReservedE0, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xE1, 0, 0, ReservedE1, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xE2, 0, 0, ReservedE2, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xE3, 0, 0, ReservedE3, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xE4, 0, 0, ReservedE4, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xE5, 0, 0, ReservedE5, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xE6, 0, 0, ReservedE6, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xE7, 0, 0, ReservedE7, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xE8, 0, 0, ReservedE8, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xE9, 0, 0, ReservedE9, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xEA, 0, 0, ReservedEA, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xEB, 0, 0, ReservedEB, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xEC, 0, 0, ReservedEC, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xED, 0, 0, ReservedED, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xEE, 0, 0, ReservedEE, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xEF, 0, 0, ReservedEF, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
+RESERVED (C0) \
+RESERVED (C1) \
+RESERVED (C2) \
+RESERVED (C3) \
+RESERVED (C4) \
+RESERVED (C5) \
+RESERVED (C6) \
+RESERVED (C7) \
+RESERVED (C8) \
+RESERVED (C9) \
+RESERVED (CA) \
+RESERVED (CB) \
+RESERVED (CC) \
+RESERVED (CD) \
+RESERVED (CE) \
+RESERVED (CF) \
 \
-INSTRUCTION (0xF0, 0, 0, ReservedF0, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xF1, 0, 0, ReservedF1, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xF2, 0, 0, ReservedF2, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xF3, 0, 0, ReservedF3, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xF4, 0, 0, ReservedF4, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xF5, 0, 0, ReservedF5, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xF6, 0, 0, ReservedF6, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xF7, 0, 0, ReservedF7, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xF8, 0, 0, ReservedF8, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xF9, 0, 0, ReservedF9, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xFA, 0, 0, ReservedFA, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xFB, 0, 0, ReservedFB, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xFC, 0, 0, ReservedFC, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xFD, 0, 0, ReservedFD, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xFE, 0, 0, ReservedFE, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
-INSTRUCTION (0xFF, 0, 0, ReservedFF, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none) \
+RESERVED (D0) \
+RESERVED (D1) \
+RESERVED (D2) \
+RESERVED (D3) \
+RESERVED (D4) \
+RESERVED (D5) \
+RESERVED (D6) \
+RESERVED (D7) \
+RESERVED (D8) \
+RESERVED (D9) \
+RESERVED (DA) \
+RESERVED (DB) \
+RESERVED (DC) \
+RESERVED (DD) \
+RESERVED (DE) \
+RESERVED (DF) \
+\
+RESERVED (E0) \
+RESERVED (E1) \
+RESERVED (E2) \
+RESERVED (E3) \
+RESERVED (E4) \
+RESERVED (E5) \
+RESERVED (E6) \
+RESERVED (E7) \
+RESERVED (E8) \
+RESERVED (E9) \
+RESERVED (EA) \
+RESERVED (EB) \
+RESERVED (EC) \
+RESERVED (ED) \
+RESERVED (EE) \
+RESERVED (EF) \
+\
+RESERVED (F0) \
+RESERVED (F1) \
+RESERVED (F2) \
+RESERVED (F3) \
+RESERVED (F4) \
+RESERVED (F5) \
+RESERVED (F6) \
+RESERVED (F7) \
+RESERVED (F8) \
+RESERVED (F9) \
+RESERVED (FA) \
+RESERVED (FB) \
+RESERVED (FC) \
+RESERVED (FD) \
+RESERVED (FE) \
+RESERVED (FF) \
 
-#define IUNOP(b0, name, type) INSTRUCTION (b0, 1, 0, name ## _ ## type, Imm_none, 1, 1, Type_ ## type, Type_none, Type_none, Type_ ## type)
-#define IBINOP(b0, name, type) INSTRUCTION (b0, 1, 0, name ## _ ## type, Imm_none, 2, 1, Type_ ## type, Type_ ## type, Type_none, Type_ ## type)
+// integer | float, unary | binary | test | relation
+#define IUNOP(b0, name, size)   INSTRUCTION (b0, 1, 0, name ## _i ## size, Imm_none, 1, 1, Type_i ## size, Type_none, Type_none, Type_i ## size)
+#define FUNOP(b0, name, size)   INSTRUCTION (b0, 1, 0, name ## _f ## size, Imm_none, 1, 1, Type_f ## size, Type_none, Type_none, Type_f ## size)
+#define IBINOP(b0, name, size)  INSTRUCTION (b0, 1, 0, name ## _i ## size, Imm_none, 2, 1, Type_i ## size, Type_i ## size, Type_none, Type_i ## size)
+#define FBINOP(b0, name, size)  INSTRUCTION (b0, 1, 0, name ## _f ## size, Imm_none, 2, 1, Type_f ## size, Type_f ## size, Type_none, Type_f ## size)
+#define ITESTOP(b0, name, size) INSTRUCTION (b0, 1, 0, name ## _i ## size, Imm_none, 1, 1, Type_i ## size, Type_none,     Type_none, Type_bool)
+#define FRELOP(b0, name, size)  INSTRUCTION (b0, 1, 0, name ## _f ## size, Imm_none, 2, 1, Type_f ## size, Type_f ## size, Type_none, Type_bool)
+#define IRELOP(b0, name, size, sign)  INSTRUCTION (b0, 1, 0, name ## _i ## size ## sign, Imm_none, 2, 1, Type_i ## size, Type_i ## size, Type_none, Type_bool)
+
+// convert; TODO make ordering more sensible?
+#define CVTOP(b0, name, from, sign, to) INSTRUCTION (b0, 1, 0, to ## _ ## name ## _ ## from ## sign, Imm_none, 1, 1, Type_ ## from, Type_none, Type_none, Type_ ## to)
+
+#define RESERVED(b0) INSTRUCTION (0x ## b0, 0, 0, Reserved ## b0, Imm_none, 0, 0, Type_none, Type_none, Type_none, Type_none)
+
+#undef CONST
+#define CONST(b0, type) INSTRUCTION (b0, 1, 0, Const_ ## type, Imm_ ## type, 0, 1, Type_none, Type_none, Type_none, Type_ ## type) \
 
 #undef INSTRUCTION
 #define INSTRUCTION(byte0, fixed_size, byte1, name, imm, push, pop, in0, in1, in2, out0) name,
