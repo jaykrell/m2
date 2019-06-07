@@ -5,7 +5,7 @@ with the primary features being:
 - Convert IL to WebAssembly?
 - Interpreter?
 - Understandable by me hopefully.
-- Class at a type conversion, for an LTCG/LTO balance.
+- Class at a time conversion, for an LTCG/LTO balance.
   - i.e. class at a time, but outputing a source file per type.
   - i.e. not assembly at a time.
   - Benefits C++ compilation, at least.
@@ -20,7 +20,7 @@ with the primary features being:
  - C is a horrible language.
 
 - Why not generate C?
- - Maybe for exception handling. We'l see.
+ - Maybe for exception handling. We'll see.
  - C is a horrible language.
 
 - Why Mono?
