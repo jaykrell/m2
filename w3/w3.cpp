@@ -98,7 +98,7 @@
 #endif
 
 typedef int8_t int8;
-typedef int16_t int16;
+//typedef int16_t int16;
 typedef int64_t int64;
 typedef uint8_t uint8;
 typedef uint16_t uint16;
@@ -342,7 +342,7 @@ struct Handle
         {
             DWORD err = GetLastError ();
             if (err != NO_ERROR)
-                throw_Win32Error ((int)err, StringFormat ("GetFileSizeEx (%s)", file_name).c_str ());
+                throw_Win32Error ((int)err, StringFormat ("GetFileSize (%s)", file_name).c_str ());
         }
         return (((uint64)hi) << 32) | lo;
     }
@@ -1274,23 +1274,44 @@ const char instructionNames [ ] =
 INSTRUCTIONS
 ;
 
+constexpr int bits_for_uint (uint a)
+{
+#define X(x) if (a < (1u << x)) return x;
+    X( 1) X( 2) X( 3) X( 4)
+    X( 5) X( 6) X( 7) X( 8)
+    X( 9) X(10) X(11) X(12)
+    X(13) X(14) X(15) X(16)
+    X(17) X(18) X(19) X(20)
+    X(21) X(22) X(23) X(24)
+    X(25) X(26) X(27) X(28)
+    X(29) X(30) X(31)
+#undef X
+    return 32;
+}
+
+static_assert (bits_for_uint (0) == 1, "");
+static_assert (bits_for_uint (10) == 4, "");
+static_assert (bits_for_uint (30) == 5, "");
+static_assert (bits_for_uint (200) == 8, "");
+static_assert (bits_for_uint (sizeof (instructionNames)) == 12, "");
+
 #define InstructionName(i) (&instructionNames [instructionEncode [i].string_offset])
 
 struct InstructionEncoding
 {
     uint8 byte0;
-    uint8 fixed_size;
-    uint8 byte1;                    // if fixed_size > 1
+    //uint8 byte1;              // FIXME always 0 if fixed_size > 1
+    uint8 fixed_size    : 2;    // 0, 1, 2
     Immediate immediate;
-    InstructionEnum name;
-    uint16 string_offset;
+    uint8 pop           : 2;    // required minimum stack in
+    uint8 push          : 1;
+    InstructionEnum name : 16;
+    uint string_offset : bits_for_uint (sizeof (instructionNames));
+    Type stack_in0  ; // type of stack [0] upon input, if pop >= 1
+    Type stack_in1  ; // type of stack [1] upon input, if pop >= 2
+    Type stack_in2  ; // type of stack [2] upon input, if pop == 3
+    Type stack_out0 ; // type of stack [1] upon input, if push == 1
     void (*interp) (Module*); // Module* probably wrong
-    int8 pop : 3;             // required minimum stack in
-    int8 push : 2;
-    Type stack_in0;  // type of stack [0] upon input, if pop >= 1
-    Type stack_in1;  // type of stack [1] upon input, if pop >= 2
-    Type stack_in2;  // type of stack [2] upon input, if pop == 3
-    Type stack_out0; // type of stack [1] upon input, if push == 1
 };
 
 struct InstructionDecoded
@@ -1321,7 +1342,7 @@ struct InstructionDecoded
 };
 
 #undef INSTRUCTION
-#define INSTRUCTION(byte0, fixed_size, byte1, name, imm, push, pop, in0, in1, in2, out0) { byte0, fixed_size, byte1, imm, name, offsetof (InstructionNames, name) },
+#define INSTRUCTION(byte0, fixed_size, byte1, name, imm, pop, push, in0, in1, in2, out0) { byte0, fixed_size, imm, pop, push, name, offsetof (InstructionNames, name), in0, in1, in2, out0 },
 const InstructionEncoding instructionEncode [ ] = {
     INSTRUCTIONS
 };
@@ -1506,7 +1527,8 @@ DecodeInstructions (Module* module, std::vector<InstructionDecoded>& instruction
                 ThrowString ("reserved");
             i.name = e.name;
             if (e.fixed_size == 2) // TODO
-                module->read_byte (cursor);
+                if (module->read_byte (cursor))
+                    ThrowString ("second byte not 0");
             switch (e.immediate)
             {
             case Imm_sequence:
