@@ -1636,31 +1636,31 @@ END_ENUM (GenericParamFlags, uint16)
 
 #if 0 // TODO This is copy/pasted from the web and should be gradually
       // worked into types/defines/enums, or deleted because it already was. And cross check with ECMA .pdf.
-
-12 - CustomAttribute Table
-
+//
+//12 - CustomAttribute Table
+//
 //I think the best description is given by the SDK: "The CustomAttribute table stores data that can be used to instantiate a
 // Custom Attribute (more precisely, an object of the specified Custom Attribute class) at runtime. The field called Type
 //is slightly misleading - it actually indexes a constructor method - the owner of that constructor method is the Type of the Custom Attribute."
-
+//
 // Fields:
-
+//
 // - Parent (index into any metadata table, except the CustomAttribute table itself; more precisely, a HasCustomAttribute coded index)
 // - Type (index into the MethodDef or MethodRef table; more precisely, a CustomAttributeType coded index)
 // - Value (index into Blob heap)
-
-20 - Event Table
-
-Each row represents an event.
-
-Fields:
-
-- EventFlags (a 2-byte bitmask of type EventAttribute)
-- Name (index into String_t heap)
-- EventType (index into TypeDef, TypeRef or TypeSpec tables; more precisely, a TypeDefOrRef coded index) [this corresponds to the Type of the Event; it is not the Type that owns this event]
-
-Available flags are:
-
+//
+//20 - Event Table
+//
+//Each row represents an event.
+//
+//Fields:
+//
+//- EventFlags (a 2-byte bitmask of type EventAttribute)
+//- Name (index into String_t heap)
+//- EventType (index into TypeDef, TypeRef or TypeSpec tables; more precisely, a TypeDefOrRef coded index) [this corresponds to the Type of the Event; it is not the Type that owns this event]
+//
+//Available flags are:
+//
 typedef enum CorEventAttr
 {
     evSpecialName           =   0x0200,     // event is special. Name describes how.
@@ -1669,19 +1669,19 @@ typedef enum CorEventAttr
     evReservedMask          =   0x0400,
     evRTSpecialName         =   0x0400      // Runtime(metadata internal APIs) should check name encoding.
 } CorEventAttr;
-
-23 - Property Table
-
-Each row represents a property.
-
-Fields:
-
-- Flags (a 2-byte bitmask of type PropertyAttributes)
-- Name (index into String_t heap)
-- Type (index into Blob heap) [the name of this field is misleading. It does not index a TypeDef or TypeRef table – instead it indexes the signature in the Blob heap of the Property)
-
-Available flags are:
-
+//
+//23 - Property Table
+//
+//Each row represents a property.
+//
+//Fields:
+//
+//- Flags (a 2-byte bitmask of type PropertyAttributes)
+//- Name (index into String_t heap)
+//- Type (index into Blob heap) [the name of this field is misleading. It does not index a TypeDef or TypeRef table - instead it indexes the signature in the Blob heap of the Property)
+//
+//Available flags are:
+//
 typedef enum CorPropertyAttr
 {
     prSpecialName           =   0x0200,     // property is special. Name describes how.
@@ -1693,39 +1693,39 @@ typedef enum CorPropertyAttr
 
     prUnused                =   0xe9ff
 } CorPropertyAttr;
-
-26 - ModuleRef Table
-
-Each row represents a reference to an external module.
-
-Fields:
-
-- Name (index into String_t heap)
-
-27 - TypeSpec Table
-
-Each row represents a specification for a TypeDef or TypeRef. The only field indexes a token in the #Blob stream.
-
-Fields:
-
-- Signature (index into the Blob heap)
-
-28 - ImplMap Table
-
+//
+//26 - ModuleRef Table
+//
+//Each row represents a reference to an external module.
+//
+//Fields:
+//
+//- Name (index into String_t heap)
+//
+//27 - TypeSpec Table
+//
+//Each row represents a specification for a TypeDef or TypeRef. The only field indexes a token in the #Blob stream.
+//
+//Fields:
+//
+//- Signature (index into the Blob heap)
+//
+//28 - ImplMap Table
+//
 // I quote: "The ImplMap table holds information about unmanaged methods that can be reached from managed code,
 // using PInvoke dispatch. Each row of the ImplMap table associates a row in the MethodDef table (MemberForwarded)
 //  with the name of a routine (ImportName) in some unmanaged DLL (ImportScope).". This means all the unmanaged functions used by the assembly are listed here.
-
+//
 // Fields:
-
+//
 // - MappingFlags (a 2-byte bitmask of type PInvokeAttributes)
 // - MemberForwarded (index into the Field or MethodDef table; more precisely, a MemberForwarded coded index.
 //  However, it only ever indexes the MethodDef table, since Field export is not supported)
 // - ImportName (index into the String_t heap)
 // - ImportScope (index into the ModuleRef table)
-
-Available flags are:
-
+//
+//Available flags are:
+//
 typedef enum  CorPinvokeMap
 {
     pmNoMangle          = 0x0001,   // Pinvoke is to use the member name as specified.
@@ -1760,116 +1760,115 @@ typedef enum  CorPinvokeMap
 
     pmMaxValue          = 0xFFFF
 } CorPinvokeMap;
-
-29 - FieldRVA Table
-
-Each row is an extension for a Field table. The RVA in this table gives the location of the inital value for a Field.
-
-Fields:
-
-- RVA (a 4-byte constant)
-- Field (index into Field table)
-
-32 - Assembly Table
-
+//
+//29 - FieldRVA Table
+//
+//Each row is an extension for a Field table. The RVA in this table gives the location of the inital value for a Field.
+//
+//Fields:
+//
+//- RVA (a 4-byte constant)
+//- Field (index into Field table)
+//
+//32 - Assembly Table
+//
 //It's a one-row table. It stores information about the current assembly.
-
-Fields:
-
-- HashAlgId (a 4-byte constant of type AssemblyHashAlgorithm)
-- MajorVersion, MinorVersion, BuildNumber, RevisionNumber (2-byte constants)
-- Flags (a 4-byte bitmask of type AssemblyFlags)
-- PublicKey (index into Blob heap)
-- Name (index into String_t heap)
-- Culture (index into String_t heap)
-
-Available flags are:
-
-The PublicKey is != 0, only if the StrongName Signature is present and the afPublicKey flag is set.
-
-35 - AssemblyRef Table
-
-Each row references an external assembly.
-
-Fields:
-
-- MajorVersion, MinorVersion, BuildNumber, RevisionNumber (2-byte constants)
-- Flags (a 4-byte bitmask of type AssemblyFlags)
-- PublicKeyOrToken (index into Blob heap – the public key or token that identifies the author of this Assembly)
-- Name (index into String_t heap)
-- Culture (index into String_t heap)
-- HashValue (index into Blob heap)
-
-The flags are the same ones of the Assembly table.
-
-36 - AssemblyRefProcessor Table
-
+//
+//Fields:
+//
+//- HashAlgId (a 4-byte constant of type AssemblyHashAlgorithm)
+//- MajorVersion, MinorVersion, BuildNumber, RevisionNumber (2-byte constants)
+//- Flags (a 4-byte bitmask of type AssemblyFlags)
+//- PublicKey (index into Blob heap)
+//- Name (index into String_t heap)
+//- Culture (index into String_t heap)
+//
+//Available flags are:
+//
+//The PublicKey is != 0, only if the StrongName Signature is present and the afPublicKey flag is set.
+//
+//35 - AssemblyRef Table
+//
+//Each row references an external assembly.
+//
+//Fields:
+//
+//- MajorVersion, MinorVersion, BuildNumber, RevisionNumber (2-byte constants)
+//- Flags (a 4-byte bitmask of type AssemblyFlags)
+//- PublicKeyOrToken (index into Blob heap - the public key or token that identifies the author of this Assembly)
+//- Name (index into String_t heap)
+//- Culture (index into String_t heap)
+//- HashValue (index into Blob heap)
+//
+//The flags are the same ones of the Assembly table.
+//
+//36 - AssemblyRefProcessor Table
+//
+////This table is ignored by the CLI and should not be present in an assembly.
+//
+//Fields:
+//
+//- Processor (4-byte constant)
+//- AssemblyRef (index into the AssemblyRef table)
+//
+//37 - AssemblyRefOS Table
+//
 //This table is ignored by the CLI and should not be present in an assembly.
-
-Fields:
-
-- Processor (4-byte constant)
-- AssemblyRef (index into the AssemblyRef table)
-
-37 - AssemblyRefOS Table
-
-//This table is ignored by the CLI and should not be present in an assembly.
-
-Fields:
-
-- OSPlatformId (4-byte constant)
-- OSMajorVersion (4-byte constant)
-- OSMinorVersion (4-byte constant)
-- AssemblyRef (index into the AssemblyRef table)
-
-38 - File Table
-
-Each row references an external file.
-
-Fields:
-
-- Flags (a 4-byte bitmask of type FileAttributes)
-- Name (index into String_t heap)
-- HashValue (index into Blob heap)
-
-Available flags are:
-
-
-39 - ExportedType Table
-
+//
+//Fields:
+//
+//- OSPlatformId (4-byte constant)
+//- OSMajorVersion (4-byte constant)
+//- OSMinorVersion (4-byte constant)
+//- AssemblyRef (index into the AssemblyRef table)
+//
+//38 - File Table
+//
+//Each row references an external file.
+//
+//Fields:
+//
+//- Flags (a 4-byte bitmask of type FileAttributes)
+//- Name (index into String_t heap)
+//- HashValue (index into Blob heap)
+//
+//Available flags are:
+//
+//
+//39 - ExportedType Table
+//
 //I quote: "The ExportedType table holds a row for each type, defined within other modules of this Assembly,
 //that is exported out of this Assembly. In essence, it stores TypeDef row numbers of all types that are marked
 //public in other modules that this Assembly comprises.". Be careful, this does not mean that when an assembly
 // uses a class contained in my assembly I export that type. In fact, I have not seen yet this table in an assembly.
-
-Fields:
-
-- Flags (a 4-byte bitmask of type TypeAttributes)
-- TypeDefId (4-byte index into a TypeDef table of another module in this Assembly). This field is used as a
+//
+//Fields:
+//
+//- Flags (a 4-byte bitmask of type TypeAttributes)
+//- TypeDefId (4-byte index into a TypeDef table of another module in this Assembly). This field is used as a
 // hint only. If the entry in the target TypeDef table matches the TypeName and TypeNamespace entries in
 //this table, resolution has succeeded. But if there is a mismatch, the CLI shall fall back to a search of the target TypeDef table
-- TypeName (index into the String_t heap)
-- TypeNamespace (index into the String_t heap)
-- Implementation. This can be an index (more precisely, an Implementation coded index) into one of 2 tables, as follows:
-        o File table, where that entry says which module in the current assembly holds the TypeDef
-        o ExportedType table, where that entry is the enclosing Type of the current nested Type
-
-The flags are the same ones of the TypeDef.
-
-40 - ManifestResource Table
-
-Each row references an internal or external resource.
-
-Fields:
-
-- Offset (a 4-byte constant)
-- Flags (a 4-byte bitmask of type ManifestResourceAttributes)
-- Name (index into the String_t heap)
-- Implementation (index into File table, or AssemblyRef table, or null; more precisely, an Implementation coded index)
-
-Available flags are:
-
-
+//- TypeName (index into the String_t heap)
+//- TypeNamespace (index into the String_t heap)
+//- Implementation. This can be an index (more precisely, an Implementation coded index) into one of 2 tables, as follows:
+//        o File table, where that entry says which module in the current assembly holds the TypeDef
+//        o ExportedType table, where that entry is the enclosing Type of the current nested Type
+//
+//The flags are the same ones of the TypeDef.
+//
+//40 - ManifestResource Table
+//
+//Each row references an internal or external resource.
+//
+//Fields:
+//
+//- Offset (a 4-byte constant)
+//- Flags (a 4-byte bitmask of type ManifestResourceAttributes)
+//- Name (index into the String_t heap)
+//- Implementation (index into File table, or AssemblyRef table, or null; more precisely, an Implementation coded index)
+//
+//Available flags are:
+//
 //If the Implementation index is 0, then the referenced resource is internal. We obtain the File Offset of
 // the resource by adding the converted Resources RVA (the one in the CLI Header) to the offset present in
 //this table. I wrote an article you can either find on NTCore or codeproject about Manifest Resources,
@@ -1879,7 +1878,7 @@ Available flags are:
 //Resource begins with a dword that tells us the size of the actual embedded resource... And that's it...
 //After that, we have our bitmap. Ok, but what about those ".resources" files? For every dialog in a .NET
 // Assembly there is one, this means every resource of a dialog is contained in the dialog's own ".resources" file.
-
+//
 //A very brief description of ".resources" files format: "The first dword is a signature which has to be
 //0xBEEFCACE, otherwise the resources file has to be considered as invalid. Second dword contains the
 //number of readers for this resources file, do not worry, it's something we do not have to talk about...
@@ -1887,11 +1886,11 @@ Available flags are:
 // the string (or strings) that follows, which is something like: "System.Resources.ResourceReader,
 //mscorlibsSystem.Resources.RuntimeResourceSet, mscorlib, Version=1.0.5000.0, Culture=neutral, PublicKeyToken=b77a5c561934e089".
 //It tells the framework the reader to use for this resources file.
-
+//
 // Ok, now we got to the interesting part. The next dword tells us the version of the resources file
 // (existing versions are 1 and 2). After the version, another dword gives the number of actual resources in the
 // file. Another dword follows and gives the number of resource types.
-
+//
 //To gather the additional information we need, we have to skip the resource types. For each type
 //there's a 7bit encoded integer who gives the size of the string that follows. To decode these kind of
 // integers you have to read every byte until you find one which has not the highest bit set and make some
@@ -1903,25 +1902,25 @@ Available flags are:
 // Well, actually it's not just the names (I just call it this way), every name  (7bit encoded integer + unicode
 // string) is followed by a dword, an offset which you can add to the DataSection offset to retrieve the resource offset.
 // The first thing we find, given a resource offset, is a 7bit encoded integer, which is the type index for the current resource.".
-
+//
 // If you are interested in this subject, check out that other article I wrote, since there you
 // can find code that maybe helps you understand better.
-
-42 - GenericParam Table
-
-I quote: The GenericParam table stores the generic parameters used in generic type definitions
-and generic methoddefinitions. These generic parameters can be constrained (i.e., generic arguments
-shall extend some class and/or implement certain interfaces) or unconstrained..
-
-Fields:
-
-- Number (the 2-byte index of the generic parameter, numbered left-to-right, from zero)
-- Flags (a 2-byte bitmask of type GenericParamAttributes)
-- Owner (an index into the TypeDef or MethodDef table, specifying the Type or Method to which this generic parameter applies; more precisely, a TypeOrMethodDef coded index)
-- Name (a non-null index into the String_t heap, giving the name for the generic parameter. This is purely descriptive and is used only by source language compilers and by Reflection)
-
-Available flags are:
-
+//
+//42 - GenericParam Table
+//
+//I quote: The GenericParam table stores the generic parameters used in generic type definitions
+//and generic methoddefinitions. These generic parameters can be constrained (i.e., generic arguments
+//shall extend some class and/or implement certain interfaces) or unconstrained..
+//
+//Fields:
+//
+//- Number (the 2-byte index of the generic parameter, numbered left-to-right, from zero)
+//- Flags (a 2-byte bitmask of type GenericParamAttributes)
+//- Owner (an index into the TypeDef or MethodDef table, specifying the Type or Method to which this generic parameter applies; more precisely, a TypeOrMethodDef coded index)
+//- Name (a non-null index into the String_t heap, giving the name for the generic parameter. This is purely descriptive and is used only by source language compilers and by Reflection)
+//
+//Available flags are:
+//
 typedef enum CorGenericParamAttr
 {
     // Variance of type parameters, only applicable to generic parameters
@@ -1938,119 +1937,119 @@ typedef enum CorGenericParamAttr
     gpNotNullableValueTypeConstraint   =   0x0008, // type argument must be a value type but not Nullable
     gpDefaultConstructorConstraint = 0x0010, // type argument must have a public default constructor
 } CorGenericParamAttr;
-
-44 - GenericParamConstraint Table
-
+//
+//44 - GenericParamConstraint Table
+//
 // I quote: "The GenericParamConstraint table records the constraints for each generic parameter.
 // Each generic parameter can be constrained to derive from zero or one class. Each generic parameter
 // can be constrained to implement zero or more interfaces. Conceptually, each row in the GenericParamConstraint
 //  table is ‘owned’ by a row in the GenericParam table. All rows in the GenericParamConstraint table for a
 // given Owner shall refer to distinct constraints.".
-
-The fields needed are, of course, only two
-
-Fields:
-
+//
+//The fields needed are, of course, only two
+//
+//Fields:
+//
 // - Owner (an index into the GenericParam table, specifying to which generic parameter this row refers)
 // - Constraint (an index into the TypeDef, TypeRef, or TypeSpec tables, specifying from which class this
 // generic parameter is constrained to derive; or which interface this generic parameter is constrained
 // to implement; more precisely, a TypeDefOrRef coded index)
-
+//
 // Ok that's all about MetaData tables. The last thing I have to explain, as I promised, is the Method format.
-
+//
 // Methods
 // Every method contained in an assembly is referenced in the MethodDef table, the RVA tells us where
 // the method is. The method body is made of three or at least two parts:
-
+//
 // - A header, which can be a Fat or a Tiny one.
-
+//
 // - The code. The code size is specified in the header.
-
+//
 // - Extra Sections. These sections are not always present, the header tells us if they are. Those sections
 //  can store different kinds of data, but for now they are only used to store Exception Sections.
 // Those sections sepcify try/catch handlers in the code.
-
+//
 // The first byte of the method tells us the type of header used. If the method uses a tiny header the CorILMethod_TinyFormat (0x02)
 //  flag will be set otherwise the CorILMethod_FatFormat (0x03) flag. If the tiny header is used, the 2 low bits are
 // reserved for flags (header type) and the rest specify the code size. Of course a tiny header can only be used if
 // the code size is less than 64 bytes. In addition it cannot be used if maxstack > 8 or local variables or exceptions
 //  (extra sections) are present. In all these other cases the fat header is used:
-
-Offset Size Field Description
-
-0 12 (bits) Flags Flags (CorILMethod_FatFormat shall be set in bits 0:1).
-12 (bits) 4 (bits) Size Size of this header expressed as the count of 4-byte integers occupied (currently 3).
-
-2 2 MaxStack Maximum number of items on the operand stack.
-4 4 CodeSize Size in bytes of the actual method body
-8 4 LocalVarSigTok Meta Data token for a signature describing the layout of the local variables for the method.  0 means there are no local variables present. This field references a stand-alone signature in the MetaData tables, which references an entry in the #Blob stream.
-
-The available flags are:
-
-Flag Value Description
-CorILMethod_FatFormat 0x3 Method header is fat.
-CorILMethod_TinyFormat 0x2 Method header is tiny.
-CorILMethod_MoreSects 0x8 More sections follow after this header.
-CorILMethod_InitLocals 0x10 Call default constructor on all local variables.
-This means that when the CorILMethod_MoreSects is set, extra sections follow the method. To reach the first extra section we have to add the size of the header to the code size and to the file offset of the method, then aligne to the next 4-byte boundary.
-
-Extra sections can have a Fat (1 byte flags, 3 bytes size) or a Small header (1 byte flags, 1 byte size); the size includes the header size. The type of header and the type of section is specified in the first byte, of course:
-
-Flag Value Description
-
-CorILMethod_Sect_EHTable 0x1
-Exception handling data. CorILMethod_Sect_OptILTable 0x2 Reserved, shall be 0.
-CorILMethod_Sect_FatFormat 0x40 Data format is of the fat variety, meaning there is a 3-byte length.  If not set, the header is small with a  1-byte length
-CorILMethod_Sect_MoreSects 0x80 Another data section occurs after this current section
-
+//
+//Offset Size Field Description
+//
+//0 12 (bits) Flags Flags (CorILMethod_FatFormat shall be set in bits 0:1).
+//12 (bits) 4 (bits) Size Size of this header expressed as the count of 4-byte integers occupied (currently 3).
+//
+//2 2 MaxStack Maximum number of items on the operand stack.
+//4 4 CodeSize Size in bytes of the actual method body
+//8 4 LocalVarSigTok Meta Data token for a signature describing the layout of the local variables for the method.  0 means there are no local variables present. This field references a stand-alone signature in the MetaData tables, which references an entry in the #Blob stream.
+//
+//The available flags are:
+//
+//Flag Value Description
+//CorILMethod_FatFormat 0x3 Method header is fat.
+//CorILMethod_TinyFormat 0x2 Method header is tiny.
+//CorILMethod_MoreSects 0x8 More sections follow after this header.
+//CorILMethod_InitLocals 0x10 Call default constructor on all local variables.
+//This means that when the CorILMethod_MoreSects is set, extra sections follow the method. To reach the first extra section we have to add the size of the header to the code size and to the file offset of the method, then aligne to the next 4-byte boundary.
+//
+//Extra sections can have a Fat (1 byte flags, 3 bytes size) or a Small header (1 byte flags, 1 byte size); the size includes the header size. The type of header and the type of section is specified in the first byte, of course:
+//
+//Flag Value Description
+//
+//CorILMethod_Sect_EHTable 0x1
+//Exception handling data. CorILMethod_Sect_OptILTable 0x2 Reserved, shall be 0.
+//CorILMethod_Sect_FatFormat 0x40 Data format is of the fat variety, meaning there is a 3-byte length.  If not set, the header is small with a  1-byte length
+//CorILMethod_Sect_MoreSects 0x80 Another data section occurs after this current section
+//
 // No other types than the exception handling sections are declared (this does not mean
 // you should not check the CorILMethod_Sect_EHTable flag). So if the section is small it will be:
-
-Offset Size Field Description
-0 1 Kind Flags as described above.
-1 1 DataSize Size of the data for the block, including the header, say n*12+4.
-2 2 Reserved Padding, always 0.
-4 n Clauses n small exception clauses.
-
-Otherwise:
-
-Offset Size Field Description
-
-0 1 Kind Which type of exception block is being used
-1 3 DataSize Size of the data for the block, including the header, say n*24+4.
-4 n Clauses n fat exception clauses.
-
-The number of the clauses is given byte the DataSize. I mean you have to subtract the size of the header and then divide by the size of a Fat/Small exception clause (this, of course, depends on the kind of header). The small one:
-
-Offset Size Field Description
-
-0 2 Flags Flags, see below.
-2 2 TryOffset Offset in bytes of try block from start of the header.
-4 1 TryLength Length in bytes of the try block
-5 2 HandlerOffset Location of the handler for this try block
-7 1 HandlerLength Size of the handler code in bytes
-8 4 ClassToken Meta data token for a type-based exception handler
-8 4 FilterOffset Offset in method body for filter-based exception handler
-And the fat one:
-
-Offset Size Field Description
-0 4 Flags Flags, see below.
-4 4 TryOffset Offset in bytes of  try block from start of the header.
-8 4 TryLength Length in bytes of the try block
-12 4 HandlerOffset Location of the handler for this try block
-16 4 HandlerLength Size of the handler code in bytes
-20 4 ClassToken Meta data token for a type-based exception handler
-20 4 FilterOffset Offset in method body for filter-based exception handler
-
-Available flags are:
-
-Flag Value Description
-
+//
+//Offset Size Field Description
+//0 1 Kind Flags as described above.
+//1 1 DataSize Size of the data for the block, including the header, say n*12+4.
+//2 2 Reserved Padding, always 0.
+//4 n Clauses n small exception clauses.
+//
+//Otherwise:
+//
+//Offset Size Field Description
+//
+//0 1 Kind Which type of exception block is being used
+//1 3 DataSize Size of the data for the block, including the header, say n*24+4.
+//4 n Clauses n fat exception clauses.
+//
+//The number of the clauses is given byte the DataSize. I mean you have to subtract the size of the header and then divide by the size of a Fat/Small exception clause (this, of course, depends on the kind of header). The small one:
+//
+//Offset Size Field Description
+//
+//0 2 Flags Flags, see below.
+//2 2 TryOffset Offset in bytes of try block from start of the header.
+//4 1 TryLength Length in bytes of the try block
+//5 2 HandlerOffset Location of the handler for this try block
+//7 1 HandlerLength Size of the handler code in bytes
+//8 4 ClassToken Meta data token for a type-based exception handler
+//8 4 FilterOffset Offset in method body for filter-based exception handler
+//And the fat one:
+//
+//Offset Size Field Description
+//0 4 Flags Flags, see below.
+//4 4 TryOffset Offset in bytes of  try block from start of the header.
+//8 4 TryLength Length in bytes of the try block
+//12 4 HandlerOffset Location of the handler for this try block
+//16 4 HandlerLength Size of the handler code in bytes
+//20 4 ClassToken Meta data token for a type-based exception handler
+//20 4 FilterOffset Offset in method body for filter-based exception handler
+//
+//Available flags are:
+//
+//Flag Value Description
+//
 const uint COR_ILEXCEPTION_CLAUSE_EXCEPTION = 0; // A typed exception clause
 const uint COR_ILEXCEPTION_CLAUSE_FILTER = 1; // An exception filter and handler clause
 const uint COR_ILEXCEPTION_CLAUSE_FINALLY = 2; // A finally clause
 const uint COR_ILEXCEPTION_CLAUSE_FAULT = 4; // Fault clause (finally that is called on exception only)
-
+//
 //The #Blob Stream
 // This stream contains different things as you might have already noticed going through the MetaData tables,
 // but the only thing in this stream which is a bit difficult to understand are signatures. Every signature
@@ -2058,7 +2057,7 @@ const uint COR_ILEXCEPTION_CLAUSE_FAULT = 4; // Fault clause (finally that is ca
 // it could tell us the declaration of a method (be it a defined method or a referenced one), this
 // meaning the parameters and the return type of that method. The various kind of signatures are:
 // MethodDefSig, MethodRefSig, FieldSig, PropertySig, LocalVarSig, TypeSpec, MethodSpec.
-
+//
 typedef enum CorElementType
 {
     ELEMENT_TYPE_END            = 0x0,
@@ -2115,9 +2114,8 @@ typedef enum CorElementType
     ELEMENT_TYPE_PINNED         = 0x05 | ELEMENT_TYPE_MODIFIER,
     ELEMENT_TYPE_R4_HFA         = 0x06 | ELEMENT_TYPE_MODIFIER, // used only internally for R4 HFA types
     ELEMENT_TYPE_R8_HFA         = 0x07 | ELEMENT_TYPE_MODIFIER, // used only internally for R8 HFA types
-
 } CorElementType;
-
+//
 #endif
 
 // COM+ 2.0 header structure.
